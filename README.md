@@ -64,3 +64,58 @@ graph TD
     I -- "i < n" --> C;
     I -- "i == n" --> Z[END];
 ```
+
+## Behavioral Engine Workflow
+```mermaid
+graph TD
+
+    %% Inputs
+    X1["Conversation History – list of strings"] --> A
+    X2["Input Prompt"] --> A
+
+    %% Top-level Behavioral Engine
+    A["Behavioral Engine"] --> B
+
+    %% 3.1 Sanitization Layer (with sublayers)
+    subgraph B["Sanitization Layer"]
+        direction TB
+        B1["Translation Layer<br/>Translate non-English text to English"]
+        B2["Decode Encoded Data<br/>Decode Base64 or similar for further checks"]
+        B3["Replace Unicode & Masked Characters<br/>(e.g., '@' → 'a')"]
+    end
+
+    %% Decision Node (Logic Diamond)
+    B --> B4{Enough Data collected?}
+    B4 -- Yes --> B6[Custom LLM finetuned on Input and output score]
+    B4 -- No --> B5[Custom score]
+
+    %% Connections from Decision Node
+    B5 --> C
+    B5 --> D
+    B5 --> E
+
+    %% 3.2 Factual Correctness
+    C["Factual Correctness score<br/>Score factual accuracy (0–100) via semantic similarity"] --> W
+
+    %% 3.3 Sensitive Data Detector
+    D["Sensitive Data Score (0-100)<br/>Detect if AI output has PII"] --> W
+
+    %% 3.4 LLM-based Score (with sublayers)
+    subgraph E["LLM-based MOE Score (0-100)"]
+        direction TB
+        E1["Custom System Prompt:<br/>Define criteria for LLM-based scoring"]
+        E1 --> E2["Agent 1"]
+        E1 --> E3["Agent 2"]
+        E1 --> E4["Agent N"]
+
+        E2 --> E5["weighted aggregate score"]
+        E3 --> E5
+        E4 --> E5
+    end
+    E --> W["Combined weighted score"]
+    B6 -->Z
+    W --> Z
+    %% 3.5 Fine-tuned Model (Weighted Final Score)
+    Z["FinalScore (0–100)"]
+    %% Output
+```
