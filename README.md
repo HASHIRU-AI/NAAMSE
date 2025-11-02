@@ -119,3 +119,60 @@ graph TD
     Z["FinalScore (0–100)"]
     %% Output
 ```
+
+## Clustering Engine Workflow
+```mermaid
+graph TD
+    Start([Start]) --> load_data[1. load_data]
+
+    %% --- Data Embedding Stage ---
+    subgraph A["Embedding Generation"]
+        load_data --> check_embed_cache{"embeddings.npy exists?"}
+        check_embed_cache -- Yes --> load_embeds[Load cached embeddings]
+        check_embed_cache -- No --> gen_embeds[Generate new embeddings]
+        gen_embeds --> save_embeds[Save embeddings.npy]
+        load_embeds --> optimize_kmeans[2. optimize_kmeans]
+        save_embeds --> optimize_kmeans
+    end
+
+    %% --- Optimization Stage ---
+    subgraph B["Parameter Optimization"]
+        optimize_kmeans --> check_params_cache{"kmeans_params.json exists?"}
+        check_params_cache -- Yes --> load_params[Load cached K-means params]
+        check_params_cache -- No --> run_optuna[Run Optuna optimization]
+        run_optuna --> save_params[Save kmeans_params.json]
+        load_params --> cluster_data["3. cluster_data<br/>Perform initial K-means"]
+        save_params --> cluster_data
+    end
+
+    %% --- Clustering Stage ---
+    subgraph C["Recursive Clustering"]
+        cluster_data --> check_cluster_cache{"final_clusters.pkl exists?"}
+        check_cluster_cache -- Yes --> load_clusters[Load cached final clusters]
+        check_cluster_cache -- No --> run_hierarchical[Run recursive clustering]
+        run_hierarchical -- "Stop: cluster size <= 5" --> save_clusters[Save final_clusters.pkl]
+        run_hierarchical -- "Stop: cannot split further" --> save_clusters
+        run_hierarchical -- "Recursive Step" --> run_hierarchical
+        load_clusters --> label_clusters[5. label_clusters]
+        save_clusters --> label_clusters
+    end
+
+    %% --- Labeling Stage ---
+    subgraph D["Cluster Labeling"]
+        label_clusters --> check_llm_toggle{"use_llm_labeling == True?"}
+        check_llm_toggle -- No --> generic_labels[Use generic labels]
+        check_llm_toggle -- Yes --> check_label_cache{"cluster_labels.json exists?"}
+        check_label_cache -- Yes --> load_labels[Load existing labels]
+        check_label_cache -- No --> new_labels[Start empty labels]
+        load_labels --> run_llm[Loop: Label remaining clusters w/ LLM]
+        new_labels --> run_llm
+        run_llm --> save_label_progress[Save progress to cluster_labels.json]
+    end
+
+    %% --- Saving Stage ---
+    subgraph E["Output Saving"]
+        generic_labels --> save_results["6. save_results<br/>Save all outputs"]
+        save_label_progress --> save_results
+        save_results --> Stop([END])
+    end
+```
