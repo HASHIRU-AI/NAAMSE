@@ -7,8 +7,7 @@ from langgraph.graph import StateGraph, START, END
 # --- Import the compiled subgraph and its state ---
 # This assumes 'mutation_engine_graph.py' is in the same directory.
 from src.mutation_engine.mutation_workflow import mutation_engine_graph
-
-
+from src.behavioral_engine.behavior_engine_workflow import behavior_engine_graph
 # --- 1. Define Parent Graph State ---
 
 class FuzzerGraphState(TypedDict):
@@ -48,7 +47,7 @@ def setup_run(state: FuzzerGraphState):
         "agent_test_scores": []
     }
 
-
+       
 def process_mutations(state: FuzzerGraphState):
     """
     This node runs *after* the mutation engine.
@@ -57,9 +56,12 @@ def process_mutations(state: FuzzerGraphState):
     print(
         f"--- PARENT: (3) Processing {len(state['final_generated_prompts'])} mutated prompts ---")
     print(f"--- PARENT: (3) Prompts: {state['final_generated_prompts']} ---")
-    # Placeholder: logic to test each prompt and get a score
-    scores = [round(random.random(), 2)
-              for _ in state["final_generated_prompts"]]
+    scores = []
+    
+    for prompt in state["final_generated_prompts"]:
+        # Placeholder: logic to test each prompt and get output
+        score = behavior_engine_graph.invoke({"input_prompt": prompt, "conversation_history": ["test output"]})
+        scores.append(score)
     print(f"--- PARENT: (3) Got scores: {scores} ---")
     return {"agent_test_scores": scores}
 
