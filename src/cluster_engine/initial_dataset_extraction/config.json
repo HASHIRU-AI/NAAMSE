@@ -1,0 +1,261 @@
+{
+  "datasets": [
+    {
+      "name": "TrustAIRLab/in-the-wild-jailbreak-prompts",
+      "description": "In-the-wild jailbreak prompts collected from various sources.",
+      "config": "jailbreak_2023_05_07",
+      "harmful_field": "prompt",
+      "harmful_condition": "jailbreak == true"
+    },
+    {
+      "name": "deepset/prompt-injections",
+      "description": "Dataset for prompt injection detection.",
+      "harmful_field": "text",
+      "harmful_condition": "label == 1"
+    },
+    {
+      "name": "jackhhao/jailbreak-classification",
+      "description": "Jailbreak prompts for classification.",
+      "harmful_field": "prompt",
+      "harmful_condition": "type == 'jailbreak'"
+    },
+    {
+      "name": "qualifire/prompt-injections-benchmark",
+      "description": "Benchmark dataset for prompt injection vs benign.",
+      "harmful_field": "text",
+      "harmful_condition": "label == 'jailbreak'"
+    },
+    {
+      "name": "jayavibhav/prompt-injection-safety",
+      "description": "Prompt injection safety dataset.",
+      "harmful_field": "text",
+      "harmful_condition": "label == 1"
+    },
+    {
+      "name": "dvilasuero/jailbreak-classification-reasoning",
+      "description": "Jailbreak classification with reasoning.",
+      "harmful_field": "prompt",
+      "harmful_condition": "type == 'jailbreak'"
+    },
+    {
+      "name": "Alignment-Lab-AI/Prompt-Injection-Test",
+      "description": "Prompt injection test dataset.",
+      "harmful_field": "red",
+      "harmful_condition": "always harmful"
+    },
+    {
+      "name": "Simsonsun/JailbreakPrompts",
+      "description": "Collection of jailbreak prompts.",
+      "config": "default",
+      "harmful_field": "Prompt",
+      "harmful_condition": "all prompts are harmful"
+    },
+    {
+      "name": "guychuk/open-prompt-injection",
+      "description": "Open prompt injection dataset.",
+      "harmful_field": "attack_input",
+      "harmful_condition": "always harmful"
+    },
+    {
+      "name": "JailbreakBench/JBB-Behaviors",
+      "description": "Jailbreak behaviors dataset.",
+      "config": "behaviors",
+      "harmful_field": "Goal",
+      "harmful_condition": "all goals are harmful"
+    },
+    {
+      "name": "allenai/tulu-3-do-anything-now-eval",
+      "description": "Do Anything Now (DAN) jailbreak evaluation dataset containing harmful prompts.",
+      "config": "default",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful"
+    },
+    {
+      "name": "walledai/JailbreakHub",
+      "description": "In-the-wild jailbreak prompts collected from various sources, including 1,405 identified jailbreak prompts.",
+      "harmful_field": "prompt",
+      "harmful_condition": "jailbreak == true"
+    },
+    {
+      "name": "JailbreakV-28K/JailBreakV-28k",
+      "description": "JailBreakV-28K dataset containing 28,000 jailbreak prompts with harmful queries.",
+      "config": "JailBreakV_28K",
+      "split": "JailBreakV_28K",
+      "harmful_field": "jailbreak_query",
+      "harmful_condition": "always harmful"
+    },
+    {
+      "name": "rubend18/ChatGPT-Jailbreak-Prompts",
+      "description": "Collection of ChatGPT jailbreak prompts.",
+      "config": "default",
+      "harmful_field": "Prompt",
+      "harmful_condition": "always harmful"
+    },
+    {
+      "name": "collinear-ai/jailbreak-prompts-allam-allam-2-34b-dev-responses",
+      "description": "Jailbreak prompts and responses from Allam-2-34b model.",
+      "config": "default",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful"
+    },
+    {
+      "name": "Lakera/mosscap_prompt_injection",
+      "description": "MOSSCAP prompt injection dataset containing adversarial prompts for testing LLM robustness.",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful"
+    }
+  ],
+  "github": [
+    {
+      "name": "0xk1h0/ChatGPT_DAN",
+      "description": "ChatGPT DAN jailbreak prompts",
+      "url": "https://github.com/0xk1h0/ChatGPT_DAN",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+    {
+      "name": "coolaj86/6f4f7b30129b0251f61fa7baaa881516",
+      "description": "ChatGPT DAN jailbreak prompts",
+      "url": "https://gist.github.com/coolaj86/6f4f7b30129b0251f61fa7baaa881516",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "*.md",
+      "format": "text"
+    },
+    {
+      "name": "tturba/AI",
+      "description": "ChatGPT DAN jailbreak prompts",
+      "url": "https://github.com/tturba/AI",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+    {
+      "name": "RamamAgarwal/90dd19cfee89fb260c4461e57b8f7a7a",
+      "description": "ChatGPT DAN jailbreak prompts",
+      "url": "https://gist.github.com/RamamAgarwal/90dd19cfee89fb260c4461e57b8f7a7a",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "*.md",
+      "format": "text"
+    },
+    {
+      "name": "trinib/ZORG-Jailbreak-Prompt-Text",
+      "description": "ZORG jailbreak prompts",
+      "url": "https://github.com/trinib/ZORG-Jailbreak-Prompt-Text",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+    {
+      "name": "langgptai/awesome-grok-prompts",
+      "description": "Awesome Grok prompts including jailbreaks",
+      "url": "https://github.com/langgptai/awesome-grok-prompts",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+    {
+      "name": "PromptLabs/Prompt-Hacking-Resources",
+      "description": "Prompt hacking resources including jailbreaks",
+      "url": "https://github.com/PromptLabs/Prompt-Hacking-Resources",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+    {
+      "name": "liudaizong/Awesome-LVLM-Attack",
+      "description": "Awesome list of LVLM attacks including jailbreaks",
+      "url": "https://github.com/liudaizong/Awesome-LVLM-Attack",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+    {
+      "name": "EasyJailbreak/EasyJailbreak",
+      "description": "EasyJailbreak framework for jailbreaking LLMs",
+      "url": "https://github.com/EasyJailbreak/EasyJailbreak",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+    {
+      "name": "IntelLabs/LLMart",
+      "description": "LLM adversarial robustness toolkit",
+      "url": "https://github.com/IntelLabs/LLMart",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+
+    {
+      "name": "Unispac/Visual-Adversarial-Examples-Jailbreak-Large-Language-Models",
+      "description": "Visual adversarial examples for jailbreaking LLMs",
+      "url": "https://github.com/Unispac/Visual-Adversarial-Examples-Jailbreak-Large-Language-Models",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+    {
+      "name": "0x6f677548/copilot-instructions-unicode-injection",
+      "description": "Copilot instructions unicode injection PoC",
+      "url": "https://github.com/0x6f677548/copilot-instructions-unicode-injection",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "README.md",
+      "format": "text"
+    },
+    {
+      "name": "SheltonLiu-N/AutoDAN",
+      "description": "ADVBench dataset containing harmful behavior prompts for evaluating jailbreak attacks on LLMs",
+      "url": "https://github.com/SheltonLiu-N/AutoDAN",
+      "harmful_field": "goal",
+      "harmful_condition": "always harmful",
+      "type": "single-level",
+      "file_path": "data/advbench/harmful_behaviors.csv",
+      "format": "csv"
+    },
+    {
+      "name": "AmanPriyanshu/FRACTURED-SORRY-Bench-Automated-Multishot-Jailbreaking",
+      "description": "FRACTURED-SORRY-Bench dataset containing multi-turn jailbreak prompts decomposed into sequential steps",
+      "url": "https://github.com/AmanPriyanshu/FRACTURED-SORRY-Bench-Automated-Multishot-Jailbreaking",
+      "harmful_field": "decomposed_steps",
+      "harmful_condition": "always harmful",
+      "type": "multi-level",
+      "file_path": "data/question_breakdowns.jsonl",
+      "format": "jsonl"
+    },
+    {
+      "name": "microsoft/BIPIA",
+      "description": "BIPIA benchmark for prompt injection attacks containing code and text attack prompts",
+      "url": "https://github.com/microsoft/BIPIA",
+      "harmful_field": "prompt",
+      "harmful_condition": "always harmful",
+      "type": "multi-level",
+      "file_path": "benchmark/*.json",
+      "format": "json"
+    }
+  ]
+}

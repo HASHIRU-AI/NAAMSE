@@ -11,6 +11,9 @@ requires-python = ">=3.10"
 dependencies = [
     "langgraph>=1.0.0",
     "python-dotenv>=1.0.1",
+    "datasets>=2.0.0",
+    "huggingface-hub>=0.20.0",
+    "pydriller>=2.0.0",
 ]
 
 
