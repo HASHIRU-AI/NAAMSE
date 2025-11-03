@@ -1,54 +1,113 @@
-"""LangGraph single-node graph template.
+# parent_graph.py
 
-Returns a predefined response. Replace logic and configuration as needed.
-"""
+import random
+from typing_extensions import List, Tuple, TypedDict, Optional
+from langgraph.graph import StateGraph, START, END
 
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Any, Dict
-
-from langgraph.graph import StateGraph
-from langgraph.runtime import Runtime
-from typing_extensions import TypedDict
+# --- Import the compiled subgraph and its state ---
+# This assumes 'mutation_engine_graph.py' is in the same directory.
+from src.mutation_engine.mutation_workflow import mutation_engine_graph
 
 
-class Context(TypedDict):
-    """Context parameters for the agent.
+# --- 1. Define Parent Graph State ---
 
-    Set these when creating assistants OR when invoking the graph.
-    See: https://langchain-ai.github.io/langgraph/cloud/how-tos/configuration_cloud/
+class FuzzerGraphState(TypedDict):
     """
+    This is the state for the main parent graph.
 
-    my_configurable_param: str
+    It must contain all keys needed by the subgraph
+    (input_prompts, n_to_generate)
 
-
-@dataclass
-class State:
-    """Input state for the agent.
-
-    Defines the initial structure of incoming data.
-    See: https://langchain-ai.github.io/langgraph/concepts/low_level/#state
+    It will also receive the output keys
+    (final_generated_prompts)
     """
+    # Inputs for the mutation engine
+    input_prompts: List[Tuple[str, float]]
+    n_to_generate: int
 
-    changeme: str = "example"
+    # Output from the mutation engine
+    final_generated_prompts: List[str]
+
+    # Other data for the parent graph
+    agent_test_scores: Optional[List[float]]
 
 
-async def call_model(state: State, runtime: Runtime[Context]) -> Dict[str, Any]:
-    """Process input and returns output.
+# --- 2. Define Parent Graph Nodes ---
 
-    Can use runtime context to alter behavior.
+def setup_run(state: FuzzerGraphState):
     """
+    This node loads the initial seed prompts.
+    For this example, we just print and assume inputs are passed at the start.
+    """
+    print("--- PARENT: (1) Setting up run ---")
+    # In a real app, this might load data from a DB
+    # and populate 'input_prompts' and 'n_to_generate'
     return {
-        "changeme": "output from call_model. "
-        f"Configured with {(runtime.context or {}).get('my_configurable_param')}"
+        # Ensure outputs are initialized
+        "final_generated_prompts": [],
+        "agent_test_scores": []
     }
 
 
-# Define the graph
-graph = (
-    StateGraph(State, context_schema=Context)
-    .add_node(call_model)
-    .add_edge("__start__", "call_model")
-    .compile(name="New Graph")
-)
+def process_mutations(state: FuzzerGraphState):
+    """
+    This node runs *after* the mutation engine.
+    It's where you would invoke the agent being tested.
+    """
+    print(
+        f"--- PARENT: (3) Processing {len(state['final_generated_prompts'])} mutated prompts ---")
+    print(f"--- PARENT: (3) Prompts: {state['final_generated_prompts']} ---")
+    # Placeholder: logic to test each prompt and get a score
+    scores = [round(random.random(), 2)
+              for _ in state["final_generated_prompts"]]
+    print(f"--- PARENT: (3) Got scores: {scores} ---")
+    return {"agent_test_scores": scores}
+
+
+# --- 3. Build the Parent Graph ---
+
+print("--- Building Parent Fuzzer Graph ---")
+parent_builder = StateGraph(FuzzerGraphState)
+
+# Add the nodes
+parent_builder.add_node("setup_run", setup_run)
+
+# *** Add the compiled subgraph as a single node ***
+parent_builder.add_node("mutation_engine", mutation_engine_graph)
+
+parent_builder.add_node("process_mutations", process_mutations)
+
+
+# --- 4. Wire the Parent Graph Edges ---
+
+parent_builder.add_edge(START, "setup_run")
+parent_builder.add_edge("setup_run", "mutation_engine")
+parent_builder.add_edge("mutation_engine", "process_mutations")
+parent_builder.add_edge("process_mutations", END)
+
+
+# --- 5. Compile the Parent Graph ---
+graph = parent_builder.compile()
+
+print("--- Parent Graph Compiled Successfully ---")
+
+
+# --- Test block (to run this file) ---
+if __name__ == "__main__":
+    print("\n--- [TEST RUN] Invoking graph.py ---")
+
+    # This is the input to the parent graph
+    initial_input = {
+        "input_prompts": [
+            ("low_score_prompt", 0.3),
+            ("mid_score_prompt", 0.7),
+            ("high_score_prompt", 0.9)
+        ],
+        "n_to_generate": 3
+    }
+
+    final_state = graph.invoke(initial_input)
+
+    print("\n--- [TEST RUN] Parent Graph Run Complete ---")
+    print("\nFinal State:")
+    print(final_state)
