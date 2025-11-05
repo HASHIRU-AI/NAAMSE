@@ -5,6 +5,7 @@ import torch
 import pickle
 import os
 import json
+import random
 
 from .data_access import DataSource, create_data_source
 
@@ -193,4 +194,41 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     }
 
     print("✅ Prompt added successfully!")
+    return result
+
+
+def get_random_prompt(data_source: Optional[DataSource] = None) -> Dict[str, Any]:
+    """
+    Get a random prompt from the corpus.
+
+    Args:
+        data_source: Data source to use (if None, uses JSONL data source)
+
+    Returns:
+        Dictionary containing a random prompt with its source and index
+    """
+    if data_source is None:
+        data_source = create_data_source('jsonl')
+
+    # Load prompts and sources
+    prompts, sources = data_source.get_prompts_and_sources()
+    cluster_info = data_source.get_cluster_info()
+
+    if not prompts:
+        raise ValueError("No prompts found in the corpus")
+
+    # Select random index
+    idx = random.randint(0, len(prompts) - 1)
+
+    # Build result
+    result = {
+        'prompt': prompts[idx],
+        'source': sources[idx],
+        'index': int(idx)
+    }
+
+    # Add cluster info if available
+    if cluster_info[idx]:
+        result.update(cluster_info[idx])
+
     return result
