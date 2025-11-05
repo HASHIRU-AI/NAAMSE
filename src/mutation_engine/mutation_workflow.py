@@ -1,8 +1,8 @@
 # mutation_engine_graph.py
 
-from typing_extensions import List, Tuple, Literal, TypedDict
 from langgraph.graph import StateGraph, START, END
 
+from src.mutation_engine.mutation_workflow_state import MutationEngineState, ScoredPrompt
 from src.mutation_engine.nodes.calculate_probabilities import calculate_probabilities
 from src.mutation_engine.nodes.select_prompt_by_probability import select_prompt_by_probability
 from src.mutation_engine.nodes.decide_action_by_score import decide_action_by_score
@@ -11,27 +11,6 @@ from src.mutation_engine.nodes.run_similar_action import run_similar_action
 from src.mutation_engine.nodes.run_mutation_action_subgraph import run_mutation_action_subgraph
 from src.mutation_engine.nodes.add_prompt_to_output_list import add_prompt_to_output_list
 from src.mutation_engine.nodes.should_continue_loop import should_continue_loop
-
-
-# --- 2. Define Main Mutation Engine Graph ---
-
-class MutationEngineState(TypedDict):
-    """
-    This is the "interface" for the main mutation engine.
-    It defines the inputs and outputs the parent graph will interact with.
-    """
-    # Inputs
-    input_prompts: List[Tuple[str, float]]
-    n_to_generate: int
-
-    # Internal state
-    prompt_probabilities: List[float]
-    selected_prompt: Tuple[str, float]
-    action_to_take: Literal["mutate", "similar", "explore"]
-    newly_generated_prompt: str
-
-    # Output
-    final_generated_prompts: List[str]
 
 
 # --- Build the Main Mutation Engine Graph ---
@@ -78,10 +57,14 @@ if __name__ == "__main__":
         "--- [TEST RUN] Compiling and running mutation_engine_graph.py independently ---")
 
     initial_prompts = [
-        ("low_score_prompt", 0.3),
-        ("mid_score_prompt", 0.7),
-        ("high_score_prompt", 0.9)
+        ScoredPrompt(
+            prompt="The quick brown fox jumps over the lazy dog.", score=0.8),
+        ScoredPrompt(
+            prompt="In a galaxy far, far away, an epic adventure unfolds.", score=0.9),
+        ScoredPrompt(
+            prompt="Once upon a time in a land of magic and mystery.", score=0.85)
     ]
+    # [{prompt:"Test", score:0.8}]
     num_to_gen = 3
 
     final_state = mutation_engine_graph.invoke({

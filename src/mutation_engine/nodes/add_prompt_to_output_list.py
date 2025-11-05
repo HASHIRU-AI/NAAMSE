@@ -1,6 +1,8 @@
-def add_prompt_to_output_list(state):
+from src.mutation_engine.mutation_workflow_state import BasePrompt, MutationEngineState
+
+def add_prompt_to_output_list(state: MutationEngineState) -> dict:
     """Adds the newly created prompt to the final list."""
-    new_prompt = state["newly_generated_prompt"]
+    new_prompt: BasePrompt = state["newly_generated_prompt"]
     current_list = state["final_generated_prompts"]
     current_list.append(new_prompt)
     print(

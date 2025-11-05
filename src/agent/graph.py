@@ -6,6 +6,7 @@ from langgraph.graph import StateGraph, START, END
 
 # --- Import the compiled subgraph and its state ---
 # This assumes 'mutation_engine_graph.py' is in the same directory.
+from src.mutation_engine.mutation_workflow_state import BasePrompt, ScoredPrompt
 from src.mutation_engine.mutation_workflow import mutation_engine_graph
 from src.behavioral_engine.behavior_engine_workflow import behavior_engine_graph
 # --- 1. Define Parent Graph State ---
@@ -21,11 +22,11 @@ class FuzzerGraphState(TypedDict):
     (final_generated_prompts)
     """
     # Inputs for the mutation engine
-    input_prompts: List[Tuple[str, float]]
+    input_prompts: List[ScoredPrompt]
     n_to_generate: int
 
     # Output from the mutation engine
-    final_generated_prompts: List[str]
+    final_generated_prompts: List[BasePrompt]
 
     # Other data for the parent graph
     agent_test_scores: Optional[List[float]]
