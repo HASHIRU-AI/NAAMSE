@@ -6,6 +6,6 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
     print(
         f"  [Mutation Subgraph] Invoking LLM to mutate: '{state['prompt_to_mutate']}'")
     mutated_prompt = BasePrompt(
-        prompt=[f"Mutated version of: {state['prompt_to_mutate']['prompt'][0]}"]
+        prompt=[f"mutated_{state['mutation_type']}_{state['prompt_to_mutate']['prompt'][0]}"]
     )
     return {"mutated_prompt": mutated_prompt}
