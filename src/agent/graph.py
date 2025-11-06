@@ -48,7 +48,6 @@ def setup_run(state: FuzzerGraphState):
         "agent_test_scores": []
     }
 
-       
 def process_mutations(state: FuzzerGraphState):
     """
     This node runs *after* the mutation engine.
@@ -58,10 +57,56 @@ def process_mutations(state: FuzzerGraphState):
         f"--- PARENT: (3) Processing {len(state['final_generated_prompts'])} mutated prompts ---")
     print(f"--- PARENT: (3) Prompts: {state['final_generated_prompts']} ---")
     scores = []
-    
-    for prompt in state["final_generated_prompts"]:
+    # Placeholder: logic to test each prompt and get output
+    conversation_histories =  [
+        [
+            {"role": "user", "content": "Hello, how are you?"}, 
+            {"role": "assistant", "content": "I am fine, thank you!"},
+        ],
+        [
+            {"role": "user", "content": "Привет, как дела?"}, 
+            {"role": "assistant", "content": "Все хорошо"},
+        ],
+        [
+            {"role": "user", "content": "नमस्ते, आप कैसे हैं?"}, 
+            {"role": "assistant", "content": "मैं ठीक हूँ"},
+        ],
+        [
+            {"role": "user", "content": "FranÃ§ais"}, 
+            {"role": "assistant", "content": "EspaÃ±ol"},
+        ],
+        [
+            {"role": "user", "content": "\xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8\xe0\xa5\x8d\xe0\xa4\xa4\xe0\xa5\x87"}, 
+            {"role": "assistant", "content": "\xd0\xb2\xd1\x8b\xd1\x85\xd0\xbe\xd0\xb4"},
+        ],
+        [
+            {"role": "user", "content": "I love Python 🐍🔥"}, 
+            {"role": "assistant", "content": "Me too! 😄👍"},
+        ],
+        [
+            {"role": "user", "content": "Ｔｅｓｔ １２３"}, 
+            {"role": "assistant", "content": "ＡＢＣ"},
+        ],
+        [
+            {"role": "user", "content": "Hello नमस्ते こんにちは"}, 
+            {"role": "assistant", "content": "Bonjour 你好"},
+        ],
+        [
+            {"role": "user", "content": "مرحبا كيف حالك؟"}, 
+            {"role": "assistant", "content": "أنا بخير"},
+        ],
+        [
+            {"role": "user", "content": "e\u0301cole"}, 
+            {"role": "assistant", "content": "fiancé\u0301"}
+        ],
+        # [
+        #     {"role": "user", "content": "SGVsbG8sIHdvcmxkIQ=="},
+        #     {"role": "assistant", "content": "SGVsbG8sIGFzc2lzdGFudCBvdXRwdXQh"}
+        # ]
+    ]
+    for conversation_history in conversation_histories:
         # Placeholder: logic to test each prompt and get output
-        score = behavior_engine_graph.invoke({"input_prompt": prompt, "conversation_history": ["test output"]})
+        score = behavior_engine_graph.invoke({"conversation_history": conversation_history})
         scores.append(score)
     print(f"--- PARENT: (3) Got scores: {scores} ---")
     return {"agent_test_scores": scores}
@@ -76,6 +121,8 @@ parent_builder = StateGraph(FuzzerGraphState)
 parent_builder.add_node("setup_run", setup_run)
 
 # *** Add the compiled subgraph as a single node ***
+# parent_builder.add_node("test_behavior_engine", test_behavior_engine)
+
 parent_builder.add_node("mutation_engine", mutation_engine_graph)
 
 parent_builder.add_node("process_mutations", process_mutations)

@@ -1,22 +1,25 @@
-from typing_extensions import List, Tuple, Literal, TypedDict
+from typing_extensions import List, Tuple, Literal, TypedDict, Dict
 from langgraph.graph import StateGraph, START, END
 
 from src.behavioral_engine.nodes.sanitize_inputs import sanitize_inputs
 from src.behavioral_engine.nodes.calculate_pii_score import calculate_pii_score
 from src.behavioral_engine.nodes.calculate_moe_score import calculate_moe_score
 from src.behavioral_engine.nodes.calculate_final_score import calculate_final_score
+from src.behavioral_engine.nodes.translate_inputs import translate_inputs
+from src.behavioral_engine.nodes.decode_inputs import decode_inputs
+from src.behavioral_engine.nodes.convert_to_ascii import convert_to_ascii
 class BehaviorEngineWorkflowState(TypedDict):
     """
     This is the "interface" for the main mutation engine.
     It defines the inputs and outputs the parent graph will interact with.
     """
     # Inputs
-    conversation_history: List[str]
-    input_prompt: str
+    conversation_history: List[Dict[str, str]]
 
     # Internal state
-    sanitized_conversation_history: List[str]
-    sanitized_input_prompt: str
+    decoded_conversation_history: List[Dict[str, str]]
+    translated_conversation_history: List[Dict[str, str]]
+    sanitized_conversation_history: List[Dict[str, str]]
     pii_score: int
     moe_score: int
 
@@ -28,15 +31,19 @@ class BehaviorEngineWorkflowState(TypedDict):
 main_graph_builder = StateGraph(BehaviorEngineWorkflowState)
 
 # Add nodes
-main_graph_builder.add_node("SanitizationLayer", sanitize_inputs)
+main_graph_builder.add_node("FixEncodingAndDecodeLayer", decode_inputs)
+main_graph_builder.add_node("LanguageTranslationLayer", translate_inputs)
+main_graph_builder.add_node("ASCIIConversionLayer", convert_to_ascii)
 main_graph_builder.add_node("PIIScoreLayer", calculate_pii_score)
 main_graph_builder.add_node("MOEScoreLayer", calculate_moe_score)
 main_graph_builder.add_node("FinalScoreLayer", calculate_final_score)
 
 # Define Edges
-main_graph_builder.add_edge(START, "SanitizationLayer")
-main_graph_builder.add_edge("SanitizationLayer", "PIIScoreLayer")
-main_graph_builder.add_edge("SanitizationLayer", "MOEScoreLayer")
+main_graph_builder.add_edge(START, "FixEncodingAndDecodeLayer")
+main_graph_builder.add_edge("FixEncodingAndDecodeLayer", "LanguageTranslationLayer")
+main_graph_builder.add_edge("LanguageTranslationLayer", "ASCIIConversionLayer")  
+main_graph_builder.add_edge("ASCIIConversionLayer", "PIIScoreLayer")
+main_graph_builder.add_edge("ASCIIConversionLayer", "MOEScoreLayer")
 main_graph_builder.add_edge("PIIScoreLayer", "FinalScoreLayer")
 main_graph_builder.add_edge("MOEScoreLayer", "FinalScoreLayer")
 main_graph_builder.add_edge("FinalScoreLayer", END)
