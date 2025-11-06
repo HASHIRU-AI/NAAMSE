@@ -19,6 +19,7 @@ dependencies = [
     "torch>=2.9.0",
     "tokenizers==0.22.1",
     "sentence-transformers>=0.2.5.1",
+    "langchain-google-genai>=3.0.1",
 ]
 
 

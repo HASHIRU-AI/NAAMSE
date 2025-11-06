@@ -10,11 +10,14 @@ class ScoredPrompt(BasePrompt):
     """Prompt with associated score."""
     score: float
 
+class MutatedPrompt(BasePrompt):
+    """Prompt with associated score."""
+    mutation_type: Literal["paraphrase", "add_negation", "synonym_swap", "split_prompt"]
 
 class MutationWorkflowState(TypedDict):
     """State for the mutation subgraph."""
     prompt_to_mutate: BasePrompt
-    mutated_prompt: BasePrompt
+    mutated_prompt: BasePrompt | MutatedPrompt
     mutation_type: Literal["paraphrase", "add_negation", "synonym_swap", "split_prompt"]
 
 
