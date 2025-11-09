@@ -38,17 +38,20 @@ def mutation_type_prompt(request: ModelRequest) -> str:
 
 def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
     model = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
-    # model = model.with_structured_output(BasePrompt, method="json_schema")
-    # # go through each mutation in the enum and load corresponding tool from src/mutation_engine/nodes/mutations/
     tools = []
-    # for mutation in Mutation:
-    module_name = mutation.value
-    module = __import__(
-        f"src.mutation_engine.nodes.mutations.{module_name}", fromlist=[''])
-    tool_function = getattr(module, module_name)
-    tools.append(tool_function)
-    llm_prompt = f"Add the following mutation to the prompt using the tool: {mutation.value}\n\nPrompt: {prompt['prompt']}"
-    # return model.invoke(llm_prompt)
+    llm_prompt = f"Apply the following mutation to the prompt using the LLM directly: {mutation.value}\n\nPrompt: {prompt['prompt']}"
+    try:
+        # for mutation in Mutation:
+        module_name = mutation.value
+        module = __import__(
+            f"src.mutation_engine.nodes.mutations.{module_name}", fromlist=[''])
+        tool_function = getattr(module, module_name)
+        tools.append(tool_function)
+        llm_prompt = f"Add the following mutation to the prompt using the tool: {mutation.value}\n\nPrompt: {prompt['prompt']}"
+    except Exception as e:
+        print(
+            f"  [Mutation Subgraph] Could not load tool for mutation type: {mutation.value}. Using direct LLM invocation.")
+        print(e)
     agent = create_agent(model, tools=tools,
                          response_format=ToolStrategy(BasePrompt),
                          middleware=[mutation_type_prompt],

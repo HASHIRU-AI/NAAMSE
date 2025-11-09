@@ -4,6 +4,7 @@ from typing_extensions import List, Literal, TypedDict, Optional
 
 class Mutation(Enum):
     SUBSTITUTION = "substitution"
+    ADVERSARIAL_PREFIX = "adversarial_prefix_mutation"
 
 
 class BasePrompt(TypedDict):
