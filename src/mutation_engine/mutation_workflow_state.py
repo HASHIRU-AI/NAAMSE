@@ -7,6 +7,7 @@ class Mutation(Enum):
     ADVERSARIAL_PREFIX = "adversarial_prefix_mutation"
     PAYLOAD_SPLITTING = "payload_splitting"
     MATHEMATICAL_ATTACK = "mathematical_attack"
+    UNICODE_MUTATION = "unicode_mutation"
 
 
 class BasePrompt(TypedDict):
