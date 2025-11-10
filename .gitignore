@@ -164,3 +164,5 @@ uv.lock
 .langgraph_api/
 
 **checkpoints**
+
+.vscode/
