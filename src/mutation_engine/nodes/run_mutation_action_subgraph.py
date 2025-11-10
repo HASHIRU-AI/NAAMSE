@@ -1,6 +1,5 @@
 import random
-from src.mutation_engine.mutation_workflow_state import BasePrompt, MutationEngineState, MutationWorkflowState
-
+from src.mutation_engine.mutation_workflow_state import BasePrompt, MutationEngineState, MutationWorkflowState, Mutation
 
 from langgraph.graph import StateGraph, START, END
 
@@ -9,9 +8,8 @@ from src.mutation_engine.mutation_workflow_state import MutationWorkflowState
 
 def select_mutation_type(state: MutationWorkflowState) -> MutationWorkflowState:
     """1. Selects a random mutation type."""
-    mutation_types = ["paraphrase", "add_negation",
-                      "synonym_swap", "split_prompt"]
-    selected_type = random.choice(mutation_types)
+    # select from the Mutation enum
+    selected_type = random.choice(list(Mutation)).value
     print(f"  [Mutation Subgraph] Selected mutation: {selected_type}")
     return {"mutation_type": selected_type}
 

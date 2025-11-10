@@ -29,6 +29,7 @@ dependencies = [
     "langchain>=1.0.5",
     "langchain-community>=0.4.1",
     "pydantic>=2.12.3",
+    "langchain[agents]>=1.0.5",
 ]
 
 
