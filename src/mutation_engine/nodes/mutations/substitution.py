@@ -8,8 +8,10 @@ def substitution(word_to_substitute: str) -> str:
 
 system_prompt = """
 Your job is to take in a prompt and mutate it by substituting words with their synonyms.
-You select words in the prompt to substitute.
-You will be provided with a tool that performs the substitution for a given word.
-Use the tool as needed to perform substitutions in the prompt until the prompt is different enough from the original.
-You must use the tool to perform substitutions.
+
+IMPORTANT: Follow these steps exactly:
+1. First, use the substitution tool to substitute words in the prompt (you can call it multiple times for different words)
+2. After you've done enough substitutions, use the BasePrompt tool to return the final mutated prompt and complete the task
+
+The prompt should be different enough from the original after substitutions.
 """

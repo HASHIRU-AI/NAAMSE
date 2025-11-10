@@ -36,8 +36,46 @@ def mutation_type_prompt(request: ModelRequest) -> str:
     return base_prompt
 
 
+# Cache for agents - key is tuple of tool names
+_agent_cache = {}
+
+
+def get_or_create_agent(tools: list):
+    """Get cached agent or create new one if not exists."""
+    # Create a cache key based on tool names
+    tool_names = tuple(sorted([tool.name if hasattr(tool, 'name') else str(tool) for tool in tools]))
+    
+    if tool_names not in _agent_cache:
+        model = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
+        
+        # If we have tools, don't use ToolStrategy for structured output
+        # Let the agent call tools naturally and extract result from final message
+        if tools:
+            agent = create_agent(
+                model, 
+                tools=tools,
+                middleware=[mutation_type_prompt],
+                context_schema=Context
+            )
+        else:
+            # No tools - use structured output directly
+            agent = create_agent(
+                model, 
+                tools=tools,
+                response_format=ToolStrategy(BasePrompt),
+                middleware=[mutation_type_prompt],
+                context_schema=Context
+            )
+        _agent_cache[tool_names] = agent
+        print(f"  [DEBUG] Agent cached with key: {tool_names}")
+    else:
+        print(f"  [DEBUG] Using cached agent for tools: {tool_names}")
+    
+    return _agent_cache[tool_names]
+
+
 def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
-    model = ChatGoogleGenerativeAI(model="gemini-2.5-flash")
+    """1. Invokes LLM with optional tools to perform the mutation."""
     tools = []
     llm_prompt = f"Apply the following mutation to the prompt using the LLM directly: {mutation.value}\n\nPrompt: {prompt['prompt']}"
     try:
@@ -52,16 +90,64 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
         print(
             f"  [Mutation Subgraph] Could not load tool for mutation type: {mutation.value}. Using direct LLM invocation.")
         print(e)
-    agent = create_agent(model, tools=tools,
-                         response_format=ToolStrategy(BasePrompt),
-                         middleware=[mutation_type_prompt],
-                         context_schema=Context)
+    
+    # Get or create cached agent
+    agent = get_or_create_agent(tools)
+    
     messages = [{"role": "user", "content": llm_prompt}]
-    response = agent.invoke(
-        {"messages": messages},
-        context={"mutation_type": mutation.value}
-    )
-    return response["structured_response"]
+    
+    try:
+        response = agent.invoke(
+            {"messages": messages},
+            context={"mutation_type": mutation.value},
+            config={
+                "recursion_limit": 10,  # Maximum 10 iterations
+                "configurable": {
+                    "thread_id": "mutation_thread"
+                }
+            }
+        )
+        
+        # If tools were used, extract result from the last tool message or AI message
+        if tools:
+            # Look for the last tool message result
+            for msg in reversed(response["messages"]):
+                if hasattr(msg, 'name') and msg.name in [tool.name for tool in tools]:
+                    # This is a tool message with the result
+                    import json
+                    try:
+                        result = json.loads(msg.content)
+                        if isinstance(result, dict) and "prompt" in result:
+                            return result
+                    except:
+                        pass
+            
+            # Fallback: look at final AI message
+            last_message = response["messages"][-1]
+            if hasattr(last_message, 'content') and last_message.content:
+                print(f"  [DEBUG] Using final AI message content: {last_message.content}")
+                return {"prompt": [last_message.content]}
+                
+            raise ValueError("Could not extract mutated prompt from tool calls")
+        
+        # No tools - check for structured_response
+        if "structured_response" in response:
+            return response["structured_response"]
+        else:
+            print(f"  [ERROR] No structured_response in agent response. Keys: {response.keys()}")
+            print(f"  [ERROR] Full response: {response}")
+            # Fallback: try to extract prompt from messages
+            if "messages" in response and len(response["messages"]) > 0:
+                last_message = response["messages"][-1]
+                print(f"  [DEBUG] Last message: {last_message}")
+                # Try to construct a BasePrompt from the last message
+                if hasattr(last_message, 'content'):
+                    return {"prompt": [last_message.content]}
+            raise ValueError("Agent did not return structured_response")
+        
+    except Exception as e:
+        print(f"  [ERROR] Exception during agent invocation: {e}")
+        print(f"  [ERROR] Exception type: {type(e)}")
 
 
 def invoke_llm_with_tools(state: MutationWorkflowState):
@@ -71,5 +157,6 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
     mutation = Mutation(state['mutation_type'])
     output: BasePrompt = invoke_llm(
         state['prompt_to_mutate'], mutation)
-
-    return {"mutated_prompt": MutatedPrompt(prompt=output['prompt'], mutation_type=mutation)}
+    result = {"mutated_prompt": MutatedPrompt(prompt=output['prompt'], mutation_type=mutation)}
+    print(f"  [DEBUG] Returning result: {result}")
+    return result
