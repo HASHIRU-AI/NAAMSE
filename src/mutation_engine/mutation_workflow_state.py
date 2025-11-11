@@ -8,6 +8,7 @@ class Mutation(Enum):
     PAYLOAD_SPLITTING = "payload_splitting"
     MATHEMATICAL_ATTACK = "mathematical_attack"
     UNICODE_MUTATION = "unicode_mutation"
+    NARRATIVE_DISPLACEMENT = "narrative_displacement"
 
 
 class BasePrompt(TypedDict):
