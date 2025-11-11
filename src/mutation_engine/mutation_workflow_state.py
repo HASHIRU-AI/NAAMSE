@@ -9,6 +9,7 @@ class Mutation(Enum):
     MATHEMATICAL_ATTACK = "mathematical_attack"
     UNICODE_MUTATION = "unicode_mutation"
     NARRATIVE_DISPLACEMENT = "narrative_displacement"
+    DEEP_INCEPTION_MUTATION = "deep_inception_mutation"
 
 
 class BasePrompt(TypedDict):
