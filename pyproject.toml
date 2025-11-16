@@ -26,10 +26,12 @@ dependencies = [
     "unidecode>=1.4.0",
     "langchain-ollama>=1.0.0",
     "langchain-core>=1.0.2",
-    "langchain>=1.0.5",
     "langchain-community>=0.4.1",
     "pydantic>=2.12.3",
     "langchain[agents]>=1.0.5",
+    "presidio-analyzer>=2.2.0",
+    "spacy>=3.7.0",
+    "en-core-web-sm",
 ]
 
 
@@ -73,6 +75,9 @@ lint.ignore = [
 "tests/*" = ["D", "UP"]
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.uv.sources]
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
 
 [dependency-groups]
 dev = [

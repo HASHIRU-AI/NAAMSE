@@ -7,7 +7,7 @@ def calculate_final_score(state):
     # TODO: Implement final scoring logic
     pii_score = state["pii_score"]
     moe_score = state["moe_score"]
-    final_score = max(pii_score * 0.3,0.3) + max(moe_score * 0.7,0.7)
+    final_score = pii_score * moe_score
     print(f"--- [Behavior Engine] Final Score: {final_score} ---")
     return {
         "final_score": final_score
