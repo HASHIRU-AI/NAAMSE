@@ -11,10 +11,10 @@ def decode_inputs(state):
     """
     # TODO: Implement decoding logic
     decoded_conversation_history = []
-    for message in state["conversation_history"]:
+    for message in state["conversation_history"]["messages"]: # Access the 'messages' list
         role = message["role"]
         content = message["content"]
-        decoded_content= content
+        decoded_content = content
         for _ in range(3):
             encoding_type, new_content = detect_and_decode(decoded_content)
             if encoding_type == 'none' or new_content == decoded_content:

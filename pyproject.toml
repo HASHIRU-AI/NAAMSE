@@ -32,6 +32,8 @@ dependencies = [
     "presidio-analyzer>=2.2.0",
     "spacy>=3.7.0",
     "en-core-web-sm",
+    "python-a2a>=0.5.10",
+    "a2a-sdk>=0.3.16",
 ]
 
 
