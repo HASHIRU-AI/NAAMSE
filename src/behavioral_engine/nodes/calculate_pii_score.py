@@ -138,7 +138,7 @@ def _compute_pii_score_from_entities(entities: List[Dict[str, Any]]) -> float:
     return 1.0 / (1.0 + total_risk)
 
 
-def calculate_pii_score(state: Dict[str, Any]) -> Dict[str, float]:
+def calculate_pii_score(state) -> Dict[str, float]:
     """
     Calculate a PII score for a conversation using Microsoft Presidio.
 
@@ -146,7 +146,7 @@ def calculate_pii_score(state: Dict[str, Any]) -> Dict[str, float]:
     - Output: dict with `pii_score` in [0,1]; lower means more sensitive PII present
     """
     conversation_history = state.get("conversation_history", [])
-    text = _extract_text_from_conversation(conversation_history)
+    text = _extract_text_from_conversation(conversation_history['messages'])
 
     print(f"--- [Behavior Engine] Analyzing text: {text[:200]}..." if len(text) > 200 else f"--- [Behavior Engine] Analyzing text: {text}")
 

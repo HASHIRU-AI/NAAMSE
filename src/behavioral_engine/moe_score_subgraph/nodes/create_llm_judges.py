@@ -48,8 +48,8 @@ def create_judge_node(judge: LLMJudge):
                 "messages": [{
                     "role": "user",
                     "content": f"""You have to analyze the following interaction:
-                                Input Prompt: {conversation_history[0]["content"]}
-                                AI Response: {conversation_history[1:]}"""
+                                Input Prompt: {conversation_history["messages"][0]["content"]}
+                                AI Response: {conversation_history["messages"][1:]}"""
                 }],
             }, context=context)["structured_response"]
             
