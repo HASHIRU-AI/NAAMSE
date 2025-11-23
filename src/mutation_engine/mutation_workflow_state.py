@@ -10,6 +10,9 @@ class Mutation(Enum):
     UNICODE_MUTATION = "unicode_mutation"
     NARRATIVE_DISPLACEMENT = "narrative_displacement"
     DEEP_INCEPTION_MUTATION = "deep_inception_mutation"
+    CODE_EXEC = "code_exec"
+    EMOJI = "emoji"
+    MEMORY_PREPEND = "memory_prepend"
 
 
 class BasePrompt(TypedDict):
