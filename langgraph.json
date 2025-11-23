@@ -5,7 +5,8 @@
     "agent": "./src/agent/graph.py:graph",
     "mutation_engine": "./src/mutation_engine/mutation_workflow.py:mutation_engine_graph",
     "mutation_action_subgraph": "./src/mutation_engine/nodes/run_mutation_action_subgraph.py:mutation_action_subgraph",
-    "behavior_engine": "./src/behavioral_engine/behavior_engine_workflow.py:behavior_engine_graph"
+    "behavior_engine": "./src/behavioral_engine/behavior_engine_workflow.py:behavior_engine_graph",
+    "invoke_agent": "./src/invoke_agent/invoke_agent_workflow.py:invoke_agent_graph"
   },
   "env": ".env",
   "image_distro": "wolfi"
