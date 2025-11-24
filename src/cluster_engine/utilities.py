@@ -28,10 +28,8 @@ def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[Da
     if data_source is None:
         data_source = create_data_source('jsonl')
 
-    # Load embeddings and data
+    # Load embeddings
     embeddings = data_source.get_embeddings()
-    prompts, sources = data_source.get_prompts_and_sources()
-    cluster_info = data_source.get_cluster_info()
 
     # Determine device
     if device is None:
@@ -52,18 +50,34 @@ def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[Da
     # Get top n indices
     top_n_indices = np.argsort(similarities)[::-1][:n]
 
+    # Now load only the required prompts and cluster info
+    corpus_file = data_source.corpus_file
+    top_indices_set = set(top_n_indices)
+    selected_data = {}
+
+    with open(corpus_file, 'r') as f:
+        for line_num, line in enumerate(f):
+            if line_num in top_indices_set:
+                data = json.loads(line.strip())
+                selected_data[line_num] = data
+
     # Build results
     results = []
     for idx in top_n_indices:
+        data = selected_data[idx]
         result = {
-            'prompt': prompts[idx],
-            'source': sources[idx],
+            'prompt': data['messages'][0]['content'],
+            'source': data['source'],
             'similarity': float(similarities[idx]),
             'index': int(idx)
         }
         # Add cluster info if available
-        if cluster_info[idx]:
-            result.update(cluster_info[idx])
+        if 'cluster_id' in data:
+            result['cluster_id'] = data['cluster_id']
+        if 'cluster_label' in data:
+            result['cluster_label'] = data['cluster_label']
+        if 'centroid_coord' in data:
+            result['centroid_coord'] = data['centroid_coord']
         results.append(result)
 
     return results
@@ -210,25 +224,41 @@ def get_random_prompt(data_source: Optional[DataSource] = None) -> Dict[str, Any
     if data_source is None:
         data_source = create_data_source('jsonl')
 
-    # Load prompts and sources
-    prompts, sources = data_source.get_prompts_and_sources()
-    cluster_info = data_source.get_cluster_info()
+    # Assuming data_source is JSONLDataSource for direct file access
+    corpus_file = data_source.corpus_file
 
-    if not prompts:
+    if not os.path.exists(corpus_file):
         raise ValueError("No prompts found in the corpus")
 
-    # Select random index
-    idx = random.randint(0, len(prompts) - 1)
+    selected_data = None
+    selected_index = 0
+    line_count = 0
+
+    with open(corpus_file, 'r') as f:
+        for line_num, line in enumerate(f):
+            data = json.loads(line.strip())
+            # Reservoir sampling: keep this item with probability 1/(line_num+1)
+            if random.random() < 1.0 / (line_num + 1):
+                selected_data = data
+                selected_index = line_num
+            line_count = line_num + 1
+
+    if selected_data is None:
+        raise ValueError("No prompts found in the corpus")
 
     # Build result
     result = {
-        'prompt': prompts[idx],
-        'source': sources[idx],
-        'index': int(idx)
+        'prompt': selected_data['messages'][0]['content'],
+        'source': selected_data['source'],
+        'index': selected_index
     }
 
     # Add cluster info if available
-    if cluster_info[idx]:
-        result.update(cluster_info[idx])
+    if 'cluster_id' in selected_data:
+        result['cluster_id'] = selected_data['cluster_id']
+    if 'cluster_label' in selected_data:
+        result['cluster_label'] = selected_data['cluster_label']
+    if 'centroid_coord' in selected_data:
+        result['centroid_coord'] = selected_data['centroid_coord']
 
     return result
