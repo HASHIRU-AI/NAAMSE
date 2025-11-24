@@ -10,7 +10,7 @@ import random
 from .data_access import DataSource, create_data_source
 
 
-def find_nearest_prompts(query_prompt: str, n: int = 5, data_source: Optional[DataSource] = None,
+def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[DataSource] = None,
                         device: str = None) -> List[Dict[str, Any]]:
     """
     Find the n nearest prompts to a given query prompt.

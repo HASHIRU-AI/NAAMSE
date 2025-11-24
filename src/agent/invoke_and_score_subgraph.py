@@ -35,8 +35,7 @@ def initialize_iteration(state: InvokeAndScoreState):
     return {
         "current_prompt_index": 0,
         "conversation_histories": [],
-        "agent_test_scores": [],
-        "current_prompt": None # Will be set by select_next_prompt
+        "agent_test_scores": []
     }
 
 def select_next_prompt(state: InvokeAndScoreState):
@@ -48,13 +47,14 @@ def select_next_prompt(state: InvokeAndScoreState):
 
     if current_index < len(generated_prompts):
         next_prompt = generated_prompts[current_index]
-        print(f"--- SUBGRAPH: Processing prompt {current_index + 1}/{len(generated_prompts)}: {next_prompt} ---")
+        print(f"--- SUBGRAPH: select_next_prompt - Setting current_prompt: {next_prompt} ---")
         return {
             "current_prompt": next_prompt,
             "current_prompt_index": current_index + 1
         }
     else:
         # This case should be handled by the conditional edge
+        print("--- SUBGRAPH: select_next_prompt - No more prompts to select. ---")
         return {"current_prompt": None}
 
 async def invoke_agent_node(state: InvokeAndScoreState): # Made async
@@ -63,6 +63,7 @@ async def invoke_agent_node(state: InvokeAndScoreState): # Made async
     """
     prompt = state["current_prompt"]
     a2a_agent_url = state["a2a_agent_url"]
+    print(f"--- SUBGRAPH: invoke_agent_node - Current prompt received: {prompt} ---")
 
     if not prompt:
         raise ValueError("No current prompt to invoke agent with.")
@@ -101,8 +102,8 @@ def score_agent_output(state: InvokeAndScoreState):
     print(f"--- SUBGRAPH: Scoring conversation history: {last_conversation_history} ---")
     score_output = behavior_engine_graph.invoke({"conversation_history": last_conversation_history})
     
-    # Assuming behavior_engine_graph.invoke returns {"score": float}
-    score = score_output.get("score", 0.0) if isinstance(score_output, dict) else 0.0
+    # Assuming behavior_engine_graph.invoke returns {"final_score": float}
+    score = score_output.get("final_score", 0.0) if isinstance(score_output, dict) else 0.0
     
     current_scores = state.get("agent_test_scores", [])
     current_scores.append(score)
