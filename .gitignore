@@ -166,3 +166,6 @@ uv.lock
 **checkpoints**
 
 .vscode/
+
+embeddings.npy
+jailbreak_corpus.jsonl

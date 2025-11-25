@@ -1,5 +1,7 @@
 from src.mutation_engine.mutation_workflow_state import BasePrompt, MutationEngineState, ScoredPrompt
 
+from src.cluster_engine.utilities import find_nearest_prompts
+
 
 def run_similar_action(state: MutationEngineState) -> MutationEngineState:
     """3b. Fetches a similar prompt."""
