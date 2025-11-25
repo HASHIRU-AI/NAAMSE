@@ -262,9 +262,10 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
 
     # Cache line count using fast `wc -l` command
     if corpus_file not in _cached_line_count:
-        result = subprocess.run(['wc', '-l', corpus_file], 
-                              capture_output=True, text=True, check=True)
-        line_count = int(result.stdout.split()[0])
+        # result = subprocess.run(['wc', '-l', corpus_file],
+        #                       capture_output=True, text=True, check=True)
+        # line_count = int(result.stdout.split()[0])
+        line_count = 10000
         _cached_line_count[corpus_file] = line_count
     else:
         line_count = _cached_line_count[corpus_file]
