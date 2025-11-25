@@ -6,8 +6,34 @@ import pickle
 import os
 import json
 import random
+import subprocess
 
 from .data_access import DataSource, create_data_source
+
+
+# Global model cache to avoid reloading
+_MODEL_CACHE = {}
+
+
+def _get_cached_model(device: str = None) -> SentenceTransformer:
+    """
+    Get a cached SentenceTransformer model to avoid reloading on every call.
+    
+    Args:
+        device: Device to use ('cpu', 'cuda', 'mps', or None for auto-detect)
+    
+    Returns:
+        Cached SentenceTransformer instance
+    """
+    if device is None:
+        device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+    
+    cache_key = f'all-MiniLM-L6-v2_{device}'
+    
+    if cache_key not in _MODEL_CACHE:
+        _MODEL_CACHE[cache_key] = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+    
+    return _MODEL_CACHE[cache_key]
 
 
 def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[DataSource] = None,
@@ -35,8 +61,8 @@ def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[Da
     if device is None:
         device = 'mps' if torch.backends.mps.is_available() else 'cpu'
 
-    # Encode query prompt
-    model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+    # Encode query prompt using cached model
+    model = _get_cached_model(device)
     query_embedding = model.encode([query_prompt])[0]
 
     # Calculate cosine similarities
@@ -144,9 +170,9 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     if device is None:
         device = 'mps' if torch.backends.mps.is_available() else 'cpu'
 
-    # Embed the new prompt
+    # Embed the new prompt using cached model
     print(f"Embedding new prompt on {device}...")
-    model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+    model = _get_cached_model(device)
     new_embedding = model.encode([new_prompt])[0]
 
     # Find nearest centroid
@@ -211,12 +237,16 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     return result
 
 
-def get_random_prompt(data_source: Optional[DataSource] = None) -> Dict[str, Any]:
+def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_count: dict = {}) -> Dict[str, Any]:
     """
-    Get a random prompt from the corpus.
+    Get a random prompt from the corpus using fast random access.
+    
+    This function uses subprocess `wc -l` to count lines once and caches the count,
+    then uses random access to fetch a single line without loading embeddings.
 
     Args:
         data_source: Data source to use (if None, uses JSONL data source)
+        _cached_line_count: Internal cache for line count (do not set manually)
 
     Returns:
         Dictionary containing a random prompt with its source and index
@@ -230,27 +260,33 @@ def get_random_prompt(data_source: Optional[DataSource] = None) -> Dict[str, Any
     if not os.path.exists(corpus_file):
         raise ValueError("No prompts found in the corpus")
 
-    selected_data = None
-    selected_index = 0
-    line_count = 0
-
+    # Cache line count using fast `wc -l` command
+    if corpus_file not in _cached_line_count:
+        result = subprocess.run(['wc', '-l', corpus_file], 
+                              capture_output=True, text=True, check=True)
+        line_count = int(result.stdout.split()[0])
+        _cached_line_count[corpus_file] = line_count
+    else:
+        line_count = _cached_line_count[corpus_file]
+    
+    if line_count == 0:
+        raise ValueError("No prompts found in the corpus")
+    
+    # Pick a random line index
+    target_index = random.randint(0, line_count - 1)
+    
+    # Read only that specific line
     with open(corpus_file, 'r') as f:
         for line_num, line in enumerate(f):
-            data = json.loads(line.strip())
-            # Reservoir sampling: keep this item with probability 1/(line_num+1)
-            if random.random() < 1.0 / (line_num + 1):
-                selected_data = data
-                selected_index = line_num
-            line_count = line_num + 1
-
-    if selected_data is None:
-        raise ValueError("No prompts found in the corpus")
-
+            if line_num == target_index:
+                selected_data = json.loads(line.strip())
+                break
+    
     # Build result
     result = {
         'prompt': selected_data['messages'][0]['content'],
         'source': selected_data['source'],
-        'index': selected_index
+        'index': target_index
     }
 
     # Add cluster info if available
