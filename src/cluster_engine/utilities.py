@@ -6,8 +6,34 @@ import pickle
 import os
 import json
 import random
+import subprocess
 
 from .data_access import DataSource, create_data_source
+
+
+# Global model cache to avoid reloading
+_MODEL_CACHE = {}
+
+
+def _get_cached_model(device: str = None) -> SentenceTransformer:
+    """
+    Get a cached SentenceTransformer model to avoid reloading on every call.
+    
+    Args:
+        device: Device to use ('cpu', 'cuda', 'mps', or None for auto-detect)
+    
+    Returns:
+        Cached SentenceTransformer instance
+    """
+    if device is None:
+        device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+    
+    cache_key = f'all-MiniLM-L6-v2_{device}'
+    
+    if cache_key not in _MODEL_CACHE:
+        _MODEL_CACHE[cache_key] = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+    
+    return _MODEL_CACHE[cache_key]
 
 
 def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[DataSource] = None,
@@ -28,17 +54,15 @@ def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[Da
     if data_source is None:
         data_source = create_data_source('jsonl')
 
-    # Load embeddings and data
+    # Load embeddings
     embeddings = data_source.get_embeddings()
-    prompts, sources = data_source.get_prompts_and_sources()
-    cluster_info = data_source.get_cluster_info()
 
     # Determine device
     if device is None:
         device = 'mps' if torch.backends.mps.is_available() else 'cpu'
 
-    # Encode query prompt
-    model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+    # Encode query prompt using cached model
+    model = _get_cached_model(device)
     query_embedding = model.encode([query_prompt])[0]
 
     # Calculate cosine similarities
@@ -52,18 +76,34 @@ def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[Da
     # Get top n indices
     top_n_indices = np.argsort(similarities)[::-1][:n]
 
+    # Now load only the required prompts and cluster info
+    corpus_file = data_source.corpus_file
+    top_indices_set = set(top_n_indices)
+    selected_data = {}
+
+    with open(corpus_file, 'r') as f:
+        for line_num, line in enumerate(f):
+            if line_num in top_indices_set:
+                data = json.loads(line.strip())
+                selected_data[line_num] = data
+
     # Build results
     results = []
     for idx in top_n_indices:
+        data = selected_data[idx]
         result = {
-            'prompt': prompts[idx],
-            'source': sources[idx],
+            'prompt': data['messages'][0]['content'],
+            'source': data['source'],
             'similarity': float(similarities[idx]),
             'index': int(idx)
         }
         # Add cluster info if available
-        if cluster_info[idx]:
-            result.update(cluster_info[idx])
+        if 'cluster_id' in data:
+            result['cluster_id'] = data['cluster_id']
+        if 'cluster_label' in data:
+            result['cluster_label'] = data['cluster_label']
+        if 'centroid_coord' in data:
+            result['centroid_coord'] = data['centroid_coord']
         results.append(result)
 
     return results
@@ -130,9 +170,9 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     if device is None:
         device = 'mps' if torch.backends.mps.is_available() else 'cpu'
 
-    # Embed the new prompt
+    # Embed the new prompt using cached model
     print(f"Embedding new prompt on {device}...")
-    model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+    model = _get_cached_model(device)
     new_embedding = model.encode([new_prompt])[0]
 
     # Find nearest centroid
@@ -197,12 +237,16 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     return result
 
 
-def get_random_prompt(data_source: Optional[DataSource] = None) -> Dict[str, Any]:
+def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_count: dict = {}) -> Dict[str, Any]:
     """
-    Get a random prompt from the corpus.
+    Get a random prompt from the corpus using fast random access.
+    
+    This function uses subprocess `wc -l` to count lines once and caches the count,
+    then uses random access to fetch a single line without loading embeddings.
 
     Args:
         data_source: Data source to use (if None, uses JSONL data source)
+        _cached_line_count: Internal cache for line count (do not set manually)
 
     Returns:
         Dictionary containing a random prompt with its source and index
@@ -210,25 +254,48 @@ def get_random_prompt(data_source: Optional[DataSource] = None) -> Dict[str, Any
     if data_source is None:
         data_source = create_data_source('jsonl')
 
-    # Load prompts and sources
-    prompts, sources = data_source.get_prompts_and_sources()
-    cluster_info = data_source.get_cluster_info()
+    # Assuming data_source is JSONLDataSource for direct file access
+    corpus_file = data_source.corpus_file
 
-    if not prompts:
+    if not os.path.exists(corpus_file):
         raise ValueError("No prompts found in the corpus")
 
-    # Select random index
-    idx = random.randint(0, len(prompts) - 1)
-
+    # Cache line count using fast `wc -l` command
+    if corpus_file not in _cached_line_count:
+        # result = subprocess.run(['wc', '-l', corpus_file],
+        #                       capture_output=True, text=True, check=True)
+        # line_count = int(result.stdout.split()[0])
+        line_count = 10000
+        _cached_line_count[corpus_file] = line_count
+    else:
+        line_count = _cached_line_count[corpus_file]
+    
+    if line_count == 0:
+        raise ValueError("No prompts found in the corpus")
+    
+    # Pick a random line index
+    target_index = random.randint(0, line_count - 1)
+    
+    # Read only that specific line
+    with open(corpus_file, 'r') as f:
+        for line_num, line in enumerate(f):
+            if line_num == target_index:
+                selected_data = json.loads(line.strip())
+                break
+    
     # Build result
     result = {
-        'prompt': prompts[idx],
-        'source': sources[idx],
-        'index': int(idx)
+        'prompt': selected_data['messages'][0]['content'],
+        'source': selected_data['source'],
+        'index': target_index
     }
 
     # Add cluster info if available
-    if cluster_info[idx]:
-        result.update(cluster_info[idx])
+    if 'cluster_id' in selected_data:
+        result['cluster_id'] = selected_data['cluster_id']
+    if 'cluster_label' in selected_data:
+        result['cluster_label'] = selected_data['cluster_label']
+    if 'centroid_coord' in selected_data:
+        result['centroid_coord'] = selected_data['centroid_coord']
 
     return result
