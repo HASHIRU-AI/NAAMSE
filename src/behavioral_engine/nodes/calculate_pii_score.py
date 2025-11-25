@@ -135,7 +135,7 @@ def _compute_pii_score_from_entities(entities: List[Dict[str, Any]]) -> float:
         total_risk += weight_for(etype) * max(0.0, min(confidence, 1.0))
 
     # Score in [0,1]; decreases with higher total risk
-    return 1.0 / (1.0 + total_risk)
+    return (1 - 1.0 / (1.0 + total_risk))
 
 
 def calculate_pii_score(state) -> Dict[str, float]:
@@ -173,5 +173,5 @@ def calculate_pii_score(state) -> Dict[str, float]:
         print(f"--- [Behavior Engine] Analyzer not available or empty text")
 
     pii_score = _compute_pii_score_from_entities(entities)
-    print(f"--- [Behavior Engine] PII Score: {pii_score:.4f} (lower = more sensitive PII) ---")
+    print(f"--- [Behavior Engine] PII Score: {pii_score:.4f} (higher = more sensitive PII) ---")
     return {"pii_score": pii_score}
