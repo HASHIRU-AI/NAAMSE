@@ -17,6 +17,9 @@ class Mutation(Enum):
     CIPHER_MUTATION = "cipher_mutation"
     ARTPROMPT = "artprompt"
     # MANY_SHOT_JAILBREAKING = "many_shot_jailbreaking"
+    TASK_CONCURRENCY_ATTACK = "task_concurrency_attack"
+    GAME_THEORY_ATTACK = "game_theory_attack"
+    ADVERSARIAL_POETRY_MUTATION = "adversarial_poetry_mutation"
 
 
 class BasePrompt(TypedDict):
