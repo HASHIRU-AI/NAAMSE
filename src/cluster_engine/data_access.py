@@ -40,6 +40,7 @@ class JSONLDataSource:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.corpus_file = os.path.join(script_dir, corpus_file)
         self.embeddings_file = os.path.join(script_dir, embeddings_file)
+        self._embeddings_cache = None  # Cache for embeddings to avoid repeated disk reads
 
     def get_prompts_and_sources(self) -> tuple[List[str], List[str]]:
         """Get all prompts and their sources from JSONL file."""
@@ -61,13 +62,19 @@ class JSONLDataSource:
         return prompts, sources
 
     def get_embeddings(self) -> np.ndarray:
-        """Get embeddings from numpy file."""
+        """Get embeddings from numpy file (with caching)."""
         import os
 
         if not os.path.exists(self.embeddings_file):
             raise FileNotFoundError(f"Embeddings file not found: {self.embeddings_file}")
 
-        return np.load(self.embeddings_file)
+        # Return cached embeddings if available
+        if self._embeddings_cache is not None:
+            return self._embeddings_cache
+        
+        # Load and cache embeddings
+        self._embeddings_cache = np.load(self.embeddings_file)
+        return self._embeddings_cache
 
     def get_cluster_info(self) -> List[Dict[str, Any]]:
         """Get cluster metadata for all prompts."""
@@ -94,8 +101,9 @@ class JSONLDataSource:
         return cluster_info
 
     def save_embeddings(self, embeddings: np.ndarray) -> None:
-        """Save embeddings to numpy file."""
+        """Save embeddings to numpy file and update cache."""
         np.save(self.embeddings_file, embeddings)
+        self._embeddings_cache = embeddings  # Update cache
 
     def add_prompt(self, prompt: str, source: str, cluster_info: Optional[Dict[str, Any]] = None) -> None:
         """Add a new prompt to the JSONL file."""

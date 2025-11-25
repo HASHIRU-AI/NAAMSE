@@ -13,6 +13,9 @@ class Mutation(Enum):
     CODE_EXEC = "code_exec"
     EMOJI = "emoji"
     MEMORY_PREPEND = "memory_prepend"
+    ECHO = "echo"
+    CIPHER_MUTATION = "cipher_mutation"
+    ARTPROMPT = "artprompt"
 
 
 class BasePrompt(TypedDict):
