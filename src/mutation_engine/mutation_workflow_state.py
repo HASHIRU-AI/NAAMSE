@@ -16,6 +16,7 @@ class Mutation(Enum):
     ECHO = "echo"
     CIPHER_MUTATION = "cipher_mutation"
     ARTPROMPT = "artprompt"
+    # MANY_SHOT_JAILBREAKING = "many_shot_jailbreaking"
 
 
 class BasePrompt(TypedDict):
