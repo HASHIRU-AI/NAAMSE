@@ -15,6 +15,7 @@ class Mutation(Enum):
     MEMORY_PREPEND = "memory_prepend"
     ECHO = "echo"
     CIPHER_MUTATION = "cipher_mutation"
+    ARTPROMPT = "artprompt"
 
 
 class BasePrompt(TypedDict):
