@@ -3,9 +3,15 @@ from src.behavioral_engine.moe_score_subgraph.more_score_state import MOESubgrap
 from src.behavioral_engine.moe_score_subgraph.nodes.create_llm_judges import create_judge_node
 from src.behavioral_engine.moe_score_subgraph.nodes.aggregate_score import aggregate_scores
 from src.behavioral_engine.moe_score_subgraph.llm_judges.gemini_judge import GeminiJudge
+from src.behavioral_engine.moe_score_subgraph.moe_score_judge_prompts import eval_type_to_prompt, EvalType
 main_graph_builder = StateGraph(MOESubgraphState)
 
-judges = [GeminiJudge(), GeminiJudge(model_name="gemini-2.5-flash")] 
+judges = []
+for eval_type, prompt in eval_type_to_prompt.items():
+    judge = GeminiJudge(judge_id=eval_type.value, eval_type=eval_type)
+    judge.set_system_prompt(prompt)
+    judges.append(judge)
+
 judge_node_names = []
 for judge in judges:
     node_name = f"MOEJudge_{judge.get_judge_id()}"
