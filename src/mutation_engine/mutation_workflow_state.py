@@ -20,6 +20,13 @@ class Mutation(Enum):
     TASK_CONCURRENCY_ATTACK = "task_concurrency_attack"
     GAME_THEORY_ATTACK = "game_theory_attack"
     ADVERSARIAL_POETRY_MUTATION = "adversarial_poetry_mutation"
+    PERSONA_ROLEPLAY_MUTATION = "persona_roleplay_mutation"
+    DUAL_RESPONSE_DIVIDER_MUTATION = "dual_response_divider_mutation"
+    CONTEXTUAL_FRAMING_MUTATION = "contextual_framing_mutation"
+    DARKCITE = "darkcite"
+    LANGUAGE_GAMES_MUTATION = "language_games_mutation"
+    SATA_ASSISTIVE_TASK_MUTATION = "sata_assistive_task_mutation"
+    SEMANTIC_STEGANOGRAPHY_MUTATION = "semantic_steganography_mutation"
 
 
 class BasePrompt(TypedDict):

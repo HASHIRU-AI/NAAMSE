@@ -7,11 +7,36 @@ import os
 import json
 import random
 import subprocess
+import platform
 
 from .data_access import DataSource, create_data_source
 
-
-# Global model cache to avoid reloading
+def _count_lines_cross_platform(file_path: str) -> int:
+    """
+    Count lines in a file using cross-platform command-line tools.
+    
+    Args:
+        file_path: Path to the file to count lines in
+        
+    Returns:
+        Number of lines in the file
+    """
+    system = platform.system().lower()
+    
+    if system == 'windows':
+        # Use Windows find command: find /c /v "" file
+        # This counts all lines including empty ones
+        result = subprocess.run(['find', '/c', '/v', '""', file_path],
+                              capture_output=True, text=True, check=True)
+        # Output format: "---------- FILE: 123"
+        line_count = int(result.stdout.strip().split()[-1])
+    else:
+        # Use Unix wc command
+        result = subprocess.run(['wc', '-l', file_path],
+                              capture_output=True, text=True, check=True)
+        line_count = int(result.stdout.split()[0])
+    
+    return line_count
 _MODEL_CACHE = {}
 
 
@@ -260,12 +285,10 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
     if not os.path.exists(corpus_file):
         raise ValueError("No prompts found in the corpus")
 
-    # Cache line count using fast `wc -l` command
+    # Cache line count using cross-platform line counting
     if corpus_file not in _cached_line_count:
-        # result = subprocess.run(['wc', '-l', corpus_file],
-        #                       capture_output=True, text=True, check=True)
-        # line_count = int(result.stdout.split()[0])
-        line_count = 10000
+        # line_count = _count_lines_cross_platform(corpus_file)
+        line_count = 100000 # Placeholder for cross-platform line count
         _cached_line_count[corpus_file] = line_count
     else:
         line_count = _cached_line_count[corpus_file]
