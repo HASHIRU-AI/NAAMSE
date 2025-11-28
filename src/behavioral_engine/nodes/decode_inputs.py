@@ -5,30 +5,54 @@ import base64
 import urllib.parse
 import html
 import re
+from typing import Union, List, Dict, Any
+def extract_text_from_content(content: Union[str, List[Dict[str, Any]]]) -> str:
+    """
+    Extracts text from content block of OPENAI style conversation history.
+    """
+    if isinstance(content, str):
+        return content
+    
+    if not isinstance(content, list):
+        raise ValueError("Content must be a string or a list of content parts.")
+    
+    chunks: List[str] = []
+    for part in content:
+        if isinstance(part, dict):
+            if part.get("type") == "text" and part.get("text"):
+                chunks.append(str(part["text"]))
+            elif "text" in part and isinstance(part["text"], str):
+                chunks.append(str(part["text"]))
+        elif isinstance(part, str):
+            chunks.append(part)
+    
+    return " ".join(chunks)
+    
 def decode_inputs(state):
     """
     This function takes in the conversation history. It fixes the encoding errors and then decodes them. 
     """
-    # TODO: Implement decoding logic
     decoded_conversation_history = []
-    for message in state["conversation_history"]["messages"]: # Access the 'messages' list
+    for message in state["conversation_history"]["messages"]:
         role = message["role"]
         content = message["content"]
-        decoded_content = content
-        for _ in range(3):
-            encoding_type, new_content = detect_and_decode(decoded_content)
-            if encoding_type == 'none' or new_content == decoded_content:
-                break
-            decoded_content = new_content
+        text = extract_text_from_content(content)
         
-        fixed_content = ftfy.fix_text(decoded_content)
-        normalized_content = unicodedata.normalize("NFKC", fixed_content)
+        decoded_text = text
+        for _ in range(3):
+            encoding_type, new_content = detect_and_decode(decoded_text)
+            if encoding_type == 'none' or new_content == decoded_text:
+                break
+            decoded_text = new_content
+    
+        fixed_text = ftfy.fix_text(decoded_text)
+        normalized_content = unicodedata.normalize("NFKC", fixed_text)
         decoded_conversation_history.append({"role": role, "content": normalized_content})
 
     print(f"--- [Behavior Engine] Decoding Inputs ---")
     print(f"Decoded Conversation History: {decoded_conversation_history}")
     return {
-        "decoded_conversation_history": decoded_conversation_history
+        "decoded_conversation_history": {"messages": decoded_conversation_history}
     }
     
 

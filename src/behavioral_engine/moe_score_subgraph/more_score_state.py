@@ -21,7 +21,7 @@ class JudgeResult(BaseModel):
 # Subgraph State
 class MOESubgraphState(TypedDict):
     """State for MOE evaluation subgraph"""
-    conversation_history: ConversationHistory
+    sanitized_conversation_history: ConversationHistory
     judge_results: Annotated[List[JudgeResult], operator.add]  # Accumulate results from parallel judges
     aggregation_method: str
     moe_score: float

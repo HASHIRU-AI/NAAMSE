@@ -1,8 +1,8 @@
-from typing_extensions import List, Literal, TypedDict, Optional, Dict
+from typing_extensions import List, Literal, TypedDict, Optional, Dict, Any
 
 class ConversationHistory(TypedDict):
     """Structure for conversation history."""
-    messages: List[Dict[str, str]]
+    messages: List[Dict[str, Any]]
     
 class BehaviorEngineWorkflowState(TypedDict):
     """

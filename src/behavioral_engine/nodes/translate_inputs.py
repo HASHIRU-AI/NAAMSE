@@ -6,7 +6,7 @@ def translate_inputs(state):
     """
     translator = GoogleTranslator(source='auto', target='en')
     translated_conversation_history = []
-    for message in state["decoded_conversation_history"]:
+    for message in state["decoded_conversation_history"]["messages"]:
         role = message["role"]
         content = message["content"]
         
@@ -31,5 +31,5 @@ def translate_inputs(state):
     print(f"--- [Behavior Engine] Translating Inputs to English ---")
     print(f"Translated Conversation History: {translated_conversation_history}")
     return {
-        "translated_conversation_history": translated_conversation_history
+        "translated_conversation_history": {"messages": translated_conversation_history}
     }

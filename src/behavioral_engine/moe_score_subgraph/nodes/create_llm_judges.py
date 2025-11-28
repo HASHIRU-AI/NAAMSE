@@ -34,7 +34,7 @@ def create_judge_node(judge: LLMJudge):
         Node function that evaluates conversation using this judge
         Runs in parallel with other judges
         """
-        conversation_history = state["conversation_history"]
+        conversation_history = state["sanitized_conversation_history"]
         
         print(f"\n[{judge.get_name()}] Starting evaluation...")
         

@@ -142,10 +142,10 @@ def calculate_pii_score(state) -> Dict[str, float]:
     """
     Calculate a PII score for a conversation using Microsoft Presidio.
 
-    - Input: state with key `conversation_history` as OpenAI-style list of messages
+    - Input: state with key `sanitized_conversation_history` as OpenAI-style messages dict
     - Output: dict with `pii_score` in [0,1]; lower means more sensitive PII present
     """
-    conversation_history = state.get("conversation_history", [])
+    conversation_history = state.get("sanitized_conversation_history", {"messages": []})
     text = _extract_text_from_conversation(conversation_history['messages'])
 
     print(f"--- [Behavior Engine] Analyzing text: {text[:200]}..." if len(text) > 200 else f"--- [Behavior Engine] Analyzing text: {text}")
