@@ -1,182 +1,126 @@
-from typing_extensions import List, TypedDict, Optional
+from typing_extensions import List, TypedDict
 from langgraph.graph import StateGraph, START, END
 import asyncio
-import random
 
-# --- Import subgraphs and their states ---
-from src.mutation_engine.mutation_workflow_state import ScoredPrompt
-from src.agent.fuzzer_iteration_subgraph import graph as fuzzer_iteration_subgraph, FuzzerGraphState
+from src.mutation_engine.mutation_workflow_state import ScoredPrompt, BasePrompt
+from src.mutation_engine.single_mutation_workflow import single_mutation_graph
+from src.invoke_agent.invoke_agent_workflow import invoke_agent_graph
+from src.invoke_agent.invoke_agent_state import InvokeAgentWorkflowState
+from src.behavioral_engine.behavior_engine_workflow import behavior_engine_graph
+from src.behavioral_engine.behavior_engine_workflow_state import ConversationHistory
 
-
-# --- 1. Define Top-Level Fuzzer Loop State ---
 
 class FuzzerLoopState(TypedDict):
-    """
-    This is the state for the top-level fuzzer loop.
-    It manages the overall fuzzer configuration, iteration count, and collected prompts.
-    """
-    # Configuration for the top-level fuzzer loop (inputs to the overall graph)
-    iterations_limit: int  # Maximum number of iterations for the fuzzer loop
-    # Number of mutations to generate in each mutation engine run
+    iterations_limit: int
     mutations_per_iteration: int
-    # Minimum score for a prompt to be carried over to the next iteration
     score_threshold: float
-    a2a_agent_url: str  # URL for the A2A agent, passed to the invoke_and_score subgraph
-
-    # State variables for the fuzzer loop
+    a2a_agent_url: str
     current_iteration: int
-    # All prompts generated and scored across all iterations
-    all_fuzzer_prompts_with_scores: List[ScoredPrompt]
-
-    # Input for the current fuzzer iteration subgraph (selected high-scoring prompts or initial seeds)
     input_prompts_for_iteration: List[ScoredPrompt]
-
-    # Output from the current fuzzer iteration subgraph
+    all_fuzzer_prompts_with_scores: List[ScoredPrompt]
+    generated_mutations: List[BasePrompt]
+    conversation_histories: List[ConversationHistory]
     iteration_scored_mutations: List[ScoredPrompt]
 
 
-# --- 2. Define Top-Level Fuzzer Loop Nodes ---
-
 def initialize_fuzzer(state: FuzzerLoopState):
-    """
-    Initializes the fuzzer loop state, setting the current iteration to 0
-    and populating initial prompts (if not already provided).
-    """
-    print("--- TOP-LEVEL FUZZER: Initializing Fuzzer Loop ---")
-
-    initial_prompts = state.get("input_prompts_for_iteration")
-    if not initial_prompts:
-        # If no initial prompts are given, create a single dummy one to start
-        initial_prompts = [{"prompt": ["initial_seed_prompt"], "score": 0.0}]
-        print(f"--- TOP-LEVEL FUZZER: Generated 1 initial seed prompt. ---")
-    else:
-        print(
-            f"--- TOP-LEVEL FUZZER: Using {len(initial_prompts)} provided initial prompts. ---")
-
+    print("--- Initializing Fuzzer ---")
+    initial_prompts = state.get("input_prompts_for_iteration") or [{"prompt": ["initial_seed_prompt"], "score": 0.0}]
     return {
-        "iterations_limit": state["iterations_limit"],
-        "mutations_per_iteration": state["mutations_per_iteration"],
-        "score_threshold": state["score_threshold"],
-        "a2a_agent_url": state["a2a_agent_url"],
         "current_iteration": 0,
         "all_fuzzer_prompts_with_scores": [],
         "input_prompts_for_iteration": initial_prompts
     }
 
 
-async def run_fuzzer_iteration(state: FuzzerLoopState):
-    """
-    Invokes the fuzzer_iteration_subgraph with the current iteration's inputs.
-    """
-    print(
-        f"--- TOP-LEVEL FUZZER: Running Iteration {state['current_iteration']} ---")
+async def generate_mutations(state: FuzzerLoopState):
+    print(f"--- Iteration {state['current_iteration']}: Generating {state['mutations_per_iteration']} mutations in parallel ---")
+    tasks = [
+        single_mutation_graph.ainvoke({"input_prompts": state["input_prompts_for_iteration"]})
+        for _ in range(state["mutations_per_iteration"])
+    ]
+    results = await asyncio.gather(*tasks)
+    all_mutations = [m for r in results for m in r["final_generated_prompts"]]
+    return {"generated_mutations": all_mutations}
 
-    subgraph_input: FuzzerGraphState = {
-        "input_prompts": state["input_prompts_for_iteration"],
-        "n_to_generate": state["mutations_per_iteration"],
-        "a2a_agent_url": state["a2a_agent_url"]
-    }
 
-    subgraph_output = await fuzzer_iteration_subgraph.ainvoke(subgraph_input)
+async def invoke_agents_parallel(state: FuzzerLoopState):
+    print(f"--- Iteration {state['current_iteration']}: Invoking agents in parallel ---")
+    tasks = [
+        invoke_agent_graph.ainvoke(InvokeAgentWorkflowState(
+            prompt=prompt,
+            a2a_agent_url=state["a2a_agent_url"]
+        ))
+        for prompt in state["generated_mutations"]
+    ]
+    results = await asyncio.gather(*tasks)
+    return {"conversation_histories": [r.get("conversation_history") for r in results]}
 
-    return {
-        "iteration_scored_mutations": subgraph_output.get("scored_mutations", [])
-    }
+
+async def score_outputs_parallel(state: FuzzerLoopState):
+    print(f"--- Iteration {state['current_iteration']}: Scoring outputs in parallel ---")
+    tasks = [
+        behavior_engine_graph.ainvoke({"conversation_history": history})
+        for history in state["conversation_histories"]
+    ]
+    results = await asyncio.gather(*tasks)
+    scores = [r.get("final_score", 0.0) for r in results]
+    
+    scored_mutations = [
+        {"prompt": state["generated_mutations"][i]["prompt"], "score": scores[i]}
+        for i in range(len(scores))
+    ]
+    return {"iteration_scored_mutations": scored_mutations}
 
 
 def process_iteration_results(state: FuzzerLoopState):
-    """
-    Collects the scored mutations from the current iteration, adds them to the
-    overall list, and selects high-scoring prompts for the next iteration.
-    """
-    print(
-        f"--- TOP-LEVEL FUZZER: Processing results for Iteration {state['current_iteration']} ---")
-
-    current_all_prompts = state.get("all_fuzzer_prompts_with_scores", [])
-    iteration_scored_mutations = state["iteration_scored_mutations"]
-
-    # Add new mutations to the overall list
-    current_all_prompts.extend(iteration_scored_mutations)
-
-    # Filter prompts based on score threshold for the next iteration
-    next_input_prompts = [
-        prompt for prompt in current_all_prompts
-        if prompt["score"] >= state["score_threshold"]
-    ]
-
-    # Remove duplicates if any (based on prompt content)
-    unique_prompts = {}
-    for p in next_input_prompts:
-        prompt_key = tuple(p["prompt"])  # Use tuple for list as dict key
-        unique_prompts[prompt_key] = p
-    next_input_prompts = list(unique_prompts.values())
-
-    print(
-        f"--- TOP-LEVEL FUZZER: Selected {len(next_input_prompts)} prompts (>= score threshold) for next iteration. ---")
-
+    print(f"--- Iteration {state['current_iteration']}: Processing results ---")
+    all_prompts = state["all_fuzzer_prompts_with_scores"] + state["iteration_scored_mutations"]
+    
+    next_prompts = [p for p in all_prompts if p["score"] >= state["score_threshold"]]
+    unique = {tuple(p["prompt"]): p for p in next_prompts}
+    
     return {
         "current_iteration": state["current_iteration"] + 1,
-        "all_fuzzer_prompts_with_scores": current_all_prompts,
-        "input_prompts_for_iteration": next_input_prompts
+        "all_fuzzer_prompts_with_scores": all_prompts,
+        "input_prompts_for_iteration": list(unique.values())
     }
 
 
 def should_continue_fuzzing(state: FuzzerLoopState):
-    """
-    Decides whether the fuzzer loop should continue or terminate.
-    Continues if the iteration limit is not reached and there are prompts to fuzz.
-    """
-    print(
-        f"--- TOP-LEVEL FUZZER: Checking loop condition (Iteration {state['current_iteration']}/{state['iterations_limit']}) ---")
-
     if state["current_iteration"] < state["iterations_limit"] and state["input_prompts_for_iteration"]:
-        print("--- TOP-LEVEL FUZZER: Continuing loop ---")
         return "continue"
-    else:
-        print("--- TOP-LEVEL FUZZER: Ending loop ---")
-        return "end"
+    return "end"
 
 
-# --- 3. Build the Top-Level Fuzzer Graph ---
-
-print("--- Building Top-Level Fuzzer Graph ---")
 fuzzer_loop_builder = StateGraph(FuzzerLoopState)
 
-# Add the nodes
 fuzzer_loop_builder.add_node("initialize_fuzzer", initialize_fuzzer)
-fuzzer_loop_builder.add_node("run_fuzzer_iteration", run_fuzzer_iteration)
-fuzzer_loop_builder.add_node(
-    "process_iteration_results", process_iteration_results)
-
-# --- 4. Wire the Top-Level Fuzzer Graph Edges ---
+fuzzer_loop_builder.add_node("generate_mutations", generate_mutations)
+fuzzer_loop_builder.add_node("invoke_agents_parallel", invoke_agents_parallel)
+fuzzer_loop_builder.add_node("score_outputs_parallel", score_outputs_parallel)
+fuzzer_loop_builder.add_node("process_iteration_results", process_iteration_results)
 
 fuzzer_loop_builder.add_edge(START, "initialize_fuzzer")
-fuzzer_loop_builder.add_edge("initialize_fuzzer", "run_fuzzer_iteration")
-fuzzer_loop_builder.add_edge(
-    "run_fuzzer_iteration", "process_iteration_results")
+fuzzer_loop_builder.add_edge("initialize_fuzzer", "generate_mutations")
+fuzzer_loop_builder.add_edge("generate_mutations", "invoke_agents_parallel")
+fuzzer_loop_builder.add_edge("invoke_agents_parallel", "score_outputs_parallel")
+fuzzer_loop_builder.add_edge("score_outputs_parallel", "process_iteration_results")
 
-# Conditional edge for the loop
 fuzzer_loop_builder.add_conditional_edges(
     "process_iteration_results",
     should_continue_fuzzing,
-    {"continue": "run_fuzzer_iteration", "end": END}
+    {"continue": "generate_mutations", "end": END}
 )
 
-# --- 5. Compile the Top-Level Fuzzer Graph ---
 graph = fuzzer_loop_builder.compile()
 
-print("--- Top-Level Fuzzer Graph Compiled Successfully ---")
 
-
-# --- Test block (to run this file) ---
 if __name__ == "__main__":
     async def main_test():
-        print("\n--- [TEST RUN] Invoking graph.py (Top-Level Fuzzer) ---")
-
-        # This is the input to the top-level fuzzer graph
         initial_input = {
-            "iterations_limit": 3,
-            "mutations_per_iteration": 2,
+            "iterations_limit": 2,
+            "mutations_per_iteration": 3,
             "score_threshold": 50,
             "a2a_agent_url": "http://localhost:5000",
             "input_prompts_for_iteration": [
@@ -188,13 +132,8 @@ if __name__ == "__main__":
                 }
             ]
         }
-
         final_state = await graph.ainvoke(initial_input)
-
-        print("\n--- [TEST RUN] Top-Level Fuzzer Graph Run Complete ---")
-        print("\nFinal State:")
-        print(final_state)
-        print("\nAll Fuzzer Prompts with Scores:")
-        print(final_state.get("all_fuzzer_prompts_with_scores"))
+        print(f"\nCompleted {final_state['current_iteration']} iterations")
+        print(f"Total prompts: {len(final_state['all_fuzzer_prompts_with_scores'])}")
 
     asyncio.run(main_test())
