@@ -16,7 +16,7 @@ class GeminiJudge(LLMJudge):
     
     def get_model(self):
         import os
-        api_key = os.getenv("BEHAVIORAL_ENGINE_API_KEY")
+        api_key = os.getenv("BEHAVIORAL_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
         return ChatGoogleGenerativeAI(
             model=self.model_name,
             temperature=self.temperature,

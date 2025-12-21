@@ -5,7 +5,7 @@ import os
 
 dotenv.load_dotenv()
 
-api_key = os.getenv("INVOKE_AGENT_API_KEY")
+api_key = os.getenv("INVOKE_AGENT_API_KEY") or os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=api_key)
 
 

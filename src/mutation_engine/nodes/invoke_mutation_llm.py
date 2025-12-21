@@ -48,7 +48,7 @@ def get_or_create_agent(tools: list):
 
     if tool_names not in _agent_cache:
         import os
-        api_key = os.getenv("MUTATION_ENGINE_API_KEY")
+        api_key = os.getenv("MUTATION_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
         model = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
             google_api_key=api_key,
