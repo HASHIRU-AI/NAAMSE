@@ -47,7 +47,12 @@ def get_or_create_agent(tools: list):
         sorted([tool.name if hasattr(tool, 'name') else str(tool) for tool in tools]))
 
     if tool_names not in _agent_cache:
-        model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", safety_settings={
+        import os
+        api_key = os.getenv("MUTATION_ENGINE_API_KEY")
+        model = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            google_api_key=api_key,
+            safety_settings={
             HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_DEROGATORY: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_TOXICITY: HarmBlockThreshold.BLOCK_NONE,
