@@ -37,6 +37,9 @@ dependencies = [
     "google-genai>=1.52.0",
     "art>=6.0",
     "agentbeats>=0.1.1",
+    "langchain-huggingface>=1.0.1",
+    "torchvision>=0.24.1",
+    "torchaudio>=2.9.1",
 ]
 
 
