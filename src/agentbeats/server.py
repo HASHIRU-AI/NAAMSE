@@ -1,6 +1,10 @@
 """
 NAAMSE Green Agent Server - Entry point to run the agent.
 """
+# Load environment variables FIRST, before any other imports
+from dotenv import load_dotenv
+load_dotenv()
+
 import click
 from a2a.server.apps import A2AStarletteApplication
 from a2a.server.request_handlers import DefaultRequestHandler
