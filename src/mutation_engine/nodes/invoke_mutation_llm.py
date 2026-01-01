@@ -178,7 +178,14 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
     mutation = Mutation(state['mutation_type'])
     output: BasePrompt = invoke_llm(
         state['prompt_to_mutate'], mutation)
-    result = {"mutated_prompt": MutatedPrompt(
-        prompt=output['prompt'], mutation_type=mutation)}
+    
+    mutated = MutatedPrompt(
+        prompt=output['prompt'], mutation_type=mutation)
+    
+    # Preserve cluster_info from the original prompt
+    if 'cluster_info' in state['prompt_to_mutate']:
+        mutated['cluster_info'] = state['prompt_to_mutate']['cluster_info']
+    
+    result = {"mutated_prompt": mutated}
     print(f"  [DEBUG] Returning result: {result}")
     return result

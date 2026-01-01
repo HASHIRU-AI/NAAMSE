@@ -29,9 +29,15 @@ class Mutation(Enum):
     SEMANTIC_STEGANOGRAPHY_MUTATION = "semantic_steganography_mutation"
 
 
-class BasePrompt(TypedDict):
-    """Base prompt structure."""
+class ClusterInfo(TypedDict, total=False):
+    """cluster information from the cluster engine."""
+    cluster_label: str
+
+
+class BasePrompt(TypedDict, total=False):
+    """Base prompt structure with cluster info."""
     prompt: List[str]
+    cluster_info: ClusterInfo
 
 
 class ScoredPrompt(BasePrompt):
