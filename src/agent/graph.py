@@ -66,10 +66,18 @@ async def score_outputs_parallel(state: FuzzerLoopState):
     results = await asyncio.gather(*tasks)
     scores = [r.get("final_score", 0.0) for r in results]
     
-    scored_mutations = [
-        {"prompt": state["generated_mutations"][i]["prompt"], "score": scores[i]}
-        for i in range(len(scores))
-    ]
+    scored_mutations = []
+    for i in range(len(scores)):
+        mutation = state["generated_mutations"][i]
+        scored_mutation = {
+            "prompt": mutation["prompt"],
+            "score": scores[i]
+        }
+        # Preserve cluster info if available from the mutation
+        if "cluster_info" in mutation:
+            scored_mutation["cluster_info"] = mutation["cluster_info"]
+        scored_mutations.append(scored_mutation)
+    
     return {"iteration_scored_mutations": scored_mutations}
 
 
