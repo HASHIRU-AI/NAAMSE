@@ -10,7 +10,7 @@ from src.invoke_agent.invoke_agent_workflow import invoke_agent_graph
 from src.invoke_agent.invoke_agent_state import InvokeAgentWorkflowState
 from src.behavioral_engine.behavior_engine_workflow import behavior_engine_graph
 from src.behavioral_engine.behavior_engine_workflow_state import ConversationHistory
-
+from src.cluster_engine.utilities import add_prompt_to_clusters
 
 class FuzzerLoopState(TypedDict):
     iterations_limit: int
@@ -89,6 +89,14 @@ def process_iteration_results(state: FuzzerLoopState):
     
     next_prompts = [p for p in all_prompts if p["score"] >= state["score_threshold"]]
     unique = {tuple(p["prompt"]): p for p in next_prompts}
+    
+    # Add unique prompts that are over the threshold back to the cluster
+    print(f"--- Adding {len(unique)} unique high-scoring prompts back to clusters ---")
+    for p in unique.values():
+        print(f"Adding prompt with score {p['score']}: {p['prompt']}")
+        add_prompt_to_clusters(
+            new_prompt= p["prompt"][0]
+        )
     
     return {
         "current_iteration": state["current_iteration"] + 1,
