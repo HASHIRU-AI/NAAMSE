@@ -169,3 +169,5 @@ uv.lock
 
 embeddings.npy
 jailbreak_corpus.jsonl
+
+.DS_Store
