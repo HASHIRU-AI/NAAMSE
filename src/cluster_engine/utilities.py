@@ -322,3 +322,50 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
         result['centroid_coord'] = selected_data['centroid_coord']
 
     return result
+
+def get_cluster_info_for_prompt(prompt: str, data_source: Optional[DataSource] = None,
+                               device: str = None) -> Optional[Dict[str, str]]:
+    """
+    Find the nearest prompt to the given prompt, get its cluster_id, and return the corresponding 
+    cluster information (label and description) from the lookup table.
+
+    Args:
+        prompt: The input prompt to find the nearest match for
+        data_source: Data source to use (if None, creates JSONL data source)
+        device: Device to use for encoding
+
+    Returns:
+        Dictionary with 'label' and 'description' if found, None otherwise
+    """
+    # Find the nearest prompt
+    nearest = find_nearest_prompts(prompt, n=1, data_source=data_source, device=device)
+    if not nearest:
+        return None
+    
+    nearest_data = nearest[0]
+    cluster_id = nearest_data.get('cluster_id')
+    if not cluster_id:
+        return None
+    
+    # Load lookup table
+    lookup_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cluster_lookup_table.json')
+    if not os.path.exists(lookup_file):
+        return None
+    
+    with open(lookup_file, 'r') as f:
+        lookup_table = json.load(f)
+    
+    # Find the most specific match
+    cluster_info = None
+    max_parts = 0
+    for key, val in lookup_table.items():
+        if cluster_id.startswith(key):
+            parts = len(key.split('/'))
+            if parts > max_parts:
+                max_parts = parts
+                if isinstance(val, dict):
+                    cluster_info = val
+                else:
+                    cluster_info = {'label': val, 'description': ''}
+    
+    return cluster_info
