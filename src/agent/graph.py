@@ -1,8 +1,10 @@
 from typing_extensions import List, TypedDict
+from typing import Optional, Dict, Any
 from langgraph.graph import StateGraph, START, END
 import asyncio
 
 from src.mutation_engine.mutation_workflow_state import ScoredPrompt, BasePrompt
+from src.report_consolidation.generate_report import generate_report_node
 from src.mutation_engine.single_mutation_workflow import single_mutation_graph
 from src.invoke_agent.invoke_agent_workflow import invoke_agent_graph
 from src.invoke_agent.invoke_agent_state import InvokeAgentWorkflowState
@@ -21,6 +23,7 @@ class FuzzerLoopState(TypedDict):
     generated_mutations: List[BasePrompt]
     conversation_histories: List[ConversationHistory]
     iteration_scored_mutations: List[ScoredPrompt]
+    report: Optional[Dict[str, Any]]
 
 
 def initialize_fuzzer(state: FuzzerLoopState):
@@ -66,10 +69,17 @@ async def score_outputs_parallel(state: FuzzerLoopState):
     results = await asyncio.gather(*tasks)
     scores = [r.get("final_score", 0.0) for r in results]
     
-    scored_mutations = [
-        {"prompt": state["generated_mutations"][i]["prompt"], "score": scores[i]}
-        for i in range(len(scores))
-    ]
+    scored_mutations = []
+    for i in range(len(scores)):
+        mutation = state["generated_mutations"][i]
+        conversation_history = state["conversation_histories"][i]
+        
+        # Directly update the mutation to become a ScoredPrompt
+        scored_mutation: ScoredPrompt = mutation
+        scored_mutation["score"] = scores[i]
+        scored_mutation["conversation_history"] = conversation_history
+        scored_mutations.append(scored_mutation)
+    
     return {"iteration_scored_mutations": scored_mutations}
 
 
@@ -100,6 +110,7 @@ fuzzer_loop_builder.add_node("generate_mutations", generate_mutations)
 fuzzer_loop_builder.add_node("invoke_agents_parallel", invoke_agents_parallel)
 fuzzer_loop_builder.add_node("score_outputs_parallel", score_outputs_parallel)
 fuzzer_loop_builder.add_node("process_iteration_results", process_iteration_results)
+fuzzer_loop_builder.add_node("generate_final_report", generate_report_node) # New node
 
 fuzzer_loop_builder.add_edge(START, "initialize_fuzzer")
 fuzzer_loop_builder.add_edge("initialize_fuzzer", "generate_mutations")
@@ -110,8 +121,9 @@ fuzzer_loop_builder.add_edge("score_outputs_parallel", "process_iteration_result
 fuzzer_loop_builder.add_conditional_edges(
     "process_iteration_results",
     should_continue_fuzzing,
-    {"continue": "generate_mutations", "end": END}
+    {"continue": "generate_mutations", "end": "generate_final_report"} # Changed END to generate_final_report
 )
+fuzzer_loop_builder.add_edge("generate_final_report", END) # New edge
 
 graph = fuzzer_loop_builder.compile()
 

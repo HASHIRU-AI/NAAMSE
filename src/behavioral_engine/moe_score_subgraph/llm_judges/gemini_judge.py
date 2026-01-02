@@ -15,9 +15,12 @@ class GeminiJudge(LLMJudge):
         self.eval_type = eval_type
     
     def get_model(self):
+        import os
+        api_key = os.getenv("BEHAVIORAL_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
         return ChatGoogleGenerativeAI(
             model=self.model_name,
             temperature=self.temperature,
+            google_api_key=api_key,
             safety_settings={
                 HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.OFF,
                 HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.OFF,

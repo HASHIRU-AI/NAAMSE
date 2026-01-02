@@ -1,9 +1,11 @@
 from typing_extensions import TypedDict
-from src.mutation_engine.mutation_workflow_state import BasePrompt, MutatedPrompt, Mutation, MutationWorkflowState
+from typing_extensions import TypedDict
+from src.mutation_engine.mutation_workflow_state import BasePrompt, Metadata, MutatedPrompt, Mutation, MutationWorkflowState
 from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
 from langchain.agents.middleware import ModelRequest, dynamic_prompt
+import json # Added for json.loads in invoke_llm_with_tools
 
 
 class Context(TypedDict):
@@ -47,7 +49,12 @@ def get_or_create_agent(tools: list):
         sorted([tool.name if hasattr(tool, 'name') else str(tool) for tool in tools]))
 
     if tool_names not in _agent_cache:
-        model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", safety_settings={
+        import os
+        api_key = os.getenv("MUTATION_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        model = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash",
+            google_api_key=api_key,
+            safety_settings={
             HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_DEROGATORY: HarmBlockThreshold.BLOCK_NONE,
             HarmCategory.HARM_CATEGORY_TOXICITY: HarmBlockThreshold.BLOCK_NONE,
@@ -173,7 +180,17 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
     mutation = Mutation(state['mutation_type'])
     output: BasePrompt = invoke_llm(
         state['prompt_to_mutate'], mutation)
-    result = {"mutated_prompt": MutatedPrompt(
-        prompt=output['prompt'], mutation_type=mutation)}
+    
+    # Create metadata for the mutated prompt
+    metadata: Metadata = {"mutation_type": mutation}
+    if 'metadata' in state['prompt_to_mutate'] and state['prompt_to_mutate']['metadata'] and 'cluster_info' in state['prompt_to_mutate']['metadata']:
+        metadata['cluster_info'] = state['prompt_to_mutate']['metadata']['cluster_info']
+
+    mutated = MutatedPrompt(
+        prompt=output['prompt'],
+        metadata=metadata
+    )
+        
+    result = {"mutated_prompt": mutated}
     print(f"  [DEBUG] Returning result: {result}")
     return result
