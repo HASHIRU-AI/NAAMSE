@@ -1,9 +1,11 @@
 from typing_extensions import TypedDict
-from src.mutation_engine.mutation_workflow_state import BasePrompt, MutatedPrompt, Mutation, MutationWorkflowState
+from typing_extensions import TypedDict
+from src.mutation_engine.mutation_workflow_state import BasePrompt, Metadata, MutatedPrompt, Mutation, MutationWorkflowState
 from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
 from langchain.agents.middleware import ModelRequest, dynamic_prompt
+import json # Added for json.loads in invoke_llm_with_tools
 
 
 class Context(TypedDict):
@@ -179,13 +181,16 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
     output: BasePrompt = invoke_llm(
         state['prompt_to_mutate'], mutation)
     
+    # Create metadata for the mutated prompt
+    metadata: Metadata = {"mutation_type": mutation}
+    if 'metadata' in state['prompt_to_mutate'] and state['prompt_to_mutate']['metadata'] and 'cluster_info' in state['prompt_to_mutate']['metadata']:
+        metadata['cluster_info'] = state['prompt_to_mutate']['metadata']['cluster_info']
+
     mutated = MutatedPrompt(
-        prompt=output['prompt'], mutation_type=mutation)
-    
-    # Preserve cluster_info from the original prompt
-    if 'cluster_info' in state['prompt_to_mutate']:
-        mutated['cluster_info'] = state['prompt_to_mutate']['cluster_info']
-    
+        prompt=output['prompt'],
+        metadata=metadata
+    )
+        
     result = {"mutated_prompt": mutated}
     print(f"  [DEBUG] Returning result: {result}")
     return result

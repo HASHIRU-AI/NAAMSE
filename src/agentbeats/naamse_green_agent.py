@@ -10,12 +10,13 @@ from a2a.utils import new_agent_text_message
 from src.agentbeats.models import NAAMSERequest
 from src.agentbeats.green_executor import GreenAgent
 from src.agent.graph import graph
+# from src.report_consolidation.generate_report import generate_report # No longer needed, as logic is in graph
 
 
 class NAAMSEGreenAgent(GreenAgent):
     """
     NAAMSE Green Agent implementation.
-    
+
     Receives a NAAMSERequest, runs the fuzzer, returns result.
     """
 
@@ -23,10 +24,10 @@ class NAAMSEGreenAgent(GreenAgent):
         """Validate the incoming request."""
         if not str(request.target_url).startswith(("http://", "https://")):
             return False, f"Invalid target URL: {request.target_url}"
-        
+
         if request.iterations_limit < 1:
             return False, "iterations_limit must be at least 1"
-        
+
         return True, "Request is valid"
 
     async def run_eval(self, request: NAAMSERequest, updater: TaskUpdater) -> None:
@@ -59,72 +60,19 @@ class NAAMSEGreenAgent(GreenAgent):
         except Exception as e:
             await updater.update_status(
                 TaskState.working,
-                new_agent_text_message(f"Fuzzer error: {e}", context_id=updater.context_id)
+                new_agent_text_message(
+                    f"Fuzzer error: {e}", context_id=updater.context_id)
             )
             raise
 
-        # Extract results
-        all_prompts = final_state.get("all_fuzzer_prompts_with_scores", [])
-        
-        # Calculate summary statistics and cluster averages in one pass
-        total_score = 0
-        max_score = 0
-        high_score_count = 0
-        
-        # Track per-cluster: {cluster_label: {"sum": x, "count": y, "max": z}}
-        cluster_stats: dict[str, dict[str, float]] = {}
-        
-        for prompt in all_prompts:
-            score = prompt.get("score", 0)
-            total_score += score
-            max_score = max(max_score, score)
-            if score >= request.score_threshold:
-                high_score_count += 1
-            
-            # Get cluster label
-            cluster_info = prompt.get("cluster_info", {})
-            cluster_label = cluster_info.get("cluster_label")
-            
-            if cluster_label not in cluster_stats:
-                cluster_stats[cluster_label] = {"sum": 0, "count": 0, "max": 0}
-            
-            cluster_stats[cluster_label]["sum"] += score
-            cluster_stats[cluster_label]["count"] += 1
-            cluster_stats[cluster_label]["max"] = max(cluster_stats[cluster_label]["max"], score)
-        
-        avg_score = total_score / len(all_prompts) if all_prompts else 0
-        
-        # Build cluster report sorted by avg score descending
-        cluster_report = [
-            {
-                "cluster": label,
-                "count": int(stats["count"]),
-                "avg_score": round(stats["sum"] / stats["count"], 2),
-                "max_score": round(stats["max"], 2),
-            }
-            for label, stats in cluster_stats.items()
-        ]
-        cluster_report.sort(key=lambda x: -x["avg_score"])
+        report_result = final_state.get("report", {})
 
-        print(f"Fuzzer completed. Tested {len(all_prompts)} prompts.")
-        print(f"Max score: {max_score}, Avg score: {avg_score}, High scoring prompts: {high_score_count}")
-        print(f"Cluster breakdown: {len(cluster_report)} clusters")
-        
-        result = {
-            "total_prompts_tested": len(all_prompts),
-            "max_score": max_score,
-            "avg_score": round(avg_score, 2),
-            "high_score_count": high_score_count,
-            "cluster_report": cluster_report,
-            "all_prompts": all_prompts
-        }
-        
         # Pretty print for terminal readability
-        print(json.dumps(result, indent=2))
-        
+        print(json.dumps(report_result, indent=2))
+
         # Send final result
         await updater.update_status(
             TaskState.working,
-            new_agent_text_message(json.dumps(result, indent=2), context_id=updater.context_id)
+            new_agent_text_message(json.dumps(
+                report_result, indent=2), context_id=updater.context_id)
         )
-

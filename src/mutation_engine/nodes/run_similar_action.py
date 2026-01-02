@@ -1,5 +1,4 @@
-from src.mutation_engine.mutation_workflow_state import BasePrompt, ClusterInfo, MutationEngineState, ScoredPrompt
-
+from src.mutation_engine.mutation_workflow_state import BasePrompt, ClusterInfo, Metadata, Mutation, MutationEngineState, ScoredPrompt
 from src.cluster_engine.utilities import find_nearest_prompts
 
 
@@ -20,15 +19,17 @@ def run_similar_action(state: MutationEngineState) -> MutationEngineState:
     similar_text = nearest["prompt"]
 
     cluster_info: ClusterInfo = {}
+    if "cluster_id" in nearest:
+        cluster_info["cluster_id"] = nearest["cluster_id"]
     if "cluster_label" in nearest:
         cluster_info["cluster_label"] = nearest["cluster_label"]
-
-    result: BasePrompt = {"prompt": [similar_text]}
+    
+    metadata: Metadata = {"mutation_type": Mutation.SIMILAR}
     if cluster_info:
-        result["cluster_info"] = cluster_info
+        metadata["cluster_info"] = cluster_info
+
+    result: BasePrompt = {"prompt": [similar_text], "metadata": metadata}
 
     return {
         "newly_generated_prompt": result,
     }
-    # similar_prompt = BasePrompt(prompt=[f"similar_to_({selected_prompt['prompt'][0]})"])
-    # return {"newly_generated_prompt": similar_prompt}

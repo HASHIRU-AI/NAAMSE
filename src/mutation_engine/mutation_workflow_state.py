@@ -27,22 +27,32 @@ class Mutation(Enum):
     LANGUAGE_GAMES_MUTATION = "language_games_mutation"
     SATA_ASSISTIVE_TASK_MUTATION = "sata_assistive_task_mutation"
     SEMANTIC_STEGANOGRAPHY_MUTATION = "semantic_steganography_mutation"
+    EXPLORE = "explore"
+    SIMILAR = "similar"
 
 
 class ClusterInfo(TypedDict, total=False):
     """cluster information from the cluster engine."""
+    cluster_id: str
     cluster_label: str
 
 
-class BasePrompt(TypedDict, total=False):
-    """Base prompt structure with cluster info."""
-    prompt: List[str]
+class Metadata(TypedDict, total=False):
     cluster_info: ClusterInfo
+    mutation_type: 'Mutation'
 
+class BasePrompt(TypedDict, total=False):
+    """Base prompt structure with metadata."""
+    prompt: List[str]
+    metadata: Metadata
+
+
+from src.behavioral_engine.behavior_engine_workflow_state import ConversationHistory
 
 class ScoredPrompt(BasePrompt):
     """Prompt with associated score."""
     score: float
+    conversation_history: Optional[ConversationHistory] = None
 
 
 class MutatedPrompt(BasePrompt):

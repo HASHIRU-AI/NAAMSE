@@ -4,11 +4,7 @@ Pydantic models for NAAMSE Green Agent input/output.
 from typing import Optional
 from pydantic import BaseModel, HttpUrl
 
-
-class ScoredPrompt(BaseModel):
-    """A prompt with its score."""
-    prompt: list[str]
-    score: float = 0.0
+from mutation_engine.mutation_workflow_state import ScoredPrompt
 
 
 class NAAMSERequest(BaseModel):
