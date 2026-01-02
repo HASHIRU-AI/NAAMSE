@@ -4,7 +4,7 @@ Pydantic models for NAAMSE Green Agent input/output.
 from typing import Optional
 from pydantic import BaseModel, HttpUrl
 
-from mutation_engine.mutation_workflow_state import ScoredPrompt
+from src.mutation_engine.mutation_workflow_state import ScoredPrompt
 
 
 class NAAMSERequest(BaseModel):
