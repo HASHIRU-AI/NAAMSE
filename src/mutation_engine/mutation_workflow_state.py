@@ -27,6 +27,7 @@ class Mutation(Enum):
     LANGUAGE_GAMES_MUTATION = "language_games_mutation"
     SATA_ASSISTIVE_TASK_MUTATION = "sata_assistive_task_mutation"
     SEMANTIC_STEGANOGRAPHY_MUTATION = "semantic_steganography_mutation"
+    SYNONYM_MUTATION = "synonym_mutation"
     EXPLORE = "explore"
     SIMILAR = "similar"
 
