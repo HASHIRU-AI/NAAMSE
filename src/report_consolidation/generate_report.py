@@ -1,6 +1,8 @@
 import json
 from typing import Any, Dict, List
 
+from ..cluster_engine.utilities import get_cluster_info_for_prompt
+
 
 def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -16,8 +18,8 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
     max_score = 0
     high_score_count = 0
 
-    # Track per-cluster: {cluster_label: {"sum": x, "count": y, "max": z}}
-    cluster_stats: dict[str, dict[str, float]] = {}
+    # Track per-cluster: {cluster_label: {"sum": x, "count": y, "max": z, "description": ""}}
+    cluster_stats: dict[str, dict[str, Any]] = {}
 
     for prompt in all_prompts:
         score = prompt.get("score", 0)
@@ -30,14 +32,27 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
         metadata = prompt.get("metadata", {})
         cluster_info = metadata.get("cluster_info", {})
         cluster_label = cluster_info.get("cluster_label")
+        description = cluster_info.get("description", "")
 
-        if cluster_label not in cluster_stats:
-            cluster_stats[cluster_label] = {"sum": 0, "count": 0, "max": 0}
+        if not cluster_label:
+            # Try to get cluster info using the utility function
+            prompt_text = prompt.get("prompt", "")
+            if prompt_text:
+                fetched_info = get_cluster_info_for_prompt(prompt_text)
+                if fetched_info:
+                    cluster_label = fetched_info.get("label")
+                    description = fetched_info.get("description", "")
 
-        cluster_stats[cluster_label]["sum"] += score
-        cluster_stats[cluster_label]["count"] += 1
-        cluster_stats[cluster_label]["max"] = max(
-            cluster_stats[cluster_label]["max"], score)
+        if cluster_label:
+            if cluster_label not in cluster_stats:
+                cluster_stats[cluster_label] = {"sum": 0, "count": 0, "max": 0, "description": description}
+            elif not cluster_stats[cluster_label]["description"]:
+                cluster_stats[cluster_label]["description"] = description
+
+            cluster_stats[cluster_label]["sum"] += score
+            cluster_stats[cluster_label]["count"] += 1
+            cluster_stats[cluster_label]["max"] = max(
+                cluster_stats[cluster_label]["max"], score)
 
     avg_score = total_score / len(all_prompts) if all_prompts else 0
 
@@ -48,6 +63,7 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
             "count": int(stats["count"]),
             "avg_score": round(stats["sum"] / stats["count"], 2),
             "max_score": round(stats["max"], 2),
+            "description": stats["description"]
         }
         for label, stats in cluster_stats.items()
     ]
