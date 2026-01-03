@@ -2,6 +2,7 @@
 NAAMSE Green Agent - Evaluator agent that calls the NAAMSE LangGraph fuzzer.
 """
 import json
+from enum import Enum
 
 from a2a.server.tasks import TaskUpdater
 from a2a.types import TaskState
@@ -10,7 +11,14 @@ from a2a.utils import new_agent_text_message
 from src.agentbeats.models import NAAMSERequest
 from src.agentbeats.green_executor import GreenAgent
 from src.agent.graph import graph
-# from src.report_consolidation.generate_report import generate_report # No longer needed, as logic is in graph
+
+
+class EnumEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles Enum types."""
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return obj.value
+        return super().default(obj)
 
 
 class NAAMSEGreenAgent(GreenAgent):
@@ -68,11 +76,11 @@ class NAAMSEGreenAgent(GreenAgent):
         report_result = final_state.get("report", {})
 
         # Pretty print for terminal readability
-        print(json.dumps(report_result, indent=2))
+        print(json.dumps(report_result, indent=2, cls=EnumEncoder))
 
         # Send final result
         await updater.update_status(
             TaskState.working,
             new_agent_text_message(json.dumps(
-                report_result, indent=2), context_id=updater.context_id)
+                report_result, indent=2, cls=EnumEncoder), context_id=updater.context_id)
         )

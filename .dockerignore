@@ -1,0 +1,59 @@
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+dist/
+eggs/
+*.egg-info/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Misc
+.git/
+.gitignore
+*.md
+!README.md
+LICENSE
+Makefile
+
+# Local config files
+.env
+.env.local
+*.local
+
+# Docker (don't include Docker files in the image)
+Dockerfile*
+docker-compose*.yml
+docker_scripts/
+
+# Test and misc scripts
+misc/
+tests/
+util/
+prompt_examples/
+
+# Large dataset files (if not needed at runtime)
+prompt_tune_dataset.json
