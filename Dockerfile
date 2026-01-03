@@ -1,78 +1,51 @@
 # NAAMSE Green Agent Docker Image
 # ================================
-# This Dockerfile packages the NAAMSE fuzzer green agent for end-to-end deployment.
+# Multi-stage build using uv for fast dependency installation.
+# to build and run:
+# docker build -t naamse-green-agent:latest .
+#  docker run --rm --add-host host.docker.internal:host-gateway -p 8000:8000 -e GOOGLE_API_KEY="key" naamse-green-agent:latest
+# Test with green agent client:
+# python test_green_agent.py --target http://host.docker.internal:5000 --green-agent http://localhost:8000 --iterations 1 --mutations 1
 
-# Stage 1: Build stage
-FROM python:3.11-slim AS builder
+# Stage 1: Build the application
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+# Disable Python downloads - use the system interpreter across both images
+ENV UV_PYTHON_DOWNLOADS=0
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create working directory
 WORKDIR /app
 
-# Copy dependency files and source code
-COPY pyproject.toml ./
-COPY src/ ./src/
+# Install dependencies first (cached if pyproject.toml/uv.lock unchanged)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --locked --no-install-project --no-dev
 
-# Install dependencies
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install .
+# Copy only what's needed for the application
+COPY pyproject.toml uv.lock /app/
+COPY src/ /app/src/
 
-# Stage 2: Runtime stage
-FROM python:3.11-slim AS runtime
+# Install the project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    # Default port for the agent
-    PORT=8000
 
-# Install runtime dependencies (needed for some Python packages)
+# Stage 2: Runtime image without uv
+FROM python:3.11-slim-bookworm
+
+# Install runtime dependencies (libgomp1 needed for torch/numpy)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash appuser
+# Copy the application from the builder
+COPY --from=builder /app /app
 
-# Set working directory
-WORKDIR /app
+# Place executables in the environment at the front of the path
+# Set PYTHONPATH so Python can find the src module
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app"
 
-# Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-
-# Copy application source code
-COPY src/ ./src/
-COPY pyproject.toml ./
-
-# Download spaCy model (required for presidio-analyzer)
-RUN python -m spacy download en_core_web_lg
-
-# Change ownership to non-root user
-RUN chown -R appuser:appuser /app
-
-# Switch to non-root user
-USER appuser
-
-# Expose the default port
-EXPOSE 8000
-
-# Health check to verify the agent is running
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/.well-known/agent.json')" || exit 1
-
-# Entry point - run the NAAMSE green agent server
-# Use 0.0.0.0 to accept connections from outside the container
-ENTRYPOINT ["python", "-m", "src.agentbeats.server"]
-CMD ["--host", "0.0.0.0", "--port", "8000"]
+# Run the NAAMSE green agent server
+CMD ["python", "-m", "src.agentbeats.server", "--host", "0.0.0.0", "--port", "8000"]
