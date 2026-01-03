@@ -10,6 +10,14 @@ import numpy as np
 import torch
 from typing import Optional
 
+# Load .env file before reading environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # dotenv not available, rely on system environment variables
+    pass
+
 
 class Config:
     """Global configuration for the fuzzing framework."""
@@ -75,13 +83,13 @@ class Config:
         """
         Initialize configuration from environment variables.
         
-        Looks for RANDOM_SEED environment variable to set the seed.
+        Looks for NAAMSE_RANDOM_SEED environment variable to set the seed.
         
         Example:
-            $ export RANDOM_SEED=42
+            $ export NAAMSE_RANDOM_SEED=42
             $ python -m src.agent.graph
         """
-        seed_str = os.getenv("RANDOM_SEED")
+        seed_str = os.getenv("NAAMSE_RANDOM_SEED")
         if seed_str is not None:
             try:
                 seed = int(seed_str)

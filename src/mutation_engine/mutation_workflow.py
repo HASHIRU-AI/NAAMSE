@@ -2,6 +2,9 @@
 
 from langgraph.graph import StateGraph, START, END
 
+# Initialize config/seeding early
+from src.config import Config
+
 from src.mutation_engine.mutation_workflow_state import MutationEngineState, ScoredPrompt
 from src.mutation_engine.nodes.calculate_probabilities import calculate_probabilities
 from src.mutation_engine.nodes.select_prompt_by_probability import select_prompt_by_probability

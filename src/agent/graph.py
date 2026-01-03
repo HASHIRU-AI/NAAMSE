@@ -3,6 +3,9 @@ from typing import Optional, Dict, Any
 from langgraph.graph import StateGraph, START, END
 import asyncio
 
+# Initialize config/seeding early
+from src.config import Config
+
 from src.mutation_engine.mutation_workflow_state import ScoredPrompt, BasePrompt
 from src.report_consolidation.generate_report import generate_report_node
 from src.mutation_engine.single_mutation_workflow import single_mutation_graph
