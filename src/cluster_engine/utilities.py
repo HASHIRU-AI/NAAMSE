@@ -212,27 +212,16 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
 
     print(f"Nearest cluster: {nearest_cluster_id} (distance: {nearest_distance:.4f})")
 
-    # Load cluster labels and paths to get cluster metadata
-    cluster_labels = {}
-    cluster_paths = {}
+    # Get cluster label from existing prompts in the assigned cluster
+    cluster_path = nearest_cluster_id
+    cluster_label = f"Cluster_{nearest_cluster_id.replace('/', '_')}"
 
-    # Try to load from checkpoints directory (relative to script directory)
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    labels_file = os.path.join(script_dir, 'checkpoints', 'cluster_labels.json')
-    clusters_file = os.path.join(script_dir, 'checkpoints', 'final_clusters.pkl')
-
-    if os.path.exists(labels_file):
-        with open(labels_file, 'r') as f:
-            cluster_labels = {int(k): v for k, v in json.load(f).items()}
-
-    if os.path.exists(clusters_file):
-        with open(clusters_file, 'rb') as f:
-            final_clusters = pickle.load(f)
-        if nearest_cluster_id < len(final_clusters):
-            cluster_paths = {i: fc['path'] for i, fc in enumerate(final_clusters)}
-
-    cluster_label = cluster_labels.get(nearest_cluster_id, f"Cluster_{nearest_cluster_id}")
-    cluster_path = cluster_paths.get(nearest_cluster_id, f"cluster_{nearest_cluster_id}")
+    try:
+        cluster_prompts = data_source.get_prompts_by_cluster(nearest_cluster_id)
+        if cluster_prompts:
+            cluster_label = cluster_prompts[0].get('cluster_label', cluster_label)
+    except Exception as e:
+        print(f"Warning: Could not retrieve cluster label from data source: {e}")
 
     # Create cluster info for the new prompt
     cluster_info = {
@@ -252,8 +241,9 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     result = {
         'prompt': new_prompt,
         'source': source,
-        'assigned_cluster_id': cluster_path,
-        'assigned_cluster_label': cluster_label,
+        'cluster_id': cluster_path,
+        'cluster_label': cluster_label,
+        'centroid_coord': nearest_centroid.tolist(),
         'distance_to_centroid': float(nearest_distance),
         'embedding_index': len(existing_embeddings)
     }
