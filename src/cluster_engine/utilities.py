@@ -387,4 +387,24 @@ def get_cluster_description(cluster_id: str, lookup_file: str = 'cluster_lookup_
                 else:
                     cluster_info = {'label': val, 'description': ''}
     
+    # If no hierarchical match found, try centroid-based nearest neighbor
+    if cluster_info is None:
+        centroids_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'centroids.pkl')
+        if os.path.exists(centroids_file):
+            with open(centroids_file, 'rb') as f:
+                centroids = pickle.load(f)
+            if cluster_id in centroids:
+                target_centroid = np.array(centroids[cluster_id])
+                min_dist = float('inf')
+                closest_info = None
+                for key, val in lookup_table.items():
+                    if key in centroids:
+                        coord = np.array(centroids[key])
+                        dist = np.linalg.norm(target_centroid - coord)
+                        if dist < min_dist:
+                            min_dist = dist
+                            closest_info = val
+                if closest_info:
+                    cluster_info = closest_info
+    
     return cluster_info
