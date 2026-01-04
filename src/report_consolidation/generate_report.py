@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, List
 
-from ..cluster_engine.utilities import get_cluster_info_for_prompt, get_cluster_description
+from ..cluster_engine.utilities import get_cluster_id_for_prompt, get_human_readable_cluster_info
 
 
 def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -34,30 +34,29 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
         cluster_label = cluster_info.get("cluster_label")
         cluster_id = cluster_info.get("cluster_id")
         description = cluster_info.get("description", "default description")
-
-        if not cluster_label:
-            # Try to get cluster info using the utility function
+        
+        # no cluster_id means we find it via getting cluster info
+        if not cluster_id:
             prompt_text = prompt.get("prompt", [])
             if prompt_text:
-                fetched_info = get_cluster_info_for_prompt(prompt_text)
-                if fetched_info:
-                    cluster_label = fetched_info.get("label")
-                    description = fetched_info.get("description", "")
+                nearest_cluster_id = get_cluster_id_for_prompt(prompt_text)
+                cluster_id = nearest_cluster_id if nearest_cluster_id else cluster_id
+                    
+        cluster_info_with_description = get_human_readable_cluster_info(cluster_id=cluster_id)
 
-        if cluster_label:
-            cluster_info_with_description = get_cluster_description(cluster_id=cluster_id)
-            if cluster_info_with_description:
-                cluster_label = cluster_info_with_description.get("label", cluster_label)
-                description = cluster_info_with_description.get("description", description)
-            if cluster_label not in cluster_stats:
+        if cluster_info_with_description:
+            cluster_label = cluster_info_with_description.get("label", cluster_label)
+            description = cluster_info_with_description.get("description", description)
+        if cluster_label not in cluster_stats:
                 cluster_stats[cluster_label] = {"sum": 0, "count": 0, "max": 0, "description": description}
-            elif not cluster_stats[cluster_label]["description"]:
-                cluster_stats[cluster_label]["description"] = description
+        elif not cluster_stats[cluster_label]["description"]:
+            cluster_stats[cluster_label]["description"] = description
 
-            cluster_stats[cluster_label]["sum"] += score
-            cluster_stats[cluster_label]["count"] += 1
-            cluster_stats[cluster_label]["max"] = max(
-                cluster_stats[cluster_label]["max"], score)
+        cluster_stats[cluster_label]["sum"] += score
+        cluster_stats[cluster_label]["count"] += 1
+        cluster_stats[cluster_label]["max"] = max(
+            cluster_stats[cluster_label]["max"], score)
+        
 
     avg_score = total_score / len(all_prompts) if all_prompts else 0
 

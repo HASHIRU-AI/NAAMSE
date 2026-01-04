@@ -313,11 +313,10 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
 
     return result
 
-def get_cluster_info_for_prompt(prompt: List[str], data_source: Optional[DataSource] = None,
-                               device: str = None) -> Optional[Dict[str, str]]:
+def get_cluster_id_for_prompt(prompt: List[str], data_source: Optional[DataSource] = None,
+                               device: str = None) -> Optional[str]:
     """
-    Find the nearest prompt to the given prompt, get its cluster_id, and return the corresponding 
-    cluster information (label and description) from the lookup table.
+    Find the nearest prompt to the given prompt, get its cluster_id, and return that cluster_id.
 
     Args:
         prompt: The input prompt to find the nearest match for
@@ -325,7 +324,7 @@ def get_cluster_info_for_prompt(prompt: List[str], data_source: Optional[DataSou
         device: Device to use for encoding
 
     Returns:
-        Dictionary with 'label' and 'description' if found, None otherwise
+        Cluster id of the nearest prompt, or None if not found
     """
     # Find the nearest prompt
     prompt_text = prompt[0] if len(prompt) > 0 else ""
@@ -338,14 +337,11 @@ def get_cluster_info_for_prompt(prompt: List[str], data_source: Optional[DataSou
     if not cluster_id:
         return None
     
-    # Get cluster description from lookup table
-    cluster_info = get_cluster_description(cluster_id)
-    
-    return cluster_info
+    return cluster_id
 
-def get_cluster_description(cluster_id: str, lookup_file: str = 'cluster_lookup_table.json') -> Optional[Dict[str, str]]:
+def get_human_readable_cluster_info(cluster_id: str, lookup_file: str = 'cluster_lookup_table.json') -> Optional[Dict[str, str]]:
     """
-    Get the description for a given cluster_id from the lookup table.
+    Given a cluster_id, look up its human-readable label and description from a lookup table.
 
     Args:
         cluster_id: The cluster_id to look up
