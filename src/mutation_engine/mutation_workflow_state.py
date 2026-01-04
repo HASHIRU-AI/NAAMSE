@@ -66,6 +66,7 @@ class MutationWorkflowState(TypedDict):
     prompt_to_mutate: BasePrompt
     mutated_prompt: BasePrompt | MutatedPrompt
     mutation_type: Mutation
+    task_seed: Optional[int]  # Seed for deterministic mutation selection
 
 
 class MutationEngineState(TypedDict):
@@ -73,6 +74,7 @@ class MutationEngineState(TypedDict):
     # Inputs
     input_prompts: List[ScoredPrompt]
     n_to_generate: int
+    task_seed: Optional[int]  # Seed for this specific parallel task
 
     # Internal state
     prompt_probabilities: List[float]

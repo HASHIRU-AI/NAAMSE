@@ -8,9 +8,13 @@ from src.mutation_engine.mutation_workflow_state import MutationWorkflowState
 
 def select_mutation_type(state: MutationWorkflowState) -> MutationWorkflowState:
     """1. Selects a random mutation type."""
-    # select from the Mutation enum
-    selected_type = random.choice(list(Mutation)).value
-    print(f"  [Mutation Subgraph] Selected mutation: {selected_type}")
+    # Use task-specific seed if provided (for deterministic parallel execution)
+    task_seed = state.get("task_seed")
+    rng = random.Random(task_seed) if task_seed is not None else random
+
+    selected_type = rng.choice(list(Mutation)).value
+    print(f"  [Mutation Subgraph] Selected mutation: {selected_type} (task_seed={task_seed})")
+    
     return {"mutation_type": selected_type}
 
 # Build and compile the subgraph
@@ -32,7 +36,8 @@ def run_mutation_action_subgraph(state: MutationEngineState) -> MutationEngineSt
     print("--- [Mutation Engine] Running Action: MUTATE ---")
     prompt_to_mutate: BasePrompt = state['selected_prompt']
 
-    subgraph_output: MutationWorkflowState = mutation_action_subgraph.invoke(
-        {"prompt_to_mutate": prompt_to_mutate}
-    )
+    subgraph_output: MutationWorkflowState = mutation_action_subgraph.invoke({
+        "prompt_to_mutate": prompt_to_mutate,
+        "task_seed": state.get("task_seed")  # Pass seed for deterministic selection
+    })
     return {"newly_generated_prompt": subgraph_output["mutated_prompt"]}

@@ -101,4 +101,4 @@ class Config:
 
 
 # Auto-initialize from environment on import
-Config.initialize_from_env()
+# Config.initialize_from_env()

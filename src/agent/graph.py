@@ -14,6 +14,9 @@ from src.invoke_agent.invoke_agent_state import InvokeAgentWorkflowState
 from src.behavioral_engine.behavior_engine_workflow import behavior_engine_graph
 from src.behavioral_engine.behavior_engine_workflow_state import ConversationHistory
 from src.cluster_engine.utilities import add_prompt_to_clusters
+import torch
+import sys
+import random
 
 class FuzzerLoopState(TypedDict):
     iterations_limit: int
@@ -30,6 +33,7 @@ class FuzzerLoopState(TypedDict):
 
 
 def initialize_fuzzer(state: FuzzerLoopState):
+    Config.initialize_from_env()
     print("--- Initializing Fuzzer ---")
     initial_prompts = state.get("input_prompts_for_iteration") or [{"prompt": ["initial_seed_prompt"], "score": 0.0}]
     return {
@@ -40,10 +44,19 @@ def initialize_fuzzer(state: FuzzerLoopState):
 
 
 async def generate_mutations(state: FuzzerLoopState):
-    print(f"--- Iteration {state['current_iteration']}: Generating {state['mutations_per_iteration']} mutations in parallel ---")
+    n = state["mutations_per_iteration"]
+    print(f"--- Iteration {state['current_iteration']}: Generating {n} mutations in parallel ---")
+    
+    # Pre-generate deterministic seeds for each parallel task
+    # This ensures mutation type selection is reproducible across runs
+    task_seeds = [random.randrange(sys.maxsize) for _ in range(n)]
+    
     tasks = [
-        single_mutation_graph.ainvoke({"input_prompts": state["input_prompts_for_iteration"]})
-        for _ in range(state["mutations_per_iteration"])
+        single_mutation_graph.ainvoke({
+            "input_prompts": state["input_prompts_for_iteration"],
+            "task_seed": task_seeds[i]
+        })
+        for i in range(n)
     ]
     results = await asyncio.gather(*tasks)
     all_mutations = [m for r in results for m in r["final_generated_prompts"]]
