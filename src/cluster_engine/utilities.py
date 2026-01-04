@@ -323,7 +323,7 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
 
     return result
 
-def get_cluster_info_for_prompt(prompt: str, data_source: Optional[DataSource] = None,
+def get_cluster_info_for_prompt(prompt: List[str], data_source: Optional[DataSource] = None,
                                device: str = None) -> Optional[Dict[str, str]]:
     """
     Find the nearest prompt to the given prompt, get its cluster_id, and return the corresponding 
@@ -338,7 +338,8 @@ def get_cluster_info_for_prompt(prompt: str, data_source: Optional[DataSource] =
         Dictionary with 'label' and 'description' if found, None otherwise
     """
     # Find the nearest prompt
-    nearest = find_nearest_prompts(prompt, n=1, data_source=data_source, device=device)
+    prompt_text = prompt[0] if len(prompt) > 0 else ""
+    nearest = find_nearest_prompts(prompt_text, n=1, data_source=data_source, device=device)
     if not nearest:
         return None
     
@@ -347,8 +348,26 @@ def get_cluster_info_for_prompt(prompt: str, data_source: Optional[DataSource] =
     if not cluster_id:
         return None
     
+    # Get cluster description from lookup table
+    cluster_info = get_cluster_description(cluster_id)
+    
+    return cluster_info
+
+def get_cluster_description(cluster_id: str, lookup_file: str = 'cluster_lookup_table.json') -> Optional[Dict[str, str]]:
+    """
+    Get the description for a given cluster_id from the lookup table.
+
+    Args:
+        cluster_id: The cluster_id to look up
+        lookup_file: Path to the cluster lookup table JSON file
+        
+    Returns:
+        Updated cluster information dictionary with 'label' and 'description', or None if not found
+    """
+    print(f"Getting description for cluster_id: {cluster_id}")
     # Load lookup table
     lookup_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cluster_lookup_table.json')
+    
     if not os.path.exists(lookup_file):
         return None
     

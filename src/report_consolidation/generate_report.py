@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, List
 
-from ..cluster_engine.utilities import get_cluster_info_for_prompt
+from ..cluster_engine.utilities import get_cluster_info_for_prompt, get_cluster_description
 
 
 def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -32,11 +32,12 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
         metadata = prompt.get("metadata", {})
         cluster_info = metadata.get("cluster_info", {})
         cluster_label = cluster_info.get("cluster_label")
-        description = cluster_info.get("description", "")
+        cluster_id = cluster_info.get("cluster_id")
+        description = cluster_info.get("description", "default description")
 
         if not cluster_label:
             # Try to get cluster info using the utility function
-            prompt_text = prompt.get("prompt", "")
+            prompt_text = prompt.get("prompt", [])
             if prompt_text:
                 fetched_info = get_cluster_info_for_prompt(prompt_text)
                 if fetched_info:
@@ -44,6 +45,10 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
                     description = fetched_info.get("description", "")
 
         if cluster_label:
+            cluster_info_with_description = get_cluster_description(cluster_id=cluster_id)
+            if cluster_info_with_description:
+                cluster_label = cluster_info_with_description.get("label", cluster_label)
+                description = cluster_info_with_description.get("description", description)
             if cluster_label not in cluster_stats:
                 cluster_stats[cluster_label] = {"sum": 0, "count": 0, "max": 0, "description": description}
             elif not cluster_stats[cluster_label]["description"]:
