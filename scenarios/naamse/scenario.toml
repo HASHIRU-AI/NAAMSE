@@ -1,0 +1,13 @@
+[green_agent]
+endpoint = "http://127.0.0.1:8000"
+cmd = "python -m src.agentbeats.server --host localhost --port 8000"
+
+[[participants]]
+role = "agent"
+endpoint = "http://127.0.0.1:5000"
+cmd = "uv run util\a2a_agent.py --host 127.0.0.1 --port 5000"
+
+[config]
+iterations_limit = 5
+mutations_per_iteration = 3
+score_threshold = 50
