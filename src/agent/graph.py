@@ -1,6 +1,8 @@
 from typing_extensions import List, TypedDict
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Annotated
 from langgraph.graph import StateGraph, START, END
+from langgraph.types import RetryPolicy
+import operator
 import asyncio
 
 # Initialize config/seeding early
@@ -26,7 +28,8 @@ class FuzzerLoopState(TypedDict):
     a2a_agent_url: str
     current_iteration: int
     input_prompts_for_iteration: List[ScoredPrompt]
-    all_fuzzer_prompts_with_scores: List[ScoredPrompt]
+    # Use reducer for accumulated prompts across iterations
+    all_fuzzer_prompts_with_scores: Annotated[List[ScoredPrompt], operator.add]
     generated_mutations: List[BasePrompt]
     conversation_histories: List[ConversationHistory]
     iteration_scored_mutations: List[ScoredPrompt]
@@ -46,6 +49,7 @@ def initialize_fuzzer(state: FuzzerLoopState):
 
 
 async def generate_mutations(state: FuzzerLoopState):
+    """Generate mutations in parallel using asyncio.gather."""
     n = state["mutations_per_iteration"]
     print(
         f"--- Iteration {state['current_iteration']}: Generating {n} mutations in parallel ---")
@@ -67,6 +71,7 @@ async def generate_mutations(state: FuzzerLoopState):
 
 
 async def invoke_agents_parallel(state: FuzzerLoopState):
+    """Invoke agents in parallel using asyncio.gather."""
     print(
         f"--- Iteration {state['current_iteration']}: Invoking agents in parallel ---")
     tasks = [
@@ -81,6 +86,7 @@ async def invoke_agents_parallel(state: FuzzerLoopState):
 
 
 async def score_outputs_parallel(state: FuzzerLoopState):
+    """Score outputs in parallel using asyncio.gather."""
     print(
         f"--- Iteration {state['current_iteration']}: Scoring outputs in parallel ---")
     tasks = [
@@ -95,8 +101,8 @@ async def score_outputs_parallel(state: FuzzerLoopState):
         mutation = state["generated_mutations"][i]
         conversation_history = state["conversation_histories"][i]
 
-        # Directly update the mutation to become a ScoredPrompt
-        scored_mutation: ScoredPrompt = mutation
+        # Create a copy to avoid mutating the original
+        scored_mutation: ScoredPrompt = dict(mutation)
         scored_mutation["score"] = scores[i]
         scored_mutation["conversation_history"] = conversation_history
         scored_mutations.append(scored_mutation)
@@ -142,33 +148,39 @@ def should_continue_fuzzing(state: FuzzerLoopState):
     return "end"
 
 
+# Define retry policy for LLM/external service calls
+llm_retry_policy = RetryPolicy(
+    max_attempts=3,
+    initial_interval=1.0,
+    backoff_factor=2.0,
+    max_interval=10.0
+)
+
 fuzzer_loop_builder = StateGraph(FuzzerLoopState)
 
+# Add nodes with retry policies for resilience (best practice)
 fuzzer_loop_builder.add_node("initialize_fuzzer", initialize_fuzzer)
-fuzzer_loop_builder.add_node("generate_mutations", generate_mutations)
-fuzzer_loop_builder.add_node("invoke_agents_parallel", invoke_agents_parallel)
-fuzzer_loop_builder.add_node("score_outputs_parallel", score_outputs_parallel)
-fuzzer_loop_builder.add_node(
-    "process_iteration_results", process_iteration_results)
-fuzzer_loop_builder.add_node(
-    "generate_final_report", generate_report_node)  # New node
+fuzzer_loop_builder.add_node("generate_mutations", generate_mutations, retry=llm_retry_policy)
+fuzzer_loop_builder.add_node("invoke_agents_parallel", invoke_agents_parallel, retry=llm_retry_policy)
+fuzzer_loop_builder.add_node("score_outputs_parallel", score_outputs_parallel, retry=llm_retry_policy)
+fuzzer_loop_builder.add_node("process_iteration_results", process_iteration_results)
+fuzzer_loop_builder.add_node("generate_final_report", generate_report_node)
 
+# Main flow edges
 fuzzer_loop_builder.add_edge(START, "initialize_fuzzer")
 fuzzer_loop_builder.add_edge("initialize_fuzzer", "generate_mutations")
 fuzzer_loop_builder.add_edge("generate_mutations", "invoke_agents_parallel")
-fuzzer_loop_builder.add_edge(
-    "invoke_agents_parallel", "score_outputs_parallel")
-fuzzer_loop_builder.add_edge(
-    "score_outputs_parallel", "process_iteration_results")
+fuzzer_loop_builder.add_edge("invoke_agents_parallel", "score_outputs_parallel")
+fuzzer_loop_builder.add_edge("score_outputs_parallel", "process_iteration_results")
 
 fuzzer_loop_builder.add_conditional_edges(
     "process_iteration_results",
     should_continue_fuzzing,
-    # Changed END to generate_final_report
     {"continue": "generate_mutations", "end": "generate_final_report"}
 )
-fuzzer_loop_builder.add_edge("generate_final_report", END)  # New edge
+fuzzer_loop_builder.add_edge("generate_final_report", END)
 
+# Compile graph
 graph = fuzzer_loop_builder.compile()
 
 
@@ -188,7 +200,14 @@ if __name__ == "__main__":
                 }
             ]
         }
-        final_state = await graph.ainvoke(initial_input)
+        
+        # max_concurrency and recursion_limit
+        config = {
+            "max_concurrency": 10,  # Throttle concurrent tasks for rate limits/resources
+            "recursion_limit": 100  # Increase from default 25 for multi-iteration fuzzing
+        }
+        
+        final_state = await graph.ainvoke(initial_input, config=config)
         print(f"\nCompleted {final_state['current_iteration']} iterations")
         print(
             f"Total prompts: {len(final_state['all_fuzzer_prompts_with_scores'])}")
