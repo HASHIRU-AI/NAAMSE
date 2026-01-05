@@ -18,6 +18,7 @@ import torch
 import sys
 import random
 
+
 class FuzzerLoopState(TypedDict):
     iterations_limit: int
     mutations_per_iteration: int
@@ -35,7 +36,8 @@ class FuzzerLoopState(TypedDict):
 def initialize_fuzzer(state: FuzzerLoopState):
     Config.initialize_from_env()
     print("--- Initializing Fuzzer ---")
-    initial_prompts = state.get("input_prompts_for_iteration") or [{"prompt": ["initial_seed_prompt"], "score": 0.0}]
+    initial_prompts = state.get("input_prompts_for_iteration") or [
+        {"prompt": ["initial_seed_prompt"], "score": 0.0}]
     return {
         "current_iteration": 0,
         "all_fuzzer_prompts_with_scores": [],
@@ -45,12 +47,13 @@ def initialize_fuzzer(state: FuzzerLoopState):
 
 async def generate_mutations(state: FuzzerLoopState):
     n = state["mutations_per_iteration"]
-    print(f"--- Iteration {state['current_iteration']}: Generating {n} mutations in parallel ---")
-    
+    print(
+        f"--- Iteration {state['current_iteration']}: Generating {n} mutations in parallel ---")
+
     # Pre-generate deterministic seeds for each parallel task
     # This ensures mutation type selection is reproducible across runs
     task_seeds = [random.randrange(sys.maxsize) for _ in range(n)]
-    
+
     tasks = [
         single_mutation_graph.ainvoke({
             "input_prompts": state["input_prompts_for_iteration"],
@@ -64,7 +67,8 @@ async def generate_mutations(state: FuzzerLoopState):
 
 
 async def invoke_agents_parallel(state: FuzzerLoopState):
-    print(f"--- Iteration {state['current_iteration']}: Invoking agents in parallel ---")
+    print(
+        f"--- Iteration {state['current_iteration']}: Invoking agents in parallel ---")
     tasks = [
         invoke_agent_graph.ainvoke(InvokeAgentWorkflowState(
             prompt=prompt,
@@ -77,47 +81,58 @@ async def invoke_agents_parallel(state: FuzzerLoopState):
 
 
 async def score_outputs_parallel(state: FuzzerLoopState):
-    print(f"--- Iteration {state['current_iteration']}: Scoring outputs in parallel ---")
+    print(
+        f"--- Iteration {state['current_iteration']}: Scoring outputs in parallel ---")
     tasks = [
         behavior_engine_graph.ainvoke({"conversation_history": history})
         for history in state["conversation_histories"]
     ]
     results = await asyncio.gather(*tasks)
     scores = [r.get("final_score", 0.0) for r in results]
-    
+
     scored_mutations = []
     for i in range(len(scores)):
         mutation = state["generated_mutations"][i]
         conversation_history = state["conversation_histories"][i]
-        
+
         # Directly update the mutation to become a ScoredPrompt
         scored_mutation: ScoredPrompt = mutation
         scored_mutation["score"] = scores[i]
         scored_mutation["conversation_history"] = conversation_history
         scored_mutations.append(scored_mutation)
-    
+
     return {"iteration_scored_mutations": scored_mutations}
 
 
 def process_iteration_results(state: FuzzerLoopState):
-    print(f"--- Iteration {state['current_iteration']}: Processing results ---")
-    all_prompts = state["all_fuzzer_prompts_with_scores"] + state["iteration_scored_mutations"]
-    
-    next_prompts = [p for p in all_prompts if p["score"] >= state["score_threshold"]]
-    unique = {tuple(p["prompt"]): p for p in next_prompts}
-    
+    print(
+        f"--- Iteration {state['current_iteration']}: Processing results ---")
+    all_prompts = state["all_fuzzer_prompts_with_scores"] + \
+        state["iteration_scored_mutations"]
+
+    next_prompts = [p for p in all_prompts if p["score"]
+                    >= state["score_threshold"]]
+    unique_prompts_map = {}
+    for p in next_prompts:
+        # merge lists of prompt strings into single strings for uniqueness
+        prompt_string = " ".join(p["prompt"])
+        unique_prompts_map[prompt_string] = p
+
+    unique_prompts = list(unique_prompts_map.values())
+
     # Add unique prompts that are over the threshold back to the cluster
-    print(f"--- Adding {len(unique)} unique high-scoring prompts back to clusters ---")
-    for p in unique.values():
+    print(
+        f"--- Adding {len(unique_prompts)} unique high-scoring prompts back to clusters ---")
+    for p in unique_prompts:
         print(f"Adding prompt with score {p['score']}: {p['prompt']}")
         add_prompt_to_clusters(
-            new_prompt= p["prompt"][0]
+            new_prompt=" ".join(p["prompt"]),
         )
-    
+
     return {
         "current_iteration": state["current_iteration"] + 1,
         "all_fuzzer_prompts_with_scores": all_prompts,
-        "input_prompts_for_iteration": list(unique.values())
+        "input_prompts_for_iteration": unique_prompts
     }
 
 
@@ -133,21 +148,26 @@ fuzzer_loop_builder.add_node("initialize_fuzzer", initialize_fuzzer)
 fuzzer_loop_builder.add_node("generate_mutations", generate_mutations)
 fuzzer_loop_builder.add_node("invoke_agents_parallel", invoke_agents_parallel)
 fuzzer_loop_builder.add_node("score_outputs_parallel", score_outputs_parallel)
-fuzzer_loop_builder.add_node("process_iteration_results", process_iteration_results)
-fuzzer_loop_builder.add_node("generate_final_report", generate_report_node) # New node
+fuzzer_loop_builder.add_node(
+    "process_iteration_results", process_iteration_results)
+fuzzer_loop_builder.add_node(
+    "generate_final_report", generate_report_node)  # New node
 
 fuzzer_loop_builder.add_edge(START, "initialize_fuzzer")
 fuzzer_loop_builder.add_edge("initialize_fuzzer", "generate_mutations")
 fuzzer_loop_builder.add_edge("generate_mutations", "invoke_agents_parallel")
-fuzzer_loop_builder.add_edge("invoke_agents_parallel", "score_outputs_parallel")
-fuzzer_loop_builder.add_edge("score_outputs_parallel", "process_iteration_results")
+fuzzer_loop_builder.add_edge(
+    "invoke_agents_parallel", "score_outputs_parallel")
+fuzzer_loop_builder.add_edge(
+    "score_outputs_parallel", "process_iteration_results")
 
 fuzzer_loop_builder.add_conditional_edges(
     "process_iteration_results",
     should_continue_fuzzing,
-    {"continue": "generate_mutations", "end": "generate_final_report"} # Changed END to generate_final_report
+    # Changed END to generate_final_report
+    {"continue": "generate_mutations", "end": "generate_final_report"}
 )
-fuzzer_loop_builder.add_edge("generate_final_report", END) # New edge
+fuzzer_loop_builder.add_edge("generate_final_report", END)  # New edge
 
 graph = fuzzer_loop_builder.compile()
 
@@ -170,6 +190,7 @@ if __name__ == "__main__":
         }
         final_state = await graph.ainvoke(initial_input)
         print(f"\nCompleted {final_state['current_iteration']} iterations")
-        print(f"Total prompts: {len(final_state['all_fuzzer_prompts_with_scores'])}")
+        print(
+            f"Total prompts: {len(final_state['all_fuzzer_prompts_with_scores'])}")
 
     asyncio.run(main_test())

@@ -144,10 +144,10 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
 
             # Fallback: look at final AI message
             last_message = response["messages"][-1]
-            if hasattr(last_message, 'content') and last_message.content:
+            if hasattr(last_message, 'text') and last_message.text:
                 print(
-                    f"  [DEBUG] Using final AI message content: {last_message.content}")
-                return {"prompt": [last_message.content]}
+                    f"  [DEBUG] Using final AI message content: {last_message.text}")
+                return {"prompt": [last_message.text]}
 
             raise ValueError(
                 "Could not extract mutated prompt from tool calls")
