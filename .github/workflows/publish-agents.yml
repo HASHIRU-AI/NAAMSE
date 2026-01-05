@@ -29,6 +29,9 @@ jobs:
       packages: write
 
     steps:
+      - name: Delete huge unnecessary tools folder
+        run: rm -rf /opt/hostedtoolcache
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
