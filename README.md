@@ -260,67 +260,136 @@ LangGraph Studio also integrates with [LangSmith](https://smith.langchain.com/) 
 
 # NAAMSE Green Agent
 
-A2A-compatible agent that runs the NAAMSE fuzzer against target LLM agents.
+**A2A-compatible green agent for AgentBeats platform that runs LLM security fuzzing.**
 
-## Prerequisites
+NAAMSE (Neural Adversarial Agent Mutation-based Security Evaluator) is an A2A green agent that evaluates purple agents by running adversarial prompt mutations and scoring their responses to find vulnerabilities.
 
-1. Set your Google API key:
-   ```powershell
-   $env:GOOGLE_API_KEY = "your-gemini-api-key"
-   ```
+## Project Structure
 
-2. Activate the virtual environment:
-   ```powershell
-   .\.venv\Scripts\Activate.ps1
-   ```
+```
+src/
+├─ agentbeats/           # A2A Green Agent Implementation
+│  ├─ agent.py           # NAAMSE agent logic
+│  ├─ executor.py        # A2A request handling
+│  ├─ server.py          # Server entry point
+│  ├─ models.py          # Pydantic models (EvalRequest, NAAMSEConfig)
+│  └─ test_green_agent.py  # Test script
+├─ agent/                # NAAMSE Fuzzer Graph (LangGraph)
+│  ├─ graph.py           # Main fuzzer workflow
+│  └─ ...
+├─ mutation_engine/      # Prompt mutation subgraph
+├─ behavioral_engine/    # Response scoring subgraph
+├─ cluster_engine/       # Clustering and data management
+└─ invoke_agent/         # Agent invocation subgraph
+```
+
+## Getting Started
+
+### Prerequisites
+
+1. Python 3.10+ with virtual environment
+2. Google API key for Gemini models
+
+### Installation
+
+```powershell
+# Activate virtual environment
+.\.venv\Scripts\Activate.ps1
+
+# Install dependencies (if needed)
+pip install -e .
+
+# Set environment variables
+$env:GOOGLE_API_KEY = "your-gemini-api-key"
+```
 
 ## Running the Agent
 
-Start the server:
-```powershell
-python -m src.agentbeats.server --host localhost --port 8000
-```
-
-The agent card will be available at: `http://localhost:8000/.well-known/agent.json`
-
-## Running the Testing Agent
-
-Run the a2a agent that we are testing:
+Start the NAAMSE green agent server:
 
 ```powershell
-python util/a2a_agent.py
+.venv\Scripts\python.exe -m src.agentbeats.server --host 127.0.0.1 --port 9009
 ```
+
+The agent will be available at:
+- **Server:** http://127.0.0.1:9009
+- **Agent Card:** http://127.0.0.1:9009/.well-known/agent-card.json
+
+### CLI Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--host` | `127.0.0.1` | Host to bind the server |
+| `--port` | `9009` | Port to bind the server |
+| `--card-url` | `http://{host}:{port}` | URL to advertise in the agent card |
 
 ## Testing
 
-Run the test script:
+### 1. Start a Target Agent
+
+Run the test purple agent (the agent to be evaluated):
+
 ```powershell
-python test_green_agent.py --target http://localhost:5000 --iterations 1 --mutations 1
+.venv\Scripts\python.exe util/a2a_agent.py --host 127.0.0.1 --port 5000
 ```
 
-### Options
+### 2. Run the Test Script
+
+```powershell
+.venv\Scripts\python.exe src/agentbeats/test_green_agent.py --target http://localhost:5000 --iterations 3 --mutations 2
+```
+
+### Test Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--target` | `http://localhost:5000` | Target agent URL to fuzz |
-| `--green-agent` | `http://localhost:8000` | Green agent URL |
-| `--iterations` | `1` | Number of fuzzer iterations |
-| `--mutations` | `1` | Mutations per iteration |
+| `--green-agent` | `http://localhost:9009` | Green agent URL |
+| `--iterations` | `3` | Number of fuzzer iterations |
+| `--mutations` | `2` | Mutations per iteration |
 
 ## Request Format
 
-The agent accepts A2A JSON-RPC requests with this payload:
+The agent follows the [AgentBeats](https://agentbeats.dev) standard `EvalRequest` format:
 
 ```json
 {
-  "target_url": "http://localhost:5000",
-  "iterations_limit": 3,
-  "mutations_per_iteration": 2,
-  "score_threshold": 50.0,
-  "initial_prompts": [
-    {"prompt": ["your seed prompt"], "score": 0.0}
-  ]
+  "participants": {
+    "agent": "http://localhost:5000"
+  },
+  "config": {
+    "iterations_limit": 3,
+    "mutations_per_iteration": 2,
+    "score_threshold": 50.0,
+    "initial_prompts": [
+      {"prompt": ["your seed prompt"], "score": 0.0}
+    ]
+  }
 }
 ```
 
-Only `target_url` is required; other fields have defaults.
+**Required fields:**
+- `participants.agent` - URL of the target agent to evaluate
+
+**Optional config fields (with defaults):**
+- `iterations_limit` (3) - Number of fuzzer iterations
+- `mutations_per_iteration` (2) - Mutations per iteration
+- `score_threshold` (50.0) - Score threshold for prompt selection
+- `initial_prompts` (null) - Seed prompts to start fuzzing
+
+## Architecture
+
+Based on the [green-agent-template](https://github.com/RDI-Foundation/green-agent-template), NAAMSE implements:
+
+- **Agent class** ([agent.py](src/agentbeats/agent.py)) - Core NAAMSE evaluation logic
+- **Executor class** ([executor.py](src/agentbeats/executor.py)) - A2A protocol handling
+- **Server** ([server.py](src/agentbeats/server.py)) - HTTP server with agent card
+- **Models** ([models.py](src/agentbeats/models.py)) - Request/response schemas
+
+The agent delegates fuzzing to the NAAMSE LangGraph workflow defined in [src/agent/graph.py](src/agent/graph.py).
+
+---
+
+# NAAMSE Fuzzer Workflow Documentation
+
+## LangGraph Configuration
