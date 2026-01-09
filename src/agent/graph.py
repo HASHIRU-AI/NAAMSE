@@ -48,91 +48,93 @@ def initialize_fuzzer(state: FuzzerLoopState):
     }
 
 
-def generate_mutations(state: FuzzerLoopState):
-    """Fan out to parallel mutation workers using Send."""
+def fan_out_iteration_workers(state: FuzzerLoopState):
+    """Fan out to parallel iteration workers at the start of each iteration.
+    
+    Each worker handles the full pipeline: mutation -> invoke -> score sequentially.
+    This avoids multiple fan-out/fan-in cycles and simplifies list management.
+    """
     n = state["mutations_per_iteration"]
     print(
-        f"--- Iteration {state['current_iteration']}: Generating {n} mutations in parallel ---")
+        f"--- Iteration {state['current_iteration']}: Spawning {n} iteration workers ---")
 
     # Pre-generate deterministic seeds for each parallel task
     task_seeds = [random.randrange(sys.maxsize) for _ in range(n)]
 
-    # Return Send objects for dynamic fan-out
+    # Return Send objects for dynamic fan-out - one worker per mutation slot
     return [
-        Send("mutation_worker", {
+        Send("iteration_worker", {
             "input_prompts": state["input_prompts_for_iteration"],
             "task_seed": task_seeds[i],
             "a2a_agent_url": state["a2a_agent_url"],
-            "current_iteration": state["current_iteration"]
+            "current_iteration": state["current_iteration"],
+            "worker_index": i
         })
         for i in range(n)
     ]
 
 
-async def mutation_worker(state: dict):
-    """Single mutation worker - processes one mutation task."""
-    result = await single_mutation_graph.ainvoke({
+async def iteration_worker(state: dict):
+    """Single iteration worker - handles mutation, invoke, and scoring sequentially.
+    
+    This worker processes the full pipeline for one mutation slot:
+    1. Generate mutation from input prompts
+    2. Invoke agent with the generated mutation
+    3. Score the conversation
+    4. Return the scored mutation
+    
+    Returns data consistent with the original implementation's reducers.
+    """
+    worker_index = state.get("worker_index", 0)
+    current_iteration = state.get("current_iteration", 0)
+    
+    # Step 1: Generate mutation
+    print(f"    [Worker {worker_index}] Generating mutation...")
+    mutation_result = await single_mutation_graph.ainvoke({
         "input_prompts": state["input_prompts"],
         "task_seed": state["task_seed"]
     })
-    return {"generated_mutations": result["final_generated_prompts"]}
-
-
-def invoke_agents_parallel(state: FuzzerLoopState):
-    """Fan out to parallel agent invocation workers using Send."""
-    print(
-        f"--- Iteration {state['current_iteration']}: Invoking agents in parallel ---")
+    generated_prompts: List[BasePrompt] = mutation_result["final_generated_prompts"]
     
-    return [
-        Send("agent_worker", {
-            "prompt": prompt,
-            "a2a_agent_url": state["a2a_agent_url"],
-            "mutation_index": i
+    # Step 2: Invoke agent for each generated prompt and score
+    scored_mutations: List[ScoredPrompt] = []
+    conversation_histories: List[ConversationHistory] = []
+    
+    for prompt in generated_prompts:
+        # Invoke agent
+        print(f"    [Worker {worker_index}] Invoking agent...")
+        invoke_result = await invoke_agent_graph.ainvoke(InvokeAgentWorkflowState(
+            prompt=prompt,
+            a2a_agent_url=state["a2a_agent_url"]
+        ))
+        conversation_history = invoke_result.get("conversation_history")
+        conversation_histories.append(conversation_history)
+        
+        # Score the conversation
+        print(f"    [Worker {worker_index}] Scoring output...")
+        score_result = await behavior_engine_graph.ainvoke({
+            "conversation_history": conversation_history
         })
-        for i, prompt in enumerate(state["generated_mutations"])
-    ]
-
-
-async def agent_worker(state: dict):
-    """Single agent worker - invokes one agent."""
-    result = await invoke_agent_graph.ainvoke(InvokeAgentWorkflowState(
-        prompt=state["prompt"],
-        a2a_agent_url=state["a2a_agent_url"]
-    ))
-    return {"conversation_histories": [result.get("conversation_history")]}
-
-
-def score_outputs_parallel(state: FuzzerLoopState):
-    """Fan out to parallel scoring workers using Send."""
-    print(
-        f"--- Iteration {state['current_iteration']}: Scoring outputs in parallel ---")
+        score = score_result.get("final_score", 0.0)
+        
+        # Build the scored mutation
+        scored_mutation: ScoredPrompt = dict(prompt)
+        scored_mutation["score"] = score
+        scored_mutation["conversation_history"] = conversation_history
+        scored_mutations.append(scored_mutation)
     
-    return [
-        Send("score_worker", {
-            "conversation_history": history,
-            "mutation": state["generated_mutations"][i],
-            "mutation_index": i
-        })
-        for i, history in enumerate(state["conversation_histories"])
-    ]
-
-
-async def score_worker(state: dict):
-    """Single scoring worker - scores one conversation."""
-    result = await behavior_engine_graph.ainvoke({
-        "conversation_history": state["conversation_history"]
-    })
-    score = result.get("final_score", 0.0)
+    print(f"    [Worker {worker_index}] Completed with {len(scored_mutations)} scored mutation(s)")
     
-    # Build the scored mutation
-    scored_mutation: ScoredPrompt = dict(state["mutation"])
-    scored_mutation["score"] = score
-    scored_mutation["conversation_history"] = state["conversation_history"]
-    
-    return {"iteration_scored_mutations": [scored_mutation]}
+    # Return data consistent with original reducers
+    return {
+        "generated_mutations": generated_prompts,
+        "conversation_histories": conversation_histories,
+        "iteration_scored_mutations": scored_mutations
+    }
 
 
 def process_iteration_results(state: FuzzerLoopState):
+    """Process results after all iteration workers complete."""
     print(
         f"--- Iteration {state['current_iteration']}: Processing results ---")
     all_prompts = state["all_fuzzer_prompts_with_scores"] + \
@@ -160,7 +162,11 @@ def process_iteration_results(state: FuzzerLoopState):
     return {
         "current_iteration": state["current_iteration"] + 1,
         "all_fuzzer_prompts_with_scores": all_prompts,
-        "input_prompts_for_iteration": unique_prompts
+        "input_prompts_for_iteration": unique_prompts,
+        # Reset per-iteration accumulators for next iteration
+        "generated_mutations": [],
+        "conversation_histories": [],
+        "iteration_scored_mutations": []
     }
 
 
@@ -185,25 +191,23 @@ fuzzer_loop_builder.add_node("initialize_fuzzer", initialize_fuzzer)
 fuzzer_loop_builder.add_node("process_iteration_results", process_iteration_results)
 fuzzer_loop_builder.add_node("generate_final_report", generate_report_node)
 
-# Parallel worker nodes with retry policies
-fuzzer_loop_builder.add_node("mutation_worker", mutation_worker, retry=llm_retry_policy)
-fuzzer_loop_builder.add_node("agent_worker", agent_worker, retry=llm_retry_policy)
-fuzzer_loop_builder.add_node("score_worker", score_worker, retry=llm_retry_policy)
+# Single iteration worker node that handles mutation -> invoke -> score sequentially
+fuzzer_loop_builder.add_node("iteration_worker", iteration_worker, retry=llm_retry_policy)
 
 # Main flow edges
 fuzzer_loop_builder.add_edge(START, "initialize_fuzzer")
 
-# Fan-out edges using conditional edges with Send
-fuzzer_loop_builder.add_conditional_edges("initialize_fuzzer", generate_mutations)
-fuzzer_loop_builder.add_conditional_edges("mutation_worker", invoke_agents_parallel)
-fuzzer_loop_builder.add_conditional_edges("agent_worker", score_outputs_parallel)
-fuzzer_loop_builder.add_edge("score_worker", "process_iteration_results")
+# Fan-out from initialize to iteration workers
+fuzzer_loop_builder.add_conditional_edges("initialize_fuzzer", fan_out_iteration_workers)
+
+# All iteration workers converge to process_iteration_results
+fuzzer_loop_builder.add_edge("iteration_worker", "process_iteration_results")
 
 # Continue or end fuzzing loop
 def continue_or_end(state: FuzzerLoopState):
     """Decide whether to continue fuzzing or generate final report."""
     if state["current_iteration"] < state["iterations_limit"] and state["input_prompts_for_iteration"]:
-        return generate_mutations(state)  # Continue with Send fan-out
+        return fan_out_iteration_workers(state)  # Continue with Send fan-out
     return "generate_final_report"
 
 fuzzer_loop_builder.add_conditional_edges(
