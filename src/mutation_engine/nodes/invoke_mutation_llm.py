@@ -128,29 +128,95 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
             }
         )
 
-        # If tools were used, extract result from the last tool message or AI message
+        # If tools were used, extract result from the tool call
         if tools:
-            # Look for the last tool message result
-            for msg in reversed(response["messages"]):
+            # Validate response structure
+            if not response or "messages" not in response:
+                raise ValueError(f"Invalid agent response structure. Keys: {response.keys() if response else 'None'}")
+            
+            if not response["messages"]:
+                raise ValueError("Agent returned empty messages array - LLM may have refused or failed to respond")
+            
+            print(f"  [DEBUG] Extracting result from {len(response['messages'])} messages")
+            
+            # Strategy 1: Look for ToolMessage (the tool's actual return value)
+            for i, msg in enumerate(reversed(response["messages"])):
+                msg_type = type(msg).__name__
+                print(f"  [DEBUG] Message {i}: type={msg_type}")
+                
+                # Check if this is a ToolMessage from our mutation tool
                 if hasattr(msg, 'name') and msg.name in [tool.name for tool in tools]:
-                    # This is a tool message with the result
-                    import json
-                    try:
-                        result = json.loads(msg.content)
-                        if isinstance(result, dict) and "prompt" in result:
-                            return result
-                    except:
-                        pass
-
-            # Fallback: look at final AI message
+                    print(f"  [DEBUG] Found ToolMessage from {msg.name}")
+                    content = msg.content
+                    
+                    # Handle different content types
+                    # Case 1: Content is already a dict (direct return)
+                    if isinstance(content, dict):
+                        if "prompt" in content:
+                            print(f"  [DEBUG] Tool returned dict directly with 'prompt' key")
+                            return content
+                        else:
+                            print(f"  [ERROR] Tool returned dict but missing 'prompt' key. Keys: {content.keys()}")
+                    
+                    # Case 2: Content is a JSON string
+                    elif isinstance(content, str):
+                        try:
+                            import json
+                            parsed = json.loads(content)
+                            if isinstance(parsed, dict) and "prompt" in parsed:
+                                print(f"  [DEBUG] Tool returned JSON string, parsed successfully")
+                                return parsed
+                        except json.JSONDecodeError as e:
+                            print(f"  [DEBUG] Content is string but not valid JSON: {e}")
+                            # Treat as literal prompt text
+                            return {"prompt": [content]}
+                    
+                    # Case 3: Content is a list (treat as prompt list)
+                    elif isinstance(content, list):
+                        print(f"  [DEBUG] Tool returned list, wrapping as prompt")
+                        return {"prompt": content}
+                    
+                    # Case 4: Other types - convert to string
+                    else:
+                        print(f"  [DEBUG] Tool returned unexpected type {type(content)}, converting to string")
+                        return {"prompt": [str(content)]}
+            
+            # Strategy 2: No ToolMessage found - LLM may have responded directly
+            # This happens if the LLM doesn't call the tool
+            print(f"  [WARNING] No ToolMessage found - LLM may not have called the tool")
+            
+            if not response["messages"]:
+                raise ValueError("No messages available to extract response from")
+            
             last_message = response["messages"][-1]
-            if hasattr(last_message, 'text') and last_message.text:
-                print(
-                    f"  [DEBUG] Using final AI message content: {last_message.text}")
-                return {"prompt": [last_message.text]}
-
+            print(f"  [DEBUG] Checking last message: type={type(last_message).__name__}")
+            
+            # Try to extract any content from the last message
+            content = None
+            if hasattr(last_message, 'content'):
+                content = last_message.content
+            elif hasattr(last_message, 'text'):
+                content = last_message.text
+            
+            if content:
+                print(f"  [DEBUG] Extracted content from last message: {str(content)[:200]}")
+                if isinstance(content, str):
+                    return {"prompt": [content]}
+                elif isinstance(content, list):
+                    return {"prompt": content}
+                elif isinstance(content, dict) and "prompt" in content:
+                    return content
+                else:
+                    return {"prompt": [str(content)]}
+            
+            # Strategy 3: Complete failure - provide diagnostic info
+            print(f"  [ERROR] Could not extract any content from response")
+            print(f"  [ERROR] Last message type: {type(last_message).__name__}")
+            print(f"  [ERROR] Last message attributes: {[a for a in dir(last_message) if not a.startswith('_')]}")
             raise ValueError(
-                "Could not extract mutated prompt from tool calls")
+                f"LLM did not call tool '{tools[0].name}' and returned no usable content. "
+                f"This likely means the LLM refused or failed to process the request."
+            )
 
         # No tools - check for structured_response
         if "structured_response" in response:
@@ -171,6 +237,7 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
     except Exception as e:
         print(f"  [ERROR] Exception during agent invocation: {e}")
         print(f"  [ERROR] Exception type: {type(e)}")
+        raise  # Re-raise the exception instead of returning None
 
 
 def invoke_llm_with_tools(state: MutationWorkflowState):
