@@ -1,5 +1,6 @@
 from src.mutation_engine.mutation_workflow_state import BasePrompt, ClusterInfo, Metadata, Mutation, MutationEngineState, ScoredPrompt
 from src.cluster_engine.utilities import find_nearest_prompts
+import random
 
 
 def run_similar_action(state: MutationEngineState) -> MutationEngineState:
@@ -10,12 +11,13 @@ def run_similar_action(state: MutationEngineState) -> MutationEngineState:
 
     # Use embedding-based nearest neighbor search
     # (uses default JSONL data source + auto device selection)
-    nearest_list = find_nearest_prompts(query_prompt, n=1)
+    nearest_list = find_nearest_prompts(query_prompt, n=10)
 
     if not nearest_list:
         raise ValueError("No similar prompts found in the corpus")
 
-    nearest = nearest_list[0]
+    # Pick a random one from the top 10
+    nearest = random.choice(nearest_list)
     similar_text = nearest["prompt"]
 
     cluster_info: ClusterInfo = {}

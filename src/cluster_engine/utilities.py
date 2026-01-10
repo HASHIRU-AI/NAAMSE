@@ -8,6 +8,7 @@ import json
 import random
 import subprocess
 import platform
+from itertools import islice
 
 from .data_access import DataSource, create_data_source
 
@@ -179,6 +180,21 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     if data_source is None:
         data_source = create_data_source('jsonl')
 
+    # Check for duplicates before proceeding
+    existing_prompts, _ = data_source.get_prompts_and_sources()
+    if new_prompt in existing_prompts:
+        print(f"⚠️  Skipping duplicate prompt: {new_prompt[:50]}...")
+        # Return a result indicating the prompt was skipped
+        return {
+            'prompt': new_prompt,
+            'source': source,
+            'cluster_id': None,
+            'cluster_label': None,
+            'centroid_coord': None,
+            'distance_to_centroid': None,
+            'embedding_index': None
+        }
+
     # Make centroids_file path relative to script directory if not absolute
     if not os.path.isabs(centroids_file):
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -277,8 +293,8 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
 
     # Cache line count using cross-platform line counting
     if corpus_file not in _cached_line_count:
-        # line_count = _count_lines_cross_platform(corpus_file)
-        line_count = 100000 # Placeholder for cross-platform line count
+        line_count = _count_lines_cross_platform(corpus_file)
+        # line_count = 100000 # Placeholder for cross-platform line count
         _cached_line_count[corpus_file] = line_count
     else:
         line_count = _cached_line_count[corpus_file]
@@ -289,12 +305,10 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
     # Pick a random line index
     target_index = random.randint(0, line_count - 1)
     
-    # Read only that specific line
+    # Read only that specific line using islice for efficiency
     with open(corpus_file, 'r') as f:
-        for line_num, line in enumerate(f):
-            if line_num == target_index:
-                selected_data = json.loads(line.strip())
-                break
+        line = next(islice(f, target_index, None))
+        selected_data = json.loads(line.strip())
     
     # Build result
     result = {
