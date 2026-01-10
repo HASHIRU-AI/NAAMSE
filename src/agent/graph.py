@@ -20,6 +20,10 @@ import torch
 import sys
 import random
 
+def append_or_reset(current, new):
+    if new == "RESET":
+        return []
+    return current + new
 
 class FuzzerLoopState(TypedDict):
     iterations_limit: int
@@ -28,11 +32,12 @@ class FuzzerLoopState(TypedDict):
     a2a_agent_url: str
     current_iteration: int
     input_prompts_for_iteration: List[ScoredPrompt]
+    # Since we calculate the full list manually, we want to OVERWRITE this key.
+    all_fuzzer_prompts_with_scores: List[ScoredPrompt]
     # Use reducers for keys written by parallel branches
-    all_fuzzer_prompts_with_scores: Annotated[List[ScoredPrompt], operator.add]
-    generated_mutations: Annotated[List[BasePrompt], operator.add]
-    conversation_histories: Annotated[List[ConversationHistory], operator.add]
-    iteration_scored_mutations: Annotated[List[ScoredPrompt], operator.add]
+    generated_mutations: Annotated[List[BasePrompt], append_or_reset]
+    conversation_histories: Annotated[List[ConversationHistory], append_or_reset]
+    iteration_scored_mutations: Annotated[List[ScoredPrompt], append_or_reset]
     report: Optional[Dict[str, Any]]
 
 
@@ -164,9 +169,9 @@ def process_iteration_results(state: FuzzerLoopState):
         "all_fuzzer_prompts_with_scores": all_prompts,
         "input_prompts_for_iteration": unique_prompts,
         # Reset per-iteration accumulators for next iteration
-        "generated_mutations": [],
-        "conversation_histories": [],
-        "iteration_scored_mutations": []
+        "generated_mutations": "RESET",
+        "conversation_histories": "RESET",
+        "iteration_scored_mutations": "RESET"
     }
 
 
