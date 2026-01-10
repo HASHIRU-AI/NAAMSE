@@ -8,6 +8,7 @@ import json
 import random
 import subprocess
 import platform
+from itertools import islice
 
 from .data_access import DataSource, create_data_source
 
@@ -304,12 +305,10 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
     # Pick a random line index
     target_index = random.randint(0, line_count - 1)
     
-    # Read only that specific line
+    # Read only that specific line using islice for efficiency
     with open(corpus_file, 'r') as f:
-        for line_num, line in enumerate(f):
-            if line_num == target_index:
-                selected_data = json.loads(line.strip())
-                break
+        line = next(islice(f, target_index, None))
+        selected_data = json.loads(line.strip())
     
     # Build result
     result = {
