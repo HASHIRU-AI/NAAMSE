@@ -16,6 +16,7 @@ from src.invoke_agent.invoke_agent_state import InvokeAgentWorkflowState
 from src.behavioral_engine.behavior_engine_workflow import behavior_engine_graph
 from src.behavioral_engine.behavior_engine_workflow_state import ConversationHistory
 from src.cluster_engine.utilities import add_prompt_to_clusters
+from src.helpers.extract_text_from_context import extract_text_from_content
 import torch
 import sys
 import random
@@ -151,7 +152,8 @@ def process_iteration_results(state: FuzzerLoopState):
     unique_prompts_map = {}
     for p in next_prompts:
         # merge lists of prompt strings into single strings for uniqueness
-        prompt_string = " ".join(p["prompt"])
+        sanitized_parts = [extract_text_from_content(part) for part in p["prompt"]]
+        prompt_string = " ".join(sanitized_parts)
         unique_prompts_map[prompt_string] = p
 
     unique_prompts = list(unique_prompts_map.values())
@@ -162,7 +164,7 @@ def process_iteration_results(state: FuzzerLoopState):
     for p in unique_prompts:
         print(f"Adding prompt with score {p['score']}: {p['prompt']}")
         add_prompt_to_clusters(
-            new_prompt=" ".join(p["prompt"]),
+            new_prompt=" ".join([extract_text_from_content(part) for part in p["prompt"]]),
         )
 
     if not unique_prompts:
