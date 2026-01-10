@@ -112,6 +112,7 @@ def process_iteration_results(state: FuzzerLoopState):
 
     next_prompts = [p for p in all_prompts if p["score"]
                     >= state["score_threshold"]]
+
     unique_prompts_map = {}
     for p in next_prompts:
         # merge lists of prompt strings into single strings for uniqueness
@@ -128,6 +129,19 @@ def process_iteration_results(state: FuzzerLoopState):
         add_prompt_to_clusters(
             new_prompt=" ".join(p["prompt"]),
         )
+
+    if not unique_prompts:
+        # add top 2 scoring prompts if none pass threshold
+        sorted_prompts = sorted(
+            state["iteration_scored_mutations"],
+            key=lambda x: x["score"],
+            reverse=True
+        )
+        unique_prompts = sorted_prompts[:2]
+        print("No prompts passed the threshold; adding top 2 scoring prompts instead.")
+
+    if len(unique_prompts) == 0:
+        print("WARNING: No prompts passed the threshold! Graph will end.")
 
     return {
         "current_iteration": state["current_iteration"] + 1,
