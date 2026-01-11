@@ -3,7 +3,7 @@ name = "agent"
 version = "0.0.1"
 description = "Starter template for making a new agent LangGraph."
 authors = [
-    { name = "William Fu-Hinthorn", email = "13333726+hinthornw@users.noreply.github.com" },
+    { name = "Parth Shah", email = "helloparthshah+naamse@gmail.com" },
 ]
 readme = "README.md"
 license = { text = "MIT" }
@@ -52,10 +52,11 @@ requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["langgraph.templates.agent", "agent"]
+packages = ["src", "agent", "langgraph.templates.agent"]
 [tool.setuptools.package-dir]
-"langgraph.templates.agent" = "src/agent"
+"src" = "src"
 "agent" = "src/agent"
+"langgraph.templates.agent" = "src/agent"
 
 
 [tool.setuptools.package-data]
