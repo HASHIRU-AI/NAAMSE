@@ -13,6 +13,7 @@ RUN \
     uv sync --locked
 
 COPY scenarios scenarios
+COPY util util
 
 ENTRYPOINT ["uv", "run", "util/a2a_agent.py"]
 CMD ["--host", "0.0.0.0", "--port", "5000"]
