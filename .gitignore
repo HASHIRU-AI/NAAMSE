@@ -171,3 +171,5 @@ embeddings.npy
 jailbreak_corpus.jsonl
 
 .DS_Store
+misc*
+centroids.pkl
