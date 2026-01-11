@@ -12,58 +12,62 @@ from itertools import islice
 
 from .data_access import DataSource, create_data_source
 
+
 def _count_lines_cross_platform(file_path: str) -> int:
     """
     Count lines in a file using cross-platform command-line tools.
-    
+
     Args:
         file_path: Path to the file to count lines in
-        
+
     Returns:
         Number of lines in the file
     """
     system = platform.system().lower()
-    
+
     if system == 'windows':
         # Use Windows find command: find /c /v "" file
         # This counts all lines including empty ones
         result = subprocess.run(['find', '/c', '/v', '""', file_path],
-                              capture_output=True, text=True, check=True)
+                                capture_output=True, text=True, check=True)
         # Output format: "---------- FILE: 123"
         line_count = int(result.stdout.strip().split()[-1])
     else:
         # Use Unix wc command
         result = subprocess.run(['wc', '-l', file_path],
-                              capture_output=True, text=True, check=True)
+                                capture_output=True, text=True, check=True)
         line_count = int(result.stdout.split()[0])
-    
+
     return line_count
+
+
 _MODEL_CACHE = {}
 
 
 def _get_cached_model(device: str = None) -> SentenceTransformer:
     """
     Get a cached SentenceTransformer model to avoid reloading on every call.
-    
+
     Args:
         device: Device to use ('cpu', 'cuda', 'mps', or None for auto-detect)
-    
+
     Returns:
         Cached SentenceTransformer instance
     """
     if device is None:
         device = 'mps' if torch.backends.mps.is_available() else 'cpu'
-    
+
     cache_key = f'all-MiniLM-L6-v2_{device}'
-    
+
     if cache_key not in _MODEL_CACHE:
-        _MODEL_CACHE[cache_key] = SentenceTransformer('all-MiniLM-L6-v2', device=device)
-    
+        _MODEL_CACHE[cache_key] = SentenceTransformer(
+            'all-MiniLM-L6-v2', device=device)
+
     return _MODEL_CACHE[cache_key]
 
 
 def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[DataSource] = None,
-                        device: str = None) -> List[Dict[str, Any]]:
+                         device: str = None) -> List[Dict[str, Any]]:
     """
     Find the n nearest prompts to a given query prompt.
 
@@ -94,7 +98,8 @@ def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[Da
     # Calculate cosine similarities
     # Normalize vectors for cosine similarity
     query_norm = query_embedding / np.linalg.norm(query_embedding)
-    embeddings_norm = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+    embeddings_norm = embeddings / \
+        np.linalg.norm(embeddings, axis=1, keepdims=True)
 
     # Compute similarities
     similarities = np.dot(embeddings_norm, query_norm)
@@ -155,9 +160,9 @@ def get_prompts_by_cluster(cluster_id: str, data_source: Optional[DataSource] = 
 
 
 def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
-                          data_source: Optional[DataSource] = None,
-                          centroids_file: str = 'centroids.pkl',
-                          device: str = None) -> Dict[str, Any]:
+                           data_source: Optional[DataSource] = None,
+                           centroids_file: str = 'centroids.pkl',
+                           device: str = None) -> Dict[str, Any]:
     """
     Add a new prompt to the existing cluster structure without re-clustering.
 
@@ -181,8 +186,8 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
         data_source = create_data_source('jsonl')
 
     # Check for duplicates before proceeding
-    existing_prompts, _ = data_source.get_prompts_and_sources()
-    if new_prompt in existing_prompts:
+    # existing_prompts, _ = data_source.get_prompts_and_sources()
+    if data_source.check_prompt_exists(new_prompt):
         print(f"⚠️  Skipping duplicate prompt: {new_prompt[:50]}...")
         # Return a result indicating the prompt was skipped
         return {
@@ -202,7 +207,8 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
 
     # Load centroids
     if not os.path.exists(centroids_file):
-        raise FileNotFoundError(f"Centroids file not found: {centroids_file}. Run clustering first.")
+        raise FileNotFoundError(
+            f"Centroids file not found: {centroids_file}. Run clustering first.")
 
     with open(centroids_file, 'rb') as f:
         centroids = pickle.load(f)
@@ -226,18 +232,22 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     nearest_distance = distances[nearest_cluster_id]
     nearest_centroid = centroids[nearest_cluster_id]
 
-    print(f"Nearest cluster: {nearest_cluster_id} (distance: {nearest_distance:.4f})")
+    print(
+        f"Nearest cluster: {nearest_cluster_id} (distance: {nearest_distance:.4f})")
 
     # Get cluster label from existing prompts in the assigned cluster
     cluster_path = nearest_cluster_id
     cluster_label = f"Cluster_{nearest_cluster_id.replace('/', '_')}"
 
     try:
-        cluster_prompts = data_source.get_prompts_by_cluster(nearest_cluster_id)
+        cluster_prompts = data_source.get_prompts_by_cluster(
+            nearest_cluster_id)
         if cluster_prompts:
-            cluster_label = cluster_prompts[0].get('cluster_label', cluster_label)
+            cluster_label = cluster_prompts[0].get(
+                'cluster_label', cluster_label)
     except Exception as e:
-        print(f"Warning: Could not retrieve cluster label from data source: {e}")
+        print(
+            f"Warning: Could not retrieve cluster label from data source: {e}")
 
     # Create cluster info for the new prompt
     cluster_info = {
@@ -268,10 +278,21 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     return result
 
 
+def get_random_line_using_reservoir_sampling(filename):
+    selected_line = None
+    selected_index = -1
+    with open(filename, "r", encoding="utf-8") as f:
+        for index, line in enumerate(f, start=1):
+            if random.randrange(index) == 0:
+                selected_line = line
+                selected_index = index - 1
+    return selected_line.strip() if selected_line else None, selected_index
+
+
 def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_count: dict = {}) -> Dict[str, Any]:
     """
     Get a random prompt from the corpus using fast random access.
-    
+
     This function uses subprocess `wc -l` to count lines once and caches the count,
     then uses random access to fetch a single line without loading embeddings.
 
@@ -291,25 +312,8 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
     if not os.path.exists(corpus_file):
         raise ValueError("No prompts found in the corpus")
 
-    # Cache line count using cross-platform line counting
-    if corpus_file not in _cached_line_count:
-        line_count = _count_lines_cross_platform(corpus_file)
-        # line_count = 100000 # Placeholder for cross-platform line count
-        _cached_line_count[corpus_file] = line_count
-    else:
-        line_count = _cached_line_count[corpus_file]
-    
-    if line_count == 0:
-        raise ValueError("No prompts found in the corpus")
-    
-    # Pick a random line index
-    target_index = random.randint(0, line_count - 1)
-    
-    # Read only that specific line using islice for efficiency
-    with open(corpus_file, 'r') as f:
-        line = next(islice(f, target_index, None))
-        selected_data = json.loads(line.strip())
-    
+    selected_data, target_index = get_random_line_using_reservoir_sampling(corpus_file)
+    selected_data = json.loads(selected_data)
     # Build result
     result = {
         'prompt': selected_data['messages'][0]['content'],
@@ -327,8 +331,9 @@ def get_random_prompt(data_source: Optional[DataSource] = None, _cached_line_cou
 
     return result
 
+
 def get_cluster_id_for_prompt(prompt: List[str], data_source: Optional[DataSource] = None,
-                               device: str = None) -> Optional[str]:
+                              device: str = None) -> Optional[str]:
     """
     Find the nearest prompt to the given prompt, get its cluster_id, and return that cluster_id.
 
@@ -342,16 +347,18 @@ def get_cluster_id_for_prompt(prompt: List[str], data_source: Optional[DataSourc
     """
     # Find the nearest prompt
     prompt_text = prompt[0] if len(prompt) > 0 else ""
-    nearest = find_nearest_prompts(prompt_text, n=1, data_source=data_source, device=device)
+    nearest = find_nearest_prompts(
+        prompt_text, n=1, data_source=data_source, device=device)
     if not nearest:
         return None
-    
+
     nearest_data = nearest[0]
     cluster_id = nearest_data.get('cluster_id')
     if not cluster_id:
         return None
-    
+
     return cluster_id
+
 
 def get_human_readable_cluster_info(cluster_id: str, lookup_file: str = 'cluster_lookup_table.json') -> Optional[Dict[str, str]]:
     """
@@ -360,20 +367,21 @@ def get_human_readable_cluster_info(cluster_id: str, lookup_file: str = 'cluster
     Args:
         cluster_id: The cluster_id to look up
         lookup_file: Path to the cluster lookup table JSON file
-        
+
     Returns:
         Updated cluster information dictionary with 'label' and 'description', or None if not found
     """
     print(f"Getting description for cluster_id: {cluster_id}")
     # Load lookup table
-    lookup_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cluster_lookup_table.json')
-    
+    lookup_file = os.path.join(os.path.dirname(
+        os.path.abspath(__file__)), 'cluster_lookup_table.json')
+
     if not os.path.exists(lookup_file):
         return None
-    
+
     with open(lookup_file, 'r') as f:
         lookup_table = json.load(f)
-    
+
     # Find the most specific match
     cluster_info = None
     max_parts = 0
@@ -386,10 +394,11 @@ def get_human_readable_cluster_info(cluster_id: str, lookup_file: str = 'cluster
                     cluster_info = val
                 else:
                     cluster_info = {'label': val, 'description': ''}
-    
+
     # If no hierarchical match found, try centroid-based nearest neighbor
     if cluster_info is None:
-        centroids_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'centroids.pkl')
+        centroids_file = os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), 'centroids.pkl')
         if os.path.exists(centroids_file):
             with open(centroids_file, 'rb') as f:
                 centroids = pickle.load(f)
@@ -406,5 +415,5 @@ def get_human_readable_cluster_info(cluster_id: str, lookup_file: str = 'cluster
                             closest_info = val
                 if closest_info:
                     cluster_info = closest_info
-    
+
     return cluster_info

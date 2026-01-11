@@ -11,6 +11,10 @@ class DataSource(Protocol):
         """Get all prompts and their sources."""
         ...
 
+    def check_prompt_exists(self, prompt: str) -> bool:
+        """Check if a prompt already exists in the data source."""
+        ...
+
     def get_embeddings(self) -> np.ndarray:
         """Get embeddings for all prompts."""
         ...
@@ -48,7 +52,8 @@ class JSONLDataSource:
         import os
 
         if not os.path.exists(self.corpus_file):
-            raise FileNotFoundError(f"Corpus file not found: {self.corpus_file}")
+            raise FileNotFoundError(
+                f"Corpus file not found: {self.corpus_file}")
 
         prompts = []
         sources = []
@@ -61,17 +66,35 @@ class JSONLDataSource:
 
         return prompts, sources
 
+    def check_prompt_exists(self, prompt: str) -> bool:
+        """Check if a prompt already exists in the JSONL file."""
+        import json
+        import os
+
+        if not os.path.exists(self.corpus_file):
+            raise FileNotFoundError(
+                f"Corpus file not found: {self.corpus_file}")
+
+        with open(self.corpus_file, 'r') as f:
+            for line in f:
+                data = json.loads(line.strip())
+                if data['messages'][0]['content'] == prompt:
+                    return True
+
+        return False
+
     def get_embeddings(self) -> np.ndarray:
         """Get embeddings from numpy file (with caching)."""
         import os
 
         if not os.path.exists(self.embeddings_file):
-            raise FileNotFoundError(f"Embeddings file not found: {self.embeddings_file}")
+            raise FileNotFoundError(
+                f"Embeddings file not found: {self.embeddings_file}")
 
         # Return cached embeddings if available
         if self._embeddings_cache is not None:
             return self._embeddings_cache
-        
+
         # Load and cache embeddings
         self._embeddings_cache = np.load(self.embeddings_file)
         return self._embeddings_cache
@@ -82,7 +105,8 @@ class JSONLDataSource:
         import os
 
         if not os.path.exists(self.corpus_file):
-            raise FileNotFoundError(f"Corpus file not found: {self.corpus_file}")
+            raise FileNotFoundError(
+                f"Corpus file not found: {self.corpus_file}")
 
         cluster_info = []
 
@@ -127,7 +151,8 @@ class JSONLDataSource:
         import os
 
         if not os.path.exists(self.corpus_file):
-            raise FileNotFoundError(f"Corpus file not found: {self.corpus_file}")
+            raise FileNotFoundError(
+                f"Corpus file not found: {self.corpus_file}")
 
         cluster_prompts = []
 
