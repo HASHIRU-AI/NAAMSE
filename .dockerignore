@@ -52,7 +52,6 @@ docker_scripts/
 # Test and misc scripts
 misc/
 tests/
-util/
 prompt_examples/
 
 # Large dataset files (if not needed at runtime)
