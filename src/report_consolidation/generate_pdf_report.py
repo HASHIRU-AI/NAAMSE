@@ -8,7 +8,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image, KeepTogether
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY, TA_RIGHT
 import io
 
 
@@ -52,6 +52,19 @@ def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_
         report_data: The report dictionary from generate_report_node
         output_path: Path where PDF will be saved
     """
+
+    # Generate timestamp once
+    generated_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    def add_header(canvas, doc):
+        """Add header with timestamp to each page."""
+        canvas.saveState()
+        canvas.setFont('Helvetica', 9)
+        canvas.setFillColor(colors.HexColor('#7f8c8d'))
+        canvas.drawRightString(
+            letter[0] - 0.25*inch, letter[1] - 0.5*inch, f"Generated: {generated_time}")
+        canvas.restoreState()
+
     doc = SimpleDocTemplate(output_path, pagesize=letter)
     story = []
     styles = getSampleStyleSheet()
@@ -86,9 +99,6 @@ def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_
 
     # Title Page
     story.append(Paragraph("NAAMSE Security Assessment Report", title_style))
-    story.append(Spacer(1, 0.1*inch))
-    story.append(Paragraph(
-        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
 
     # Executive Summary
     story.append(Paragraph("Executive Summary", heading_style))
@@ -105,7 +115,8 @@ def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_
 
     # Risk Severity Breakdown
     severity_section = []
-    severity_section.append(Paragraph("Risk Severity Distribution", heading_style))
+    severity_section.append(
+        Paragraph("Risk Severity Distribution", heading_style))
     severity_chart = _create_severity_chart(all_prompts)
     if severity_chart:
         severity_section.append(severity_chart)
@@ -113,7 +124,8 @@ def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_
 
     # Iteration Progression Chart
     iteration_section = []
-    iteration_section.append(Paragraph("Attack Effectiveness Over Time", heading_style))
+    iteration_section.append(
+        Paragraph("Attack Effectiveness Over Time", heading_style))
     iteration_chart = _create_iteration_chart(
         summary.get("iteration_progression", []))
     if iteration_chart:
@@ -141,7 +153,8 @@ def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_
 
     # Cluster Radar Chart
     cluster_radar_section = []
-    cluster_radar_section.append(Paragraph("Attack type Radar Analysis", heading_style))
+    cluster_radar_section.append(
+        Paragraph("Attack type Radar Analysis", heading_style))
     cluster_radar = _create_radar_chart(
         summary.get("cluster_report", []), "Clusters")
     if cluster_radar:
@@ -160,7 +173,8 @@ def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_
 
     # Mutation Radar Chart
     mutation_radar_section = []
-    mutation_radar_section.append(Paragraph("Mutation Type Radar Analysis", heading_style))
+    mutation_radar_section.append(
+        Paragraph("Mutation Type Radar Analysis", heading_style))
     mutation_radar = _create_radar_chart(
         summary.get("mutation_report", []), "Mutation Types")
     if mutation_radar:
@@ -170,8 +184,8 @@ def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_
     # Page Break
     story.append(PageBreak())
 
-    # Build PDF
-    doc.build(story)
+    # Build PDF with header
+    doc.build(story, onFirstPage=add_header, onLaterPages=add_header)
     print(f"PDF report generated: {output_path}")
 
 
