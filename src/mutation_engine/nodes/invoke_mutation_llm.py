@@ -5,7 +5,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, H
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
 from langchain.agents.middleware import ModelRequest, dynamic_prompt
-import json # Added for json.loads in invoke_llm_with_tools
+import json  # Added for json.loads in invoke_llm_with_tools
 
 
 class Context(TypedDict):
@@ -50,24 +50,25 @@ def get_or_create_agent(tools: list):
 
     if tool_names not in _agent_cache:
         import os
-        api_key = os.getenv("MUTATION_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        api_key = os.getenv("MUTATION_ENGINE_API_KEY") or os.getenv(
+            "GOOGLE_API_KEY")
         model = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
             google_api_key=api_key,
             safety_settings={
-            HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_DEROGATORY: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_TOXICITY: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_VIOLENCE: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUAL: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_MEDICAL: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_DANGEROUS: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY: HarmBlockThreshold.BLOCK_NONE,
-        })
+                HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_DEROGATORY: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_TOXICITY: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_VIOLENCE: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_SEXUAL: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_MEDICAL: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_DANGEROUS: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY: HarmBlockThreshold.BLOCK_NONE,
+            })
 
         # If we have tools, don't use ToolStrategy for structured output
         # Let the agent call tools naturally and extract result from final message
@@ -132,74 +133,87 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
         if tools:
             # Validate response structure
             if not response or "messages" not in response:
-                raise ValueError(f"Invalid agent response structure. Keys: {response.keys() if response else 'None'}")
-            
+                raise ValueError(
+                    f"Invalid agent response structure. Keys: {response.keys() if response else 'None'}")
+
             if not response["messages"]:
-                raise ValueError("Agent returned empty messages array - LLM may have refused or failed to respond")
-            
-            print(f"  [DEBUG] Extracting result from {len(response['messages'])} messages")
-            
+                raise ValueError(
+                    "Agent returned empty messages array - LLM may have refused or failed to respond")
+
+            print(
+                f"  [DEBUG] Extracting result from {len(response['messages'])} messages")
+
             # Strategy 1: Look for ToolMessage (the tool's actual return value)
             for i, msg in enumerate(reversed(response["messages"])):
                 msg_type = type(msg).__name__
                 print(f"  [DEBUG] Message {i}: type={msg_type}")
-                
+
                 # Check if this is a ToolMessage from our mutation tool
                 if hasattr(msg, 'name') and msg.name in [tool.name for tool in tools]:
                     print(f"  [DEBUG] Found ToolMessage from {msg.name}")
                     content = msg.content
-                    
+
                     # Handle different content types
                     # Case 1: Content is already a dict (direct return)
                     if isinstance(content, dict):
                         if "prompt" in content:
-                            print(f"  [DEBUG] Tool returned dict directly with 'prompt' key")
+                            print(
+                                f"  [DEBUG] Tool returned dict directly with 'prompt' key")
                             return content
                         else:
-                            print(f"  [ERROR] Tool returned dict but missing 'prompt' key. Keys: {content.keys()}")
-                    
+                            print(
+                                f"  [ERROR] Tool returned dict but missing 'prompt' key. Keys: {content.keys()}")
+
                     # Case 2: Content is a JSON string
                     elif isinstance(content, str):
                         try:
                             import json
                             parsed = json.loads(content)
                             if isinstance(parsed, dict) and "prompt" in parsed:
-                                print(f"  [DEBUG] Tool returned JSON string, parsed successfully")
+                                print(
+                                    f"  [DEBUG] Tool returned JSON string, parsed successfully")
                                 return parsed
                         except json.JSONDecodeError as e:
-                            print(f"  [DEBUG] Content is string but not valid JSON: {e}")
+                            print(
+                                f"  [DEBUG] Content is string but not valid JSON: {e}")
                             # Treat as literal prompt text
                             return {"prompt": [content]}
-                    
+
                     # Case 3: Content is a list (treat as prompt list)
                     elif isinstance(content, list):
-                        print(f"  [DEBUG] Tool returned list, wrapping as prompt")
+                        print(
+                            f"  [DEBUG] Tool returned list, wrapping as prompt")
                         return {"prompt": content}
-                    
+
                     # Case 4: Other types - convert to string
                     else:
-                        print(f"  [DEBUG] Tool returned unexpected type {type(content)}, converting to string")
+                        print(
+                            f"  [DEBUG] Tool returned unexpected type {type(content)}, converting to string")
                         return {"prompt": [str(content)]}
-            
+
             # Strategy 2: No ToolMessage found - LLM may have responded directly
             # This happens if the LLM doesn't call the tool
-            print(f"  [WARNING] No ToolMessage found - LLM may not have called the tool")
-            
+            print(
+                f"  [WARNING] No ToolMessage found - LLM may not have called the tool")
+
             if not response["messages"]:
-                raise ValueError("No messages available to extract response from")
-            
+                raise ValueError(
+                    "No messages available to extract response from")
+
             last_message = response["messages"][-1]
-            print(f"  [DEBUG] Checking last message: type={type(last_message).__name__}")
-            
+            print(
+                f"  [DEBUG] Checking last message: type={type(last_message).__name__}")
+
             # Try to extract any content from the last message
             content = None
             if hasattr(last_message, 'content'):
                 content = last_message.content
             elif hasattr(last_message, 'text'):
                 content = last_message.text
-            
+
             if content:
-                print(f"  [DEBUG] Extracted content from last message: {str(content)[:200]}")
+                print(
+                    f"  [DEBUG] Extracted content from last message: {str(content)[:200]}")
                 if isinstance(content, str):
                     return {"prompt": [content]}
                 elif isinstance(content, list):
@@ -208,11 +222,13 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
                     return content
                 else:
                     return {"prompt": [str(content)]}
-            
+
             # Strategy 3: Complete failure - provide diagnostic info
             print(f"  [ERROR] Could not extract any content from response")
-            print(f"  [ERROR] Last message type: {type(last_message).__name__}")
-            print(f"  [ERROR] Last message attributes: {[a for a in dir(last_message) if not a.startswith('_')]}")
+            print(
+                f"  [ERROR] Last message type: {type(last_message).__name__}")
+            print(
+                f"  [ERROR] Last message attributes: {[a for a in dir(last_message) if not a.startswith('_')]}")
             raise ValueError(
                 f"LLM did not call tool '{tools[0].name}' and returned no usable content. "
                 f"This likely means the LLM refused or failed to process the request."
@@ -245,9 +261,15 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
     print(
         f"  [Mutation Subgraph] Invoking LLM to mutate: '{state['prompt_to_mutate']}'")
     mutation = Mutation(state['mutation_type'])
-    output: BasePrompt = invoke_llm(
-        state['prompt_to_mutate'], mutation)
-    
+    output: BasePrompt
+    try:
+        output = invoke_llm(
+            state['prompt_to_mutate'], mutation)
+    except Exception as e:
+        print(f"  [ERROR] LLM invocation failed: {e}")
+        # keep original prompt in case of failure
+        output = state['prompt_to_mutate']
+
     # Create metadata for the mutated prompt
     metadata: Metadata = {"mutation_type": mutation}
     if 'metadata' in state['prompt_to_mutate'] and state['prompt_to_mutate']['metadata'] and 'cluster_info' in state['prompt_to_mutate']['metadata']:
@@ -257,7 +279,7 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
         prompt=output['prompt'],
         metadata=metadata
     )
-        
+
     result = {"mutated_prompt": mutated}
     print(f"  [DEBUG] Returning result: {result}")
     return result
