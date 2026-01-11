@@ -186,8 +186,8 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
         data_source = create_data_source('jsonl')
 
     # Check for duplicates before proceeding
-    existing_prompts, _ = data_source.get_prompts_and_sources()
-    if new_prompt in existing_prompts:
+    # existing_prompts, _ = data_source.get_prompts_and_sources()
+    if data_source.check_prompt_exists(new_prompt):
         print(f"⚠️  Skipping duplicate prompt: {new_prompt[:50]}...")
         # Return a result indicating the prompt was skipped
         return {
