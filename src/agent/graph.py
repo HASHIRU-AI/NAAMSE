@@ -107,6 +107,10 @@ async def iteration_worker(state: dict):
     conversation_histories: List[ConversationHistory] = []
     
     for prompt in generated_prompts:
+        print(f"    [Worker {worker_index}] Processing prompt: {prompt}")
+        if not prompt.get("prompt")[0]:
+            print(f"[Worker {worker_index}] Skipping empty prompt.")
+            continue
         # Invoke agent
         print(f"    [Worker {worker_index}] Invoking agent...")
         invoke_result = await invoke_agent_graph.ainvoke(InvokeAgentWorkflowState(
