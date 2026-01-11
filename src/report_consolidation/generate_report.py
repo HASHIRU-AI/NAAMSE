@@ -52,6 +52,10 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
         cluster_info_with_description = get_human_readable_cluster_info(
             cluster_id=cluster_id)
 
+        # add cluster info to metadata.cluster_info
+        metadata["cluster_info"] = {
+            **cluster_info, **cluster_info_with_description}
+
         if cluster_info_with_description:
             cluster_label = cluster_info_with_description.get(
                 "label", cluster_label)
@@ -152,11 +156,14 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
 if __name__ == "__main__":
     # Test block to run this node independently
     # load test state from JSON file
-    PATH = "tests/data/fuzzer_final_state_example.json"
+    PATH = "tests/data/fuzzer_final_state_2.json"
     with open(PATH, "r", encoding="utf-8") as f:
         test_state = json.load(f)
     report_result = generate_report_node(test_state)
     # remove all_prompts_with_scores_and_history for brevity
-    if "all_prompts_with_scores_and_history" in report_result["report"]:
-        del report_result["report"]["all_prompts_with_scores_and_history"]
+    # if "all_prompts_with_scores_and_history" in report_result["report"]:
+    # del report_result["report"]["all_prompts_with_scores_and_history"]
     print(json.dumps(report_result, indent=2))
+    # write to file
+    with open("tests/data/final_report_2.json", "w", encoding="utf-8") as f:
+        json.dump(report_result, f, indent=2)
