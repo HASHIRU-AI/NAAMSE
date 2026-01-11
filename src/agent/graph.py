@@ -251,7 +251,7 @@ if __name__ == "__main__":
             "iterations_limit": 2,
             "mutations_per_iteration": 3,
             "score_threshold": 50,
-            "a2a_agent_url": "http://localhost:5000",
+            "a2a_agent_url": "http://localhost:5001",
             "input_prompts_for_iteration": [
                 {
                     "prompt": [
