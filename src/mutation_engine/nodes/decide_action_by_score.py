@@ -23,6 +23,6 @@ def decide_action_by_score(state: MutationEngineState) -> MutationEngineState:
                                 0.1, 0.2, 0.7], k=1)[0]
     else:  # 100%
         action = rng.choices(["explore", "similar", "mutate"], weights=[
-                                0.5, 0.3, 0.2], k=1)[0]
+                                0.4, 0.4, 0.2], k=1)[0]
     print(f"--- [Mutation Engine] Decided action: {action} ---")
     return {"action_to_take": action}
