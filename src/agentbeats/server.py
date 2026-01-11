@@ -21,7 +21,7 @@ from a2a.types import (
     AgentSkill,
 )
 
-from .executor import Executor
+from src.agentbeats.executor import Executor
 
 
 def main():

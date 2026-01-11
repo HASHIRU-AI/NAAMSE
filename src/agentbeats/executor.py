@@ -19,7 +19,7 @@ from a2a.utils import (
     new_task,
 )
 
-from .agent import Agent
+from src.agentbeats.agent import Agent
 
 
 TERMINAL_STATES = {

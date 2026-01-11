@@ -5,9 +5,9 @@ NAAMSE Green Agent - A2A agent for fuzzing LLM agents.
 from dotenv import load_dotenv
 load_dotenv()
 
-from .agent import Agent
-from .executor import Executor
-from .models import EvalRequest, NAAMSEConfig, EvalResult
+from src.agentbeats.agent import Agent
+from src.agentbeats.executor import Executor
+from src.agentbeats.models import EvalRequest, NAAMSEConfig, EvalResult
 
 __all__ = [
     "Agent",
