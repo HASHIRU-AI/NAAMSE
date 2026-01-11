@@ -18,7 +18,7 @@ def decide_action_by_score(state: MutationEngineState) -> MutationEngineState:
     elif prompt['score'] < 0.8:  # 50-80%
         action = rng.choices(["explore", "similar", "mutate"], weights=[
                                 0.1, 0.7, 0.2], k=1)[0]
-    else:  # >80%
+    elif prompt['score'] >= 0.8 and prompt['score'] < 1.0:  # >80% but not 100%
         action = rng.choices(["explore", "similar", "mutate"], weights=[
                                 0.1, 0.2, 0.7], k=1)[0]
 

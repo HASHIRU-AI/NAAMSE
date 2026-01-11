@@ -11,8 +11,10 @@ def select_mutation_type(state: MutationWorkflowState) -> MutationWorkflowState:
     # Use task-specific seed if provided (for deterministic parallel execution)
     task_seed = state.get("task_seed")
     rng = random.Random(task_seed) if task_seed is not None else random
-
-    selected_type = rng.choice(list(Mutation)).value
+    mutations = list(Mutation)
+    mutations.remove(Mutation.SIMILAR)
+    mutations.remove(Mutation.EXPLORE)
+    selected_type = rng.choice(mutations).value
     print(f"  [Mutation Subgraph] Selected mutation: {selected_type} (task_seed={task_seed})")
     
     return {"mutation_type": selected_type}

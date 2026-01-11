@@ -176,14 +176,9 @@ def process_iteration_results(state: FuzzerLoopState):
         )
 
     if not unique_prompts:
-        # add top 2 scoring prompts if none pass threshold
-        sorted_prompts = sorted(
-            state["iteration_scored_mutations"],
-            key=lambda x: x["score"],
-            reverse=True
-        )
-        unique_prompts = sorted_prompts[:2]
-        print("No prompts passed the threshold; adding top 2 scoring prompts instead.")
+        # add all the prompts from this iteration if none passed the threshold
+        unique_prompts = state["iteration_scored_mutations"]
+        print("No prompts passed the threshold; adding all prompts from this iteration instead.")
 
     if len(unique_prompts) == 0:
         print("WARNING: No prompts passed the threshold! Graph will end.")
@@ -256,7 +251,7 @@ if __name__ == "__main__":
             "iterations_limit": 2,
             "mutations_per_iteration": 3,
             "score_threshold": 50,
-            "a2a_agent_url": "http://localhost:5000",
+            "a2a_agent_url": "http://localhost:5001",
             "input_prompts_for_iteration": [
                 {
                     "prompt": [
