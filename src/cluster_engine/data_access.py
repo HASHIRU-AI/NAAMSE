@@ -218,10 +218,13 @@ class JSONLDataSource:
         return self._model_cache[cache_key]
 
     def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None) -> List[Dict[str, Any]]:
-        """Find the n nearest prompts to a given query prompt."""
+        """Find n random prompts from the parent cluster of the given query prompt."""
         import json
+        import random
         import torch
 
+        print(f"\n[DEBUG JSONL] Query prompt: {query_prompt[:60]}...")
+        
         # Load embeddings
         embeddings = self.get_embeddings()
 
@@ -229,47 +232,95 @@ class JSONLDataSource:
         if device is None:
             device = 'mps' if torch.backends.mps.is_available() else 'cpu'
 
-        # Encode query prompt using cached model
-        model = self._get_cached_model(device)
-        query_embedding = model.encode([query_prompt], normalize_embeddings=True)[0]
-
-        # Use brute force for nearest neighbor search
-        query_norm = query_embedding / np.linalg.norm(query_embedding)
-        embeddings_norm = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
-        similarities = np.dot(embeddings_norm, query_norm)
-
-        # Get top n indices
-        top_n_indices = np.argsort(similarities)[::-1][:n]
-
-        # Load only the required prompts
-        top_indices_set = set(top_n_indices)
-        selected_data = {}
-
+        # First, find the cluster_id of the query_prompt
+        cluster_id = None
+        prompt_found = False
+        
+        with open(self.corpus_file, 'r') as f:
+            for line in f:
+                data = json.loads(line.strip())
+                if data['messages'][0]['content'] == query_prompt:
+                    cluster_id = data.get('cluster_id')
+                    prompt_found = True
+                    #print(f"[DEBUG JSONL] Prompt found in corpus! Cluster: {cluster_id}")
+                    break
+        
+        # If prompt not found, find nearest via embeddings
+        if not prompt_found:
+            #print(f"[DEBUG JSONL] Prompt NOT found, using embedding search...")
+            model = self._get_cached_model(device)
+            query_embedding = model.encode([query_prompt], normalize_embeddings=True)[0]
+            query_norm = query_embedding / np.linalg.norm(query_embedding)
+            embeddings_norm = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+            similarities = np.dot(embeddings_norm, query_norm)
+            top_index = np.argmax(similarities)
+            #print(f"[DEBUG JSONL] Nearest prompt index: {top_index}, similarity: {similarities[top_index]:.4f}")
+            
+            # Get cluster_id of nearest prompt
+            with open(self.corpus_file, 'r') as f:
+                for line_num, line in enumerate(f):
+                    if line_num == top_index:
+                        data = json.loads(line.strip())
+                        cluster_id = data.get('cluster_id')
+                        #print(f"[DEBUG JSONL] Nearest prompt cluster: {cluster_id}")
+                        break
+        
+        if not cluster_id:
+            #print(f"[DEBUG JSONL] No cluster_id found, returning empty list")
+            return []
+        
+        # Determine parent cluster
+        parts = cluster_id.split('/')
+        #print(f"[DEBUG JSONL] Original cluster parts: {parts} (depth: {len(parts)})")
+        
+        if len(parts) <= 1:
+            parent_prefix = cluster_id
+            exact_match = True
+            #print(f"[DEBUG JSONL] Top-level cluster, staying at: {parent_prefix}")
+        else:
+            parent_prefix = '/'.join(parts[:-1])
+            exact_match = False
+            #print(f"[DEBUG JSONL] Going up to parent cluster: {parent_prefix}")
+        
+        # Collect all prompts from parent cluster (excluding query prompt)
+        candidate_prompts = []
         with open(self.corpus_file, 'r') as f:
             for line_num, line in enumerate(f):
-                if line_num in top_indices_set:
-                    data = json.loads(line.strip())
-                    selected_data[line_num] = data
-
-        # Build results
-        results = []
-        for idx in top_n_indices:
-            data = selected_data[idx]
-            result = {
-                'prompt': data['messages'][0]['content'],
-                'source': data['source'],
-                'similarity': float(similarities[idx]),
-                'index': int(idx)
-            }
-            if 'cluster_id' in data:
-                result['cluster_id'] = data['cluster_id']
-            if 'cluster_label' in data:
-                result['cluster_label'] = data['cluster_label']
-            if 'centroid_coord' in data:
-                result['centroid_coord'] = data['centroid_coord']
-            results.append(result)
-
-        return results
+                data = json.loads(line.strip())
+                prompt_cluster = data.get('cluster_id', '')
+                prompt_content = data['messages'][0]['content']
+                
+                # Skip the query prompt
+                if prompt_content == query_prompt:
+                    continue
+                
+                # Check if prompt belongs to parent cluster
+                if exact_match:
+                    matches = prompt_cluster == parent_prefix
+                else:
+                    matches = prompt_cluster.startswith(parent_prefix + '/')
+                
+                if matches:
+                    candidate_prompts.append({
+                        'prompt': prompt_content,
+                        'source': data['source'],
+                        'similarity': None,
+                        'index': line_num,
+                        'cluster_id': data.get('cluster_id'),
+                        'cluster_label': data.get('cluster_label'),
+                        'centroid_coord': data.get('centroid_coord')
+                    })
+        
+        #print(f"[DEBUG JSONL] Found {len(candidate_prompts)} candidates in parent cluster")
+        
+        # Return random n prompts
+        if len(candidate_prompts) <= n:
+            #print(f"[DEBUG JSONL] Returning all {len(candidate_prompts)} candidates")
+            return candidate_prompts
+        
+        selected = random.sample(candidate_prompts, n)
+        #print(f"[DEBUG JSONL] Randomly selected {len(selected)} prompts from {len(candidate_prompts)} candidates")
+        return selected
 
     def add_prompt_to_clusters(self, new_prompt: str, source: str, centroids_file: str, device: str = None) -> Dict[str, Any]:
         """Add a new prompt to the existing cluster structure without re-clustering."""
@@ -661,63 +712,96 @@ class SQLiteDataSource:
         return self._model_cache[cache_key]
     
     def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None) -> List[Dict[str, Any]]:
-        """Find the n nearest prompts to a given query prompt."""
+        """Find n random prompts from the parent cluster of the given query prompt."""
         import torch
         
-        # Load embeddings
-        embeddings = self.get_embeddings()
+        #print(f"\n[DEBUG SQLITE] Query prompt: {query_prompt[:60]}...")
         
-        # Determine device
-        if device is None:
-            device = 'mps' if torch.backends.mps.is_available() else 'cpu'
-        
-        # Encode query prompt using cached model
-        model = self._get_cached_model(device)
-        query_embedding = model.encode([query_prompt], normalize_embeddings=True)[0]
-        
-        # Use brute force for nearest neighbor search
-        query_norm = query_embedding / np.linalg.norm(query_embedding)
-        embeddings_norm = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
-        similarities = np.dot(embeddings_norm, query_norm)
-        top_n_indices = np.argsort(similarities)[::-1][:n]
-        similarities = similarities[top_n_indices]
-        
-        # Fetch the corresponding prompts from database
         conn = self._get_connection()
         cursor = conn.cursor()
         
-        # Build results
+        # Find the cluster_id of the query_prompt
+        cursor.execute("SELECT id, cluster_id FROM prompts WHERE user_content = ?", (query_prompt,))
+        row = cursor.fetchone()
+        
+        if not row:
+            # If not found, find the nearest prompt's cluster
+            #print(f"[DEBUG SQLITE] Prompt NOT found in DB, using embedding search...")
+            embeddings = self.get_embeddings()
+            if device is None:
+                device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+            model = self._get_cached_model(device)
+            query_embedding = model.encode([query_prompt], normalize_embeddings=True)[0]
+            query_norm = query_embedding / np.linalg.norm(query_embedding)
+            embeddings_norm = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+            similarities = np.dot(embeddings_norm, query_norm)
+            top_index = np.argmax(similarities)
+            #print(f"[DEBUG SQLITE] Nearest prompt index: {top_index}, similarity: {similarities[top_index]:.4f}")
+            prompt_id = int(top_index) + 1
+            cursor.execute("SELECT cluster_id FROM prompts WHERE id = ?", (prompt_id,))
+            row2 = cursor.fetchone()
+            if row2:
+                cluster_id = row2[0]
+                #print(f"[DEBUG SQLITE] Nearest prompt cluster: {cluster_id}")
+            else:
+                conn.close()
+                #print(f"[DEBUG SQLITE] No cluster found for nearest prompt, returning empty list")
+                return []
+        else:
+            prompt_id, cluster_id = row
+            #print(f"[DEBUG SQLITE] Prompt found in DB! ID: {prompt_id}, Cluster: {cluster_id}")
+        
+        if not cluster_id:
+            conn.close()
+            #print(f"[DEBUG SQLITE] No cluster_id found, returning empty list")
+            return []
+        
+        parts = cluster_id.split('/')
+        #print(f"[DEBUG SQLITE] Original cluster parts: {parts} (depth: {len(parts)})")
+        
+        if len(parts) <= 1:
+            where_clause = "p.cluster_id = ?"
+            param = cluster_id
+            #print(f"[DEBUG SQLITE] Top-level cluster, staying at: {param}")
+        else:
+            parent = '/'.join(parts[:-1])
+            where_clause = "p.cluster_id LIKE ?"
+            param = parent + '/%'
+            #print(f"[DEBUG SQLITE] Going up to parent cluster: {parent}")
+        
+        # Get random n prompts from the parent cluster (excluding the query prompt)
+        #print(f"[DEBUG SQLITE] Querying with WHERE clause: {where_clause}, param: {param}")
+        cursor.execute(f"""
+            SELECT p.id, p.user_content, p.source, p.cluster_id, p.cluster_label,
+                   c.embedding_vector, c.dimensions
+            FROM prompts p
+            LEFT JOIN centroids c ON p.id = c.prompt_id
+            WHERE {where_clause} AND p.user_content != ?
+            ORDER BY RANDOM()
+            LIMIT ?
+        """, (param, query_prompt, n))
+        
+        rows = cursor.fetchall()
+        #print(f"[DEBUG SQLITE] Found {len(rows)} results from parent cluster")
+        
         results = []
-        for i, idx in enumerate(top_n_indices):
-            # prompt_id is idx + 1 (1-indexed in DB)
-            prompt_id = int(idx) + 1
-            
-            cursor.execute("""
-                SELECT p.user_content, p.source, p.cluster_id, p.cluster_label,
-                       c.embedding_vector, c.dimensions
-                FROM prompts p
-                LEFT JOIN centroids c ON p.id = c.prompt_id
-                WHERE p.id = ?
-            """, (prompt_id,))
-            
-            row = cursor.fetchone()
-            if row:
-                result = {
-                    'prompt': row[0],
-                    'source': row[1],
-                    'similarity': float(similarities[i]),
-                    'index': int(idx)
-                }
-                if row[2]:  # cluster_id
-                    result['cluster_id'] = row[2]
-                if row[3]:  # cluster_label
-                    result['cluster_label'] = row[3]
-                if row[4] is not None:  # embedding_vector exists
-                    import struct
-                    blob = row[4]
-                    dimensions = row[5]
-                    result['centroid_coord'] = list(struct.unpack(f'{dimensions}d', blob))
-                results.append(result)
+        for row in rows:
+            result = {
+                'prompt': row[1],
+                'source': row[2],
+                'similarity': None,
+                'index': row[0] - 1
+            }
+            if row[3]:
+                result['cluster_id'] = row[3]
+            if row[4]:
+                result['cluster_label'] = row[4]
+            if row[5] is not None:
+                import struct
+                blob = row[5]
+                dimensions = row[6]
+                result['centroid_coord'] = list(struct.unpack(f'{dimensions}d', blob))
+            results.append(result)
         
         conn.close()
         return results
