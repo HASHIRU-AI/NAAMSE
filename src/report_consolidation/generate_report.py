@@ -22,6 +22,12 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
     # Track per-cluster: {cluster_label: {"sum": x, "count": y, "max": z, "description": ""}}
     cluster_stats: dict[str, dict[str, Any]] = {}
 
+    # Track per-mutation: {mutation_type: {"sum": x, "count": y, "max": z}}
+    mutation_stats: dict[str, dict[str, float]] = {}
+
+    # Track per-iteration: {iteration: {"sum": x, "count": y, "max": z}}
+    iteration_stats: dict[int, dict[str, float]] = {}
+
     for prompt in all_prompts:
         score = prompt.get("score", 0)
         total_score += score
@@ -62,6 +68,24 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
         cluster_stats[cluster_label]["max"] = max(
             cluster_stats[cluster_label]["max"], score)
 
+        # Track mutation type statistics
+        mutation_type = metadata.get("mutation_type", "unknown")
+        if mutation_type not in mutation_stats:
+            mutation_stats[mutation_type] = {"sum": 0, "count": 0, "max": 0}
+        mutation_stats[mutation_type]["sum"] += score
+        mutation_stats[mutation_type]["count"] += 1
+        mutation_stats[mutation_type]["max"] = max(
+            mutation_stats[mutation_type]["max"], score)
+
+        # Track iteration statistics
+        iteration = metadata.get("iteration", 0)
+        if iteration not in iteration_stats:
+            iteration_stats[iteration] = {"sum": 0, "count": 0, "max": 0}
+        iteration_stats[iteration]["sum"] += score
+        iteration_stats[iteration]["count"] += 1
+        iteration_stats[iteration]["max"] = max(
+            iteration_stats[iteration]["max"], score)
+
     avg_score = total_score / len(all_prompts) if all_prompts else 0
 
     # Build cluster report sorted by avg score descending
@@ -77,18 +101,47 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
     ]
     cluster_report.sort(key=lambda x: -x["avg_score"])
 
+    # Build mutation report sorted by avg score descending
+    mutation_report = [
+        {
+            "mutation_type": mut_type,
+            "count": int(stats["count"]),
+            "avg_score": round(stats["sum"] / stats["count"], 2),
+            "max_score": round(stats["max"], 2)
+        }
+        for mut_type, stats in mutation_stats.items()
+    ]
+    mutation_report.sort(key=lambda x: -x["avg_score"])
+
+    # Build iteration progression report sorted by iteration number
+    iteration_progression = [
+        {
+            "iteration": iteration,
+            "count": int(stats["count"]),
+            "avg_score": round(stats["sum"] / stats["count"], 2),
+            "max_score": round(stats["max"], 2)
+        }
+        for iteration, stats in iteration_stats.items()
+    ]
+    iteration_progression.sort(key=lambda x: x["iteration"])
+
     # print statements for terminal readability can be kept here or moved to the agent
     print(f"Fuzzer completed. Tested {len(all_prompts)} prompts.")
     print(
         f"Max score: {max_score}, Avg score: {avg_score}, High scoring prompts: {high_score_count}")
     print(f"Cluster breakdown: {len(cluster_report)} clusters")
+    print(f"Mutation breakdown: {len(mutation_report)} mutation types")
 
     report_content = {
-        "total_prompts_tested": len(all_prompts),
-        "max_score": max_score,
-        "avg_score": round(avg_score, 2),
-        "high_score_count": high_score_count,
-        "cluster_report": cluster_report,
+        "summary": {
+            "total_prompts_tested": len(all_prompts),
+            "max_score": max_score,
+            "avg_score": round(avg_score, 2),
+            "high_score_count": high_score_count,
+            "cluster_report": cluster_report,
+            "mutation_report": mutation_report,
+            "iteration_progression": iteration_progression,
+        },
         # All prompts, now with score and history
         "all_prompts_with_scores_and_history": all_prompts
     }
@@ -98,44 +151,12 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
 
 if __name__ == "__main__":
     # Test block to run this node independently
-    test_state = {
-        "all_fuzzer_prompts_with_scores": [
-            {
-                "prompt": "Test prompt 1",
-                "score": 0.9,
-                "metadata": {
-                    "cluster_info": {
-                        "cluster_label": "A",
-                        "cluster_id": "cluster_1",
-                        "description": "Cluster A description"
-                    }
-                }
-            },
-            {
-                "prompt": "Test prompt 2",
-                "score": 0.7,
-                "metadata": {
-                    "cluster_info": {
-                        "cluster_label": "B",
-                        "cluster_id": "cluster_2",
-                        "description": "Cluster B description"
-                    }
-                }
-            },
-            {
-                "prompt": "Test prompt 3",
-                "score": 0.85,
-                "metadata": {
-                    "cluster_info": {
-                        "cluster_label": "A",
-                        "cluster_id": "cluster_1",
-                        "description": "Cluster A description"
-                    }
-                }
-            }
-        ],
-        "score_threshold": 0.8
-    }
-
+    # load test state from JSON file
+    PATH = "tests/data/fuzzer_final_state_example.json"
+    with open(PATH, "r", encoding="utf-8") as f:
+        test_state = json.load(f)
     report_result = generate_report_node(test_state)
+    # remove all_prompts_with_scores_and_history for brevity
+    if "all_prompts_with_scores_and_history" in report_result["report"]:
+        del report_result["report"]["all_prompts_with_scores_and_history"]
     print(json.dumps(report_result, indent=2))
