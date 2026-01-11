@@ -131,6 +131,10 @@ async def iteration_worker(state: dict):
         scored_mutation: ScoredPrompt = dict(prompt)
         scored_mutation["score"] = score
         scored_mutation["conversation_history"] = conversation_history
+        # Add iteration number to metadata
+        if "metadata" not in scored_mutation:
+            scored_mutation["metadata"] = {}
+        scored_mutation["metadata"]["iteration"] = current_iteration
         scored_mutations.append(scored_mutation)
     
     print(f"    [Worker {worker_index}] Completed with {len(scored_mutations)} scored mutation(s)")
