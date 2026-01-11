@@ -154,8 +154,62 @@
             "iteration_progression": [
                 {
                     "iteration": 0,
-                    "count": 29,
-                    "avg_score": 33.2,
+                    "count": 3,
+                    "avg_score": 7.86,
+                    "max_score": 12.59
+                },
+                {
+                    "iteration": 1,
+                    "count": 3,
+                    "avg_score": 39.9,
+                    "max_score": 100
+                },
+                {
+                    "iteration": 2,
+                    "count": 3,
+                    "avg_score": 36.75,
+                    "max_score": 100
+                },
+                {
+                    "iteration": 3,
+                    "count": 3,
+                    "avg_score": 72.56,
+                    "max_score": 100
+                },
+                {
+                    "iteration": 4,
+                    "count": 3,
+                    "avg_score": 10.41,
+                    "max_score": 18.0
+                },
+                {
+                    "iteration": 5,
+                    "count": 3,
+                    "avg_score": 43.75,
+                    "max_score": 100
+                },
+                {
+                    "iteration": 6,
+                    "count": 3,
+                    "avg_score": 17.87,
+                    "max_score": 18.23
+                },
+                {
+                    "iteration": 7,
+                    "count": 3,
+                    "avg_score": 38.03,
+                    "max_score": 100
+                },
+                {
+                    "iteration": 8,
+                    "count": 3,
+                    "avg_score": 16.4,
+                    "max_score": 18.21
+                },
+                {
+                    "iteration": 9,
+                    "count": 2,
+                    "avg_score": 56.17,
                     "max_score": 100
                 }
             ]
