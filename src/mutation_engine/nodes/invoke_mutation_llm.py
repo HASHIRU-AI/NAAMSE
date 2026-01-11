@@ -5,6 +5,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, H
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
 from langchain.agents.middleware import ModelRequest, dynamic_prompt
+from src.helpers.extract_text_from_context import extract_text_from_content
 import json  # Added for json.loads in invoke_llm_with_tools
 
 
@@ -265,6 +266,20 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
     try:
         output = invoke_llm(
             state['prompt_to_mutate'], mutation)
+        
+        # sanitize output to make sure output follows openai format
+        sanitized_output = []
+    
+        for msg in output['prompt']:
+            # Build a new dictionary with only the standard keys
+            clean_msg = {
+                "role": msg.get("role", "user"),  # Default to user if missing
+                "content": extract_text_from_content(msg.get("content"))
+            }
+            sanitized_output.append(clean_msg)
+        
+        output['prompt'] = sanitized_output
+        
     except Exception as e:
         print(f"  [ERROR] LLM invocation failed: {e}")
         # keep original prompt in case of failure
