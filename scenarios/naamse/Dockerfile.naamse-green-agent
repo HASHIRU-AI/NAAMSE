@@ -8,6 +8,13 @@ WORKDIR /home/agentbeats/naamse
 COPY pyproject.toml uv.lock README.md ./
 COPY src src
 
+# Download naamse.db from Google Drive to project root
+RUN gdown --fuzzy 'https://drive.google.com/file/d/1cOkB5tXqw91aIWZjC53zFrkdT0mEeluR/view?usp=sharing' -O /home/agentbeats/naamse/naamse.db
+
+# Create cluster_engine directory and download files
+RUN gdown --fuzzy 'https://drive.google.com/file/d/1jtHP1v6UvUZy_5jaIJ59epVNJpUObP0U/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/embedding.npy
+RUN gdown --fuzzy 'https://drive.google.com/file/d/1YHBR8BVV68gCD3W67bHKUAXGXV2mqtKb/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/centroids.pkl
+
 RUN \
     --mount=type=cache,target=/home/agentbeats/.cache/uv,uid=1000 \
     uv sync --locked
@@ -16,14 +23,8 @@ USER root
 RUN apt-get update && apt-get install -y git python3-pip && \
     pip3 install gdown && \
     rm -rf /var/lib/apt/lists/*
+
 USER agentbeats
-
-# Download naamse.db from Google Drive to project root
-RUN gdown --fuzzy 'https://drive.google.com/file/d/1cOkB5tXqw91aIWZjC53zFrkdT0mEeluR/view?usp=sharing' -O /home/agentbeats/naamse/naamse.db
-
-# Create cluster_engine directory and download files
-RUN gdown --fuzzy 'https://drive.google.com/file/d/1jtHP1v6UvUZy_5jaIJ59epVNJpUObP0U/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/embedding.npy
-RUN gdown --fuzzy 'https://drive.google.com/file/d/1YHBR8BVV68gCD3W67bHKUAXGXV2mqtKb/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/centroids.pkl
 
 # Download tau2 data
 # RUN git clone --depth 1 --filter=blob:none --sparse https://github.com/sierra-research/tau2-bench.git /home/agentbeats/tau2-bench && \
