@@ -9,7 +9,8 @@ COPY pyproject.toml uv.lock README.md ./
 
 RUN \
     --mount=type=cache,target=/home/agentbeats/.cache/uv,uid=1000 \
-    uv sync --locked
+    # Only install external dependencies, not the project itself
+    uv sync --locked --no-install-project 
 
 COPY scenarios scenarios
 COPY util util
