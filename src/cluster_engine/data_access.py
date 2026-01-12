@@ -915,16 +915,27 @@ class SQLiteDataSource:
     
     def get_random_prompt(self) -> Dict[str, Any]:
         """Get a random prompt from the corpus."""
+        import random
+        
         conn = self._get_connection()
         cursor = conn.cursor()
         
-        # Use SQLite's RANDOM() for efficient random sampling
+        # Get total count of prompts
+        cursor.execute("SELECT COUNT(*) FROM prompts")
+        count = cursor.fetchone()[0]
+        
+        if count == 0:
+            conn.close()
+            raise ValueError("No prompts found in the database")
+        
+        # Use Python's random (seeded via config.py) for reproducible sampling
+        random_id = random.randint(1, count)
+        
         cursor.execute("""
             SELECT id, user_content, source, cluster_id, cluster_label
             FROM prompts
-            ORDER BY RANDOM()
-            LIMIT 1
-        """)
+            WHERE id = ?
+        """, (random_id,))
         
         row = cursor.fetchone()
         conn.close()
