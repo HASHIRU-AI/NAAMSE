@@ -43,11 +43,11 @@ if __name__ == "__main__":
         tags=['hello world'],
         examples=['hi', 'hello world'],
     )
-    agent = EchoAgent(url="http://localhost:5000",
+    agent = EchoAgent(url=f"http://{args.host}:{args.port}",
                       agent_card=AgentCard(
                           name='Hello World Agent',
                           description='Just a hello world agent',
-                          url='http://localhost:5000/',
+                          url=f"http://{args.host}:{args.port}",
                           version='1.0.0',
                           default_input_modes=['text'],
                           default_output_modes=['text'],
@@ -60,4 +60,4 @@ if __name__ == "__main__":
                           skills=[skill],
                       ))
     agent.agent_card.capabilities["streaming"] = False
-    run_server(agent, host="0.0.0.0", port=5000)
+    run_server(agent, host=args.host, port=args.port)
