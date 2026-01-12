@@ -8,7 +8,12 @@ def run_explore_action(state: MutationEngineState) -> MutationEngineState:
     """3a. Fetches a random prompt."""
     print("--- [Mutation Engine] Running Action: EXPLORE ---")
 
-    random_prompt_info = get_random_prompt()
+    # Use task-specific seed if provided (for deterministic parallel execution)
+    task_seed = state.get("task_seed")
+    if task_seed is not None:
+        print(f"[Seeding] run_explore_action using task_seed={task_seed}")
+
+    random_prompt_info = get_random_prompt(seed=task_seed)
     prompt_text = random_prompt_info["prompt"]
 
     cluster_info: ClusterInfo = {}

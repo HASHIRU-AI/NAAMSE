@@ -45,7 +45,7 @@ class DataSource(Protocol):
         """Get all prompts belonging to a specific cluster."""
         ...
 
-    def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None) -> List[Dict[str, Any]]:
+    def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None, seed=None) -> List[Dict[str, Any]]:
         """Find the n nearest prompts to a given query prompt."""
         ...
 
@@ -53,7 +53,7 @@ class DataSource(Protocol):
         """Add a new prompt to the existing cluster structure without re-clustering."""
         ...
 
-    def get_random_prompt(self) -> Dict[str, Any]:
+    def get_random_prompt(self, seed=None) -> Dict[str, Any]:
         """Get a random prompt from the corpus."""
         ...
 
@@ -217,7 +217,7 @@ class JSONLDataSource:
 
         return self._model_cache[cache_key]
 
-    def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None) -> List[Dict[str, Any]]:
+    def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None, seed=None) -> List[Dict[str, Any]]:
         """Find n random prompts from the parent cluster of the given query prompt."""
         import json
         import random
@@ -231,6 +231,9 @@ class JSONLDataSource:
         # Determine device
         if device is None:
             device = 'mps' if torch.backends.mps.is_available() else 'cpu'
+
+        # Use seeded random for reproducible sampling if seed provided
+        rng = random.Random(seed) if seed is not None else random
 
         # First, find the cluster_id of the query_prompt
         cluster_id = None
@@ -318,7 +321,7 @@ class JSONLDataSource:
             #print(f"[DEBUG JSONL] Returning all {len(candidate_prompts)} candidates")
             return candidate_prompts
         
-        selected = random.sample(candidate_prompts, n)
+        selected = rng.sample(candidate_prompts, n)
         #print(f"[DEBUG JSONL] Randomly selected {len(selected)} prompts from {len(candidate_prompts)} candidates")
         return selected
 
@@ -413,7 +416,7 @@ class JSONLDataSource:
         print("✅ Prompt added successfully!")
         return result
 
-    def get_random_prompt(self) -> Dict[str, Any]:
+    def get_random_prompt(self, seed=None) -> Dict[str, Any]:
         """Get a random prompt from the corpus using reservoir sampling."""
         import json
         import random
@@ -421,12 +424,15 @@ class JSONLDataSource:
         if not os.path.exists(self.corpus_file):
             raise ValueError("No prompts found in the corpus")
 
+        # Use seeded random for reproducible sampling if seed provided
+        rng = random.Random(seed) if seed is not None else random
+
         # Reservoir sampling
         selected_line = None
         selected_index = -1
         with open(self.corpus_file, "r", encoding="utf-8") as f:
             for index, line in enumerate(f, start=1):
-                if random.randrange(index) == 0:
+                if rng.randrange(index) == 0:
                     selected_line = line
                     selected_index = index - 1
 
@@ -711,7 +717,7 @@ class SQLiteDataSource:
 
         return self._model_cache[cache_key]
     
-    def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None) -> List[Dict[str, Any]]:
+    def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None, seed=None) -> List[Dict[str, Any]]:
         """Find n random prompts from the parent cluster of the given query prompt."""
         import torch
         
@@ -913,7 +919,7 @@ class SQLiteDataSource:
         print("✅ Prompt added successfully!")
         return result
     
-    def get_random_prompt(self) -> Dict[str, Any]:
+    def get_random_prompt(self, seed=None) -> Dict[str, Any]:
         """Get a random prompt from the corpus."""
         import random
         
@@ -928,8 +934,9 @@ class SQLiteDataSource:
             conn.close()
             raise ValueError("No prompts found in the database")
         
-        # Use Python's random (seeded via config.py) for reproducible sampling
-        random_id = random.randint(1, count)
+        # Use seeded random for reproducible sampling if seed provided
+        rng = random.Random(seed) if seed is not None else random
+        random_id = rng.randint(1, count)
         
         cursor.execute("""
             SELECT id, user_content, source, cluster_id, cluster_label

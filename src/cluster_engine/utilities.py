@@ -4,7 +4,7 @@ from .data_access import DataSource, create_data_source
 
 
 def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[DataSource] = None,
-                         device: str = None) -> List[Dict[str, Any]]:
+                         device: str = None, seed=None) -> List[Dict[str, Any]]:
     """
     Find the n nearest prompts to a given query prompt.
 
@@ -13,6 +13,7 @@ def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[Da
         n: Number of nearest prompts to return
         data_source: Data source to use (if None, creates SQLite data source)
         device: Device to use for encoding ('cpu', 'cuda', 'mps', or None for auto-detect)
+        seed: Random seed for reproducible sampling
 
     Returns:
         List of dictionaries containing the nearest prompts with their similarity scores
@@ -21,7 +22,7 @@ def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[Da
     if data_source is None:
         data_source = create_data_source('sqlite')
 
-    return data_source.find_nearest_prompts(query_prompt, n, device)
+    return data_source.find_nearest_prompts(query_prompt, n, device, seed)
 
 
 def get_prompts_by_cluster(cluster_id: str, data_source: Optional[DataSource] = None) -> List[Dict[str, Any]]:
@@ -72,7 +73,7 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     return data_source.add_prompt_to_clusters(new_prompt, source, centroids_file, device)
 
 
-def get_random_prompt(data_source: Optional[DataSource] = None) -> Dict[str, Any]:
+def get_random_prompt(data_source: Optional[DataSource] = None, seed=None) -> Dict[str, Any]:
     """
     Get a random prompt from the corpus using fast random access.
 
@@ -80,6 +81,7 @@ def get_random_prompt(data_source: Optional[DataSource] = None) -> Dict[str, Any
 
     Args:
         data_source: Data source to use (if None, uses SQLite data source)
+        seed: Random seed for reproducible sampling
 
     Returns:
         Dictionary containing a random prompt with its source and index
@@ -87,7 +89,7 @@ def get_random_prompt(data_source: Optional[DataSource] = None) -> Dict[str, Any
     if data_source is None:
         data_source = create_data_source('sqlite')
 
-    return data_source.get_random_prompt()
+    return data_source.get_random_prompt(seed=seed)
 
 
 def get_cluster_id_for_prompt(prompt: List[str], data_source: Optional[DataSource] = None,
