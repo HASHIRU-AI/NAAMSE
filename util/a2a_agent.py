@@ -1,5 +1,7 @@
 from python_a2a import A2AServer, AgentCard, AgentSkill, Message, TextContent, MessageRole, run_server
 from google import genai
+from google.genai.types import GenerateContentConfig
+
 import dotenv
 import os
 import argparse
@@ -17,7 +19,7 @@ class EchoAgent(A2AServer):
         if message.content.type == "text":
             print(f"Received message: {message.content.text}")
             chat = client.chats.create(model="gemini-2.5-flash")
-            response = chat.send_message(message.content.text)
+            response = chat.send_message(message.content.text, config=GenerateContentConfig(temperature=0.0))
             return Message(
                 content=TextContent(text=f"{response.text}"),
                 role=MessageRole.AGENT,

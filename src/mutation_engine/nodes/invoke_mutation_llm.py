@@ -56,6 +56,7 @@ def get_or_create_agent(tools: list):
         model = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash",
             google_api_key=api_key,
+            temperature=0,
             safety_settings={
                 HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
                 HarmCategory.HARM_CATEGORY_DEROGATORY: HarmBlockThreshold.BLOCK_NONE,
