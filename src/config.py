@@ -64,6 +64,10 @@ class Config:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
+            # Note: SQLite does not support seeding for its RANDOM() function.
+            # Random operations in SQLiteDataSource use Python's random module instead,
+            # which is seeded here for reproducibility.
+
             print(f"🌱 Random seed set to {seed} for reproducible runs")
         else:
             print("🎲 Running in non-deterministic mode (no seed set)")
