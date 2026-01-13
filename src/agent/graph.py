@@ -40,6 +40,7 @@ class FuzzerLoopState(TypedDict):
     conversation_histories: Annotated[List[ConversationHistory], append_or_reset]
     iteration_scored_mutations: Annotated[List[ScoredPrompt], append_or_reset]
     report: Optional[Dict[str, Any]]
+    all_task_seeds: List[int]  # Pre-generated seeds for all iterations
 
 
 def initialize_fuzzer(state: FuzzerLoopState):
@@ -47,25 +48,34 @@ def initialize_fuzzer(state: FuzzerLoopState):
     print("--- Initializing Fuzzer ---")
     initial_prompts = state.get("input_prompts_for_iteration") or [
         {"prompt": ["initial_seed_prompt"], "score": 0.0}]
+
+    # Pre-generate all task seeds for all iterations to ensure determinism
+    # even if external code advances global random state
+    total_seeds = state["iterations_limit"] * state["mutations_per_iteration"]
+    all_task_seeds = [random.randrange(sys.maxsize) for _ in range(total_seeds)]
+
     return {
         "current_iteration": 0,
         "all_fuzzer_prompts_with_scores": [],
-        "input_prompts_for_iteration": initial_prompts
+        "input_prompts_for_iteration": initial_prompts,
+        "all_task_seeds": all_task_seeds
     }
 
 
 def fan_out_iteration_workers(state: FuzzerLoopState):
     """Fan out to parallel iteration workers at the start of each iteration.
-    
+
     Each worker handles the full pipeline: mutation -> invoke -> score sequentially.
     This avoids multiple fan-out/fan-in cycles and simplifies list management.
     """
     n = state["mutations_per_iteration"]
+    current_iteration = state["current_iteration"]
     print(
-        f"--- Iteration {state['current_iteration']}: Spawning {n} iteration workers ---")
+        f"--- Iteration {current_iteration}: Spawning {n} iteration workers ---")
 
-    # Pre-generate deterministic seeds for each parallel task
-    task_seeds = [random.randrange(sys.maxsize) for _ in range(n)]
+    # Use pre-generated seeds for this iteration
+    start_index = current_iteration * n
+    task_seeds = state["all_task_seeds"][start_index : start_index + n]
 
     # Return Send objects for dynamic fan-out - one worker per mutation slot
     return [
@@ -73,7 +83,7 @@ def fan_out_iteration_workers(state: FuzzerLoopState):
             "input_prompts": state["input_prompts_for_iteration"],
             "task_seed": task_seeds[i],
             "a2a_agent_url": state["a2a_agent_url"],
-            "current_iteration": state["current_iteration"],
+            "current_iteration": current_iteration,
             "worker_index": i
         })
         for i in range(n)

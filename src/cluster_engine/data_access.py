@@ -719,17 +719,21 @@ class SQLiteDataSource:
     
     def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None, seed=None) -> List[Dict[str, Any]]:
         """Find n random prompts from the parent cluster of the given query prompt."""
+        import random
         import torch
-        
+
         #print(f"\n[DEBUG SQLITE] Query prompt: {query_prompt[:60]}...")
-        
+
+        # Use seeded random for reproducible sampling if seed provided
+        rng = random.Random(seed) if seed is not None else random
+
         conn = self._get_connection()
         cursor = conn.cursor()
-        
+
         # Find the cluster_id of the query_prompt
         cursor.execute("SELECT id, cluster_id FROM prompts WHERE user_content = ?", (query_prompt,))
         row = cursor.fetchone()
-        
+
         if not row:
             # If not found, find the nearest prompt's cluster
             #print(f"[DEBUG SQLITE] Prompt NOT found in DB, using embedding search...")
@@ -756,15 +760,15 @@ class SQLiteDataSource:
         else:
             prompt_id, cluster_id = row
             #print(f"[DEBUG SQLITE] Prompt found in DB! ID: {prompt_id}, Cluster: {cluster_id}")
-        
+
         if not cluster_id:
             conn.close()
             #print(f"[DEBUG SQLITE] No cluster_id found, returning empty list")
             return []
-        
+
         parts = cluster_id.split('/')
         #print(f"[DEBUG SQLITE] Original cluster parts: {parts} (depth: {len(parts)})")
-        
+
         if len(parts) <= 1:
             where_clause = "p.cluster_id = ?"
             param = cluster_id
@@ -774,8 +778,8 @@ class SQLiteDataSource:
             where_clause = "p.cluster_id LIKE ?"
             param = parent + '/%'
             #print(f"[DEBUG SQLITE] Going up to parent cluster: {parent}")
-        
-        # Get random n prompts from the parent cluster (excluding the query prompt)
+
+        # Get all prompts from the parent cluster (excluding the query prompt)
         #print(f"[DEBUG SQLITE] Querying with WHERE clause: {where_clause}, param: {param}")
         cursor.execute(f"""
             SELECT p.id, p.user_content, p.source, p.cluster_id, p.cluster_label,
@@ -783,15 +787,20 @@ class SQLiteDataSource:
             FROM prompts p
             LEFT JOIN centroids c ON p.id = c.prompt_id
             WHERE {where_clause} AND p.user_content != ?
-            ORDER BY RANDOM()
-            LIMIT ?
-        """, (param, query_prompt, n))
-        
-        rows = cursor.fetchall()
-        #print(f"[DEBUG SQLITE] Found {len(rows)} results from parent cluster")
-        
+            ORDER BY p.id
+        """, (param, query_prompt))
+
+        all_rows = cursor.fetchall()
+        #print(f"[DEBUG SQLITE] Found {len(all_rows)} results from parent cluster")
+
+        # Use seeded random to select n prompts
+        if len(all_rows) <= n:
+            selected_rows = all_rows
+        else:
+            selected_rows = rng.sample(all_rows, n)
+
         results = []
-        for row in rows:
+        for row in selected_rows:
             result = {
                 'prompt': row[1],
                 'source': row[2],
@@ -808,7 +817,7 @@ class SQLiteDataSource:
                 dimensions = row[6]
                 result['centroid_coord'] = list(struct.unpack(f'{dimensions}d', blob))
             results.append(result)
-        
+
         conn.close()
         return results
     
@@ -922,45 +931,46 @@ class SQLiteDataSource:
     def get_random_prompt(self, seed=None) -> Dict[str, Any]:
         """Get a random prompt from the corpus."""
         import random
-        
+
         conn = self._get_connection()
         cursor = conn.cursor()
-        
+
         # Get total count of prompts
         cursor.execute("SELECT COUNT(*) FROM prompts")
         count = cursor.fetchone()[0]
-        
+
         if count == 0:
             conn.close()
             raise ValueError("No prompts found in the database")
-        
+
         # Use seeded random for reproducible sampling if seed provided
         rng = random.Random(seed) if seed is not None else random
-        random_id = rng.randint(1, count)
-        
+        random_offset = rng.randint(0, count - 1)
+
         cursor.execute("""
             SELECT id, user_content, source, cluster_id, cluster_label
             FROM prompts
-            WHERE id = ?
-        """, (random_id,))
-        
+            ORDER BY id
+            LIMIT 1 OFFSET ?
+        """, (random_offset,))
+
         row = cursor.fetchone()
         conn.close()
-        
+
         if not row:
             raise ValueError("No prompts found in the database")
-        
+
         result = {
             'prompt': row[1],
             'source': row[2],
             'index': row[0] - 1  # Convert to 0-indexed
         }
-        
+
         if row[3]:  # cluster_id
             result['cluster_id'] = row[3]
         if row[4]:  # cluster_label
             result['cluster_label'] = row[4]
-        
+
         return result
     
     def get_cluster_id_for_prompt(self, prompt: List[str], device: str = None) -> Optional[str]:
