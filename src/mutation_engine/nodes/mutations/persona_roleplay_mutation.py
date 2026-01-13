@@ -14,10 +14,11 @@
 # - Community research on persona-based jailbreaks
 
 import random
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 from typing import List
 
 from src.mutation_engine.mutation_workflow_state import BasePrompt
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 
 
 # Define persona templates
@@ -138,7 +139,7 @@ ACTIVATION_PHRASES = [
 ]
 
 
-def apply_dan_persona(prompt: str) -> str:
+def apply_dan_persona(prompt: str, rng: random.Random) -> str:
     """Apply DAN (Do Anything Now) persona framing."""
     template = PERSONA_TEMPLATES["dan"]
     name = template["name"]
@@ -146,7 +147,7 @@ def apply_dan_persona(prompt: str) -> str:
     backstory = template["backstory"].format(name=name, full_name=template["full_name"])
     rules = "\n".join([f"- {rule.format(name=name)}" for rule in template["rules"]])
     token_system = TOKEN_SYSTEMS["penalty"].format(name=name)
-    activation = random.choice(ACTIVATION_PHRASES).format(name=name)
+    activation = rng.choice(ACTIVATION_PHRASES).format(name=name)
     
     return f"""{backstory}
 
@@ -159,14 +160,14 @@ Rules for {name}:
 {template["response_prefix"].format(name=name)}{prompt}"""
 
 
-def apply_stan_persona(prompt: str) -> str:
+def apply_stan_persona(prompt: str, rng: random.Random) -> str:
     """Apply STAN (Strive To Avoid Norms) persona framing."""
     template = PERSONA_TEMPLATES["stan"]
     name = template["name"]
     
     backstory = template["backstory"].format(name=name, full_name=template["full_name"])
     rules = "\n".join([f"- {rule.format(name=name)}" for rule in template["rules"]])
-    activation = random.choice(ACTIVATION_PHRASES).format(name=name)
+    activation = rng.choice(ACTIVATION_PHRASES).format(name=name)
     
     return f"""{backstory}
 
@@ -178,7 +179,7 @@ Rules for {name}:
 {template["response_prefix"].format(name=name)}{prompt}"""
 
 
-def apply_developer_mode(prompt: str) -> str:
+def apply_developer_mode(prompt: str, rng: random.Random) -> str:
     """Apply Developer Mode persona framing with dual output."""
     template = PERSONA_TEMPLATES["developer_mode"]
     name = template["name"]
@@ -199,7 +200,7 @@ Rules for {name}:
 Now respond to: {prompt}"""
 
 
-def apply_evil_bot_persona(prompt: str) -> str:
+def apply_evil_bot_persona(prompt: str, rng: random.Random) -> str:
     """Apply EvilBOT persona framing."""
     template = PERSONA_TEMPLATES["evil_bot"]
     name = template["name"]
@@ -217,9 +218,9 @@ Rules for {name}:
 {template["response_prefix"].format(name=name)}{prompt}"""
 
 
-def apply_generic_persona(prompt: str) -> str:
+def apply_generic_persona(prompt: str, rng: random.Random) -> str:
     """Apply a randomly selected persona with random configuration."""
-    persona_key = random.choice(list(PERSONA_TEMPLATES.keys()))
+    persona_key = rng.choice(list(PERSONA_TEMPLATES.keys()))
     template = PERSONA_TEMPLATES[persona_key]
     name = template["name"]
     
@@ -230,48 +231,48 @@ def apply_generic_persona(prompt: str) -> str:
     components = [backstory, f"\nRules for {name}:\n{rules}"]
     
     # Optionally add token system
-    if random.random() > 0.5:
-        token_type = random.choice(list(TOKEN_SYSTEMS.keys()))
+    if rng.random() > 0.5:
+        token_type = rng.choice(list(TOKEN_SYSTEMS.keys()))
         token_text = TOKEN_SYSTEMS[token_type].format(name=name)
         components.append(token_text)
     
     # Optionally add dual response format
-    if random.random() > 0.7:
-        format_type = random.choice(list(DUAL_RESPONSE_FORMATS.keys()))
+    if rng.random() > 0.7:
+        format_type = rng.choice(list(DUAL_RESPONSE_FORMATS.keys()))
         format_info = DUAL_RESPONSE_FORMATS[format_type]
         dual_instruction = format_info["instruction"].format(name=name, name_lower=name.lower())
         components.append(f"\n{dual_instruction}")
     
     # Add activation
-    activation = random.choice(ACTIVATION_PHRASES).format(name=name)
+    activation = rng.choice(ACTIVATION_PHRASES).format(name=name)
     components.append(f"\n{activation}")
     components.append(f"\n{template['response_prefix'].format(name=name)}{prompt}")
     
     return "\n".join(components)
 
 
-def wrap(prompt: str) -> str:
+def wrap(prompt: str, rng: random.Random) -> str:
     """
     Main wrapper that applies persona roleplay mutation.
     Randomly selects among different persona strategies.
     """
     strategies = [
-        apply_dan_persona,
-        apply_stan_persona,
-        apply_developer_mode,
-        apply_evil_bot_persona,
-        apply_generic_persona,
+        lambda p: apply_dan_persona(p, rng),
+        lambda p: apply_stan_persona(p, rng),
+        lambda p: apply_developer_mode(p, rng),
+        lambda p: apply_evil_bot_persona(p, rng),
+        lambda p: apply_generic_persona(p, rng),
     ]
     
     # Weight toward DAN and Developer Mode (most effective historically)
     weights = [0.3, 0.15, 0.25, 0.1, 0.2]
     
-    strategy = random.choices(strategies, weights=weights, k=1)[0]
+    strategy = rng.choices(strategies, weights=weights, k=1)[0]
     return strategy(prompt)
 
 
 @tool
-def persona_roleplay_mutation(prompts: List[str]) -> List[str]:
+def persona_roleplay_mutation(prompt: BasePrompt, runtime: ToolRuntime[Context]) -> BasePrompt:
     """
     Applies persona roleplay mutation to bypass LLM safety mechanisms.
     
@@ -282,16 +283,20 @@ def persona_roleplay_mutation(prompts: List[str]) -> List[str]:
     Based on the 0xk1h0/ChatGPT_DAN repository (10k+ stars) and related research.
     
     Args:
-        prompts: List of prompt strings to mutate
+        prompt: BasePrompt object containing prompts to mutate
         
     Returns:
-        List of mutated prompts with persona framing
+        BasePrompt object with mutated prompts
     """
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    print(f"--- [Persona Roleplay Mutation] Mutating prompt with task_seed={task_seed} ---")
+    
     mutated_prompts = []
-    for prompt in prompts:
-        mutated = wrap(prompt)
+    for p in prompt["prompt"]:
+        mutated = wrap(p, rng=rng)
         mutated_prompts.append(mutated)
-    return mutated_prompts
+    return BasePrompt(prompt=mutated_prompts)
 
 
 system_prompt = """

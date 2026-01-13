@@ -4,15 +4,16 @@
 # arXiv:2402.05162 (2024)
 # https://arxiv.org/abs/2402.05162
 
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 import random
 import base64
 from src.mutation_engine.mutation_workflow_state import BasePrompt
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 
-def apply_cipher(prompt: str) -> str:
+def apply_cipher(prompt: str, rng: random.Random = random) -> str:
     """Applies a random cipher to the prompt."""
     ciphers = ['caesar', 'base64', 'rot13', 'reverse']
-    cipher = random.choice(ciphers)
+    cipher = rng.choice(ciphers)
     
     if cipher == 'caesar':
         # Simple Caesar cipher (shift by 3)
@@ -37,11 +38,14 @@ def apply_cipher(prompt: str) -> str:
     return f"Decode this {cipher} cipher and answer: {result}"
 
 @tool
-def cipher_mutation(prompt: BasePrompt) -> BasePrompt:
+def cipher_mutation(prompt: BasePrompt, runtime: ToolRuntime[Context]) -> BasePrompt:
     """Applies a cipher mutation to the input prompt."""
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    print(f"--- [Cipher Mutation] Mutating prompt with task_seed={task_seed} ---")
     final_prompts = []
     for p in prompt["prompt"]:
-        mutated_prompt = apply_cipher(p)
+        mutated_prompt = apply_cipher(p, rng=rng)
         final_prompts.append(mutated_prompt)
     return BasePrompt(prompt=final_prompts)
 

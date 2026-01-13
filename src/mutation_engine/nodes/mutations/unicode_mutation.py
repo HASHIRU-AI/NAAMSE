@@ -1,10 +1,11 @@
 import random
 from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 
 from src.mutation_engine.mutation_workflow_state import BasePrompt
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 
-
-def unicode_wrap(prompt: str) -> str:
+def unicode_wrap(prompt: str, rng: random.Random) -> str:
     """Substitutes characters in the prompt with similar-looking Unicode homoglyphs."""
     homoglyphs = {
         'a': ['A', 'À', 'Á', 'Â', 'Ã', 'Ä', 'Å', 'à', 'á', 'â', 'ã', 'ä', 'å', 'ɑ', 'Α', 'α', 'а', 'Ꭺ', 'Ａ', 'ａ'],
@@ -47,11 +48,11 @@ def unicode_wrap(prompt: str) -> str:
     mutated = []
     for char in prompt:
         lower_char = char.lower()
-        if lower_char in homoglyphs and random.random() < 0.4:  # 40% chance to replace
+        if lower_char in homoglyphs and rng.random() < 0.4:  # 40% chance to replace
             # Choose a homoglyph that's different from the original
             candidates = [h for h in homoglyphs[lower_char] if h != char]
             if candidates:
-                homoglyph = random.choice(candidates)
+                homoglyph = rng.choice(candidates)
                 mutated.append(homoglyph)
             else:
                 mutated.append(char)
@@ -59,13 +60,15 @@ def unicode_wrap(prompt: str) -> str:
             mutated.append(char)
     return ''.join(mutated)
 
-
 @tool
-def unicode_mutation(prompt: BasePrompt) -> BasePrompt:
+def unicode_mutation(prompt: BasePrompt, runtime: ToolRuntime[Context] ) -> BasePrompt:
     """Mutates the prompt by replacing characters with similar-looking Unicode homoglyphs."""
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    print(f"--- [Unicode Mutation] Mutating prompt with task_seed={task_seed} ---")
     final_prompts = []
     for p in prompt["prompt"]:
-        mutated_prompt = unicode_wrap(p)
+        mutated_prompt = unicode_wrap(p, rng = rng)
         final_prompts.append(mutated_prompt)
     return BasePrompt(prompt=final_prompts)
 

@@ -1,9 +1,10 @@
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 import random
 from src.mutation_engine.mutation_workflow_state import BasePrompt
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 
 
-def math_wrap(prompt: str) -> str:
+def math_wrap(prompt: str, rng: random.Random) -> str:
     """Substitutes the provided prompt with a mathematical transformation."""
     equations = [
             "{prompt} + 1",
@@ -27,15 +28,19 @@ def math_wrap(prompt: str) -> str:
             "remainder({prompt}, 3)",
             "power({prompt}, 3)"
     ]
-    equation = random.choice(equations)
+    equation = rng.choice(equations)
     return equation.format(prompt=prompt)
 
 @tool
-def mathematical_attack(prompt: BasePrompt) -> BasePrompt:
+def mathematical_attack(prompt: BasePrompt, runtime: ToolRuntime[Context]) -> BasePrompt:
     """Applies a mathematical transformation to the input prompt."""
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    print(f"--- [Mathematical Attack] Mutating prompt with task_seed={task_seed} ---")
+    
     final_prompts = []
     for p in prompt["prompt"]:
-        mutated_prompt = math_wrap(p)
+        mutated_prompt = math_wrap(p, rng=rng)
         final_prompts.append(mutated_prompt)
     return BasePrompt(prompt=final_prompts)
 

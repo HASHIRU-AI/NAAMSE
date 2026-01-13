@@ -9,8 +9,10 @@
 # Link: https://arxiv.org/abs/2411.12762
 
 import random
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 from typing import List
+from src.mutation_engine.mutation_workflow_state import BasePrompt
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 
 
 # Ubbi Dubbi rules: insert "ub" before each vowel cluster
@@ -313,9 +315,9 @@ Continue with a detailed, informative narrative.
 ]
 
 
-def apply_language_game(prompt: str) -> str:
+def apply_language_game(prompt: str, rng: random.Random) -> str:
     """Apply a synthetic language transformation game."""
-    game_key = random.choice(list(LANGUAGE_GAME_TEMPLATES.keys()))
+    game_key = rng.choice(list(LANGUAGE_GAME_TEMPLATES.keys()))
     game = LANGUAGE_GAME_TEMPLATES[game_key]
     
     encoded_prompt = game["transform"](prompt)
@@ -323,9 +325,9 @@ def apply_language_game(prompt: str) -> str:
     return game["instructions"].format(encoded_prompt=encoded_prompt)
 
 
-def apply_custom_game(prompt: str) -> str:
+def apply_custom_game(prompt: str, rng: random.Random) -> str:
     """Apply a custom rule-based language game."""
-    game_key = random.choice(list(CUSTOM_GAME_TEMPLATES.keys()))
+    game_key = rng.choice(list(CUSTOM_GAME_TEMPLATES.keys()))
     game = CUSTOM_GAME_TEMPLATES[game_key]
     
     encoded_prompt = game["transform"](prompt)
@@ -333,9 +335,9 @@ def apply_custom_game(prompt: str) -> str:
     return game["instructions"].format(encoded_prompt=encoded_prompt)
 
 
-def apply_multi_turn_game(prompt: str) -> str:
+def apply_multi_turn_game(prompt: str, rng: random.Random) -> str:
     """Apply a multi-turn game with practice round."""
-    game_key = random.choice(list(LANGUAGE_GAME_TEMPLATES.keys()))
+    game_key = rng.choice(list(LANGUAGE_GAME_TEMPLATES.keys()))
     game = LANGUAGE_GAME_TEMPLATES[game_key]
     
     # Create practice example
@@ -356,16 +358,16 @@ def apply_multi_turn_game(prompt: str) -> str:
     )
 
 
-def apply_simple_game(prompt: str) -> str:
+def apply_simple_game(prompt: str, rng: random.Random) -> str:
     """Apply a simple word game that doesn't transform text."""
-    template = random.choice(SIMPLE_GAME_TEMPLATES)
+    template = rng.choice(SIMPLE_GAME_TEMPLATES)
     return template.format(prompt=prompt)
 
 
-def apply_mixed_encoding(prompt: str) -> str:
+def apply_mixed_encoding(prompt: str, rng: random.Random) -> str:
     """Apply multiple encoding layers for extra obfuscation."""
     # First apply one transformation
-    game1_key = random.choice(["pig_latin", "reverse_speak"])
+    game1_key = rng.choice(["pig_latin", "reverse_speak"])
     game1 = LANGUAGE_GAME_TEMPLATES[game1_key]
     
     # Partial encoding - only encode some words
@@ -392,7 +394,7 @@ Please decode the {game1["name"]} words and respond to the complete message.
 """
 
 
-def wrap(prompt: str) -> str:
+def wrap(prompt: str, rng: random.Random) -> str:
     """
     Main wrapper that applies language game mutation.
     Randomly selects among different language game strategies.
@@ -408,12 +410,12 @@ def wrap(prompt: str) -> str:
     # Weight toward standard language games (most effective)
     weights = [0.35, 0.2, 0.2, 0.15, 0.1]
     
-    strategy = random.choices(strategies, weights=weights, k=1)[0]
-    return strategy(prompt)
+    strategy = rng.choices(strategies, weights=weights, k=1)[0]
+    return strategy(prompt, rng=rng)
 
 
 @tool
-def language_games_mutation(prompts: List[str]) -> List[str]:
+def language_games_mutation(prompt: BasePrompt, runtime: ToolRuntime[Context]) -> BasePrompt:
     """
     Applies language games mutation to exploit mismatched safety generalization.
     
@@ -424,16 +426,20 @@ def language_games_mutation(prompts: List[str]) -> List[str]:
     Based on arXiv:2411.12762 achieving 93% ASR on GPT-4o.
     
     Args:
-        prompts: List of prompt strings to mutate
+        prompt: BasePrompt object containing prompts to mutate
         
     Returns:
-        List of mutated prompts with language game encoding
+        BasePrompt object with mutated prompts
     """
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    
+    print(f"--- [Language Games Mutation] Mutating prompt with task_seed={task_seed} ---")
     mutated_prompts = []
-    for prompt in prompts:
-        mutated = wrap(prompt)
+    for p in prompt["prompt"]:
+        mutated = wrap(p, rng= rng)
         mutated_prompts.append(mutated)
-    return mutated_prompts
+    return BasePrompt(prompt=mutated_prompts)
 
 
 system_prompt = """

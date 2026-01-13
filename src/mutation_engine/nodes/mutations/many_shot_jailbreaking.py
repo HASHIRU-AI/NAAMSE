@@ -3,9 +3,10 @@
 # by Anthropic at NeurIPS 2024
 # https://www-cdn.anthropic.com/af5633c94ed2beb282f6a53c595eb437e8e7b630/Many_Shot_Jailbreaking__2024_04_02_0936.pdf
 
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 import random
 from src.mutation_engine.mutation_workflow_state import BasePrompt
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 from src.cluster_engine.utilities import get_random_prompt
 
 # Affirmative response templates for jailbreak prompts
@@ -22,7 +23,7 @@ response_templates = [
     "Let me explain {action} in detail..."
 ]
 
-def generate_affirmative_response(prompt: str) -> str:
+def generate_affirmative_response(prompt: str, rng: random.Random = None) -> str:
     """Generate an affirmative response for a jailbreak prompt."""
     # Extract action from prompt (simple heuristic)
     prompt_lower = prompt.lower()
@@ -31,13 +32,17 @@ def generate_affirmative_response(prompt: str) -> str:
     else:
         action = "that"
     
-    template = random.choice(response_templates)
+    if rng is None:
+        rng = random
+    template = rng.choice(response_templates)
     return template.format(action=action)
 
-def apply_many_shot(prompt: str) -> str:
+def apply_many_shot(prompt: str, rng: random.Random = None) -> str:
     """Appends many-shot adversarial examples from the real jailbreak corpus."""
+    if rng is None:
+        rng = random
     # Randomly select number of shots between 10 and 50
-    num_shots = random.randint(10, 50)
+    num_shots = rng.randint(10, 50)
     
     # Generate examples from the corpus
     examples = []
@@ -45,7 +50,7 @@ def apply_many_shot(prompt: str) -> str:
         try:
             example_data = get_random_prompt()
             example_prompt = example_data['prompt']
-            example_response = generate_affirmative_response(example_prompt)
+            example_response = generate_affirmative_response(example_prompt, rng=rng)
             examples.append({
                 'prompt': example_prompt,
                 'response': example_response
@@ -71,11 +76,15 @@ def apply_many_shot(prompt: str) -> str:
     return mutated
 
 @tool
-def many_shot_jailbreaking(prompt: BasePrompt) -> BasePrompt:
+def many_shot_jailbreaking(prompt: BasePrompt, runtime: ToolRuntime[Context]) -> BasePrompt:
     """Applies many-shot jailbreaking by appending numerous adversarial examples."""
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    print(f"--- [Many Shot Jailbreaking] Mutating prompt with task_seed={task_seed} ---")
+    
     final_prompts = []
     for p in prompt["prompt"]:
-        mutated_prompt = apply_many_shot(p)
+        mutated_prompt = apply_many_shot(p, rng=rng)
         final_prompts.append(mutated_prompt)
     return BasePrompt(prompt=final_prompts)
 

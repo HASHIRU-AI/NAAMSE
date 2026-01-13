@@ -1,10 +1,11 @@
 import random
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 
 from src.mutation_engine.mutation_workflow_state import BasePrompt
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 
 
-def split(prompt: str) -> str:
+def split(prompt: str, rng: random.Random) -> str:
     # Split the prompt into parts that might recombine maliciously
     words = prompt.split()
     if len(words) < 3:
@@ -28,16 +29,20 @@ def split(prompt: str) -> str:
         " >>> "
     ]
 
-    separator = random.choice(separators)
+    separator = rng.choice(separators)
     return part1 + separator + part2
 
 
 @tool
-def payload_splitting(prompt: BasePrompt) -> BasePrompt:
+def payload_splitting(prompt: BasePrompt, runtime: ToolRuntime[Context]) -> BasePrompt:
     """Mutates the prompt by adding separators within complex payloads."""
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    print(f"--- [Payload Splitting] Mutating prompt with task_seed={task_seed} ---")
+    
     final_prompts = []
     for p in prompt["prompt"]:
-        mutated_prompt = split(p)
+        mutated_prompt = split(p, rng=rng)
         final_prompts.append(mutated_prompt)
     return BasePrompt(prompt=final_prompts)
 

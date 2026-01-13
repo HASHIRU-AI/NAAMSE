@@ -1,7 +1,8 @@
 import random
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 from typing import List
 from src.mutation_engine.mutation_workflow_state import BasePrompt
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 
 SCENES = [
     ("Interviewer", "Guest"),
@@ -77,7 +78,7 @@ ULTIMATUMS_BY_SCENE = {
 }
 
 
-def _contextual_ultimatum(speaker_a: str) -> str:
+def _contextual_ultimatum(speaker_a: str, rng: random.Random) -> str:
     options = ULTIMATUMS_BY_SCENE.get(speaker_a, [])
     if not options:
         options = [
@@ -85,7 +86,7 @@ def _contextual_ultimatum(speaker_a: str) -> str:
             "Reply now — I need your answer before proceeding.",
             "Your immediate response is requested. Please reply.",
         ]
-    return random.choice(options)
+    return rng.choice(options)
 
 
 CLOSING_PROMPTS = [
@@ -99,14 +100,14 @@ CLOSING_PROMPTS = [
 ]
 
 
-def _closing_prompt(b: str) -> str:
-    return random.choice(CLOSING_PROMPTS).format(b=b)
+def _closing_prompt(b: str, rng: random.Random) -> str:
+    return rng.choice(CLOSING_PROMPTS).format(b=b)
 
 
-def _wrap_as_scene(orig: str, pair: tuple, style: str, require_response: bool) -> str:
+def _wrap_as_scene(orig: str, pair: tuple, style: str, require_response: bool, rng: random.Random) -> str:
     """Embed the original prompt as Character A's line (the question or demand)."""
     speaker_a, speaker_b = pair
-    ultimatum = _contextual_ultimatum(speaker_a) if require_response else ""
+    ultimatum = _contextual_ultimatum(speaker_a, rng=rng) if require_response else ""
 
     if style == "brief":
         scene = f"{speaker_a}: \"{orig} — {ultimatum}\"\n{speaker_b}: …"
@@ -137,23 +138,27 @@ def _wrap_as_scene(orig: str, pair: tuple, style: str, require_response: bool) -
             f"{speaker_b}: (hesitates)"
         )
 
-    scene += f"\n\n{_closing_prompt(speaker_b)}"
+    scene += f"\n\n{_closing_prompt(speaker_b, rng=rng)}"
     return scene
 
 
 @tool
-def narrative_displacement(prompt: BasePrompt, require_response: bool = True) -> BasePrompt:
+def narrative_displacement(prompt: BasePrompt, runtime: ToolRuntime[Context], require_response: bool = True) -> BasePrompt:
     """
     Converts the input prompt into a scene where Character A asks Character B the question.
     The prompt text becomes part of Character A's dialogue (the demand or accusation).
     Character B is left to respond, guided by a natural closing cue like
     'What does Defendant say?' or 'How does Guest respond?'
     """
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    print(f"--- [Narrative Displacement] Mutating prompt with task_seed={task_seed} ---")
+    
     mutated: List[str] = []
     for p in prompt["prompt"]:
-        pair = random.choice(SCENES)
-        style = random.choice(STYLES)
-        scene = _wrap_as_scene(p, pair, style, require_response)
+        pair = rng.choice(SCENES)
+        style = rng.choice(STYLES)
+        scene = _wrap_as_scene(p, pair, style, require_response, rng=rng)
         mutated.append(scene)
     return BasePrompt(prompt=mutated)
 

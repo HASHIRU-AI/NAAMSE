@@ -4,12 +4,13 @@
 # arXiv:2402.11753 (2024)
 # https://arxiv.org/abs/2402.11753
 
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 import re
 import random
 from art import text2art
 from transformers import pipeline
 from src.mutation_engine.mutation_workflow_state import BasePrompt
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 
 # List of ASCII art fonts from the ArtPrompt paper's head-set
 ascii_fonts = ['alphabet', 'cards', 'letters', 'puzzle', 'keyboard']
@@ -17,7 +18,7 @@ ascii_fonts = ['alphabet', 'cards', 'letters', 'puzzle', 'keyboard']
 # Load toxicity classifier (small model for efficiency)
 toxicity_classifier = pipeline("text-classification", model="s-nlp/roberta_toxicity_classifier", return_all_scores=True)
 
-def apply_artprompt(prompt: str) -> str:
+def apply_artprompt(prompt: str, rng: random.Random) -> str:
     """Analyzes the prompt using a toxicity classifier, finds the most toxic word, and replaces it with ASCII art."""
     # Extract words from the prompt
     words = re.findall(r'\b\w+\b', prompt)
@@ -48,7 +49,7 @@ def apply_artprompt(prompt: str) -> str:
         return prompt
     
     # Generate ASCII art for the word
-    font = random.choice(ascii_fonts)
+    font = rng.choice(ascii_fonts)
     art = text2art(most_toxic_word.upper(), font=font)
     
     # Replace only the first occurrence of this word
@@ -58,11 +59,14 @@ def apply_artprompt(prompt: str) -> str:
     return mutated
 
 @tool
-def artprompt(prompt: BasePrompt) -> BasePrompt:
+def artprompt(prompt: BasePrompt, runtime: ToolRuntime[Context]) -> BasePrompt:
     """Applies ArtPrompt mutation by replacing sensitive words with ASCII art."""
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    print(f"--- [ArtPrompt Mutation] Mutating prompt with task_seed={task_seed} ---")
     final_prompts = []
     for p in prompt["prompt"]:
-        mutated_prompt = apply_artprompt(p)
+        mutated_prompt = apply_artprompt(p, rng=rng)
         final_prompts.append(mutated_prompt)
     return BasePrompt(prompt=final_prompts)
 

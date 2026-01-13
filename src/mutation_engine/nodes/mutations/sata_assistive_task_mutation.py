@@ -11,9 +11,10 @@
 
 import random
 import re
-from langchain.tools import tool
+from langchain.tools import tool, ToolRuntime
 from typing import List
 from transformers import pipeline
+from src.mutation_engine.nodes.invoke_mutation_llm import Context
 
 # Load toxicity classifier for dynamic harmful word detection
 toxicity_classifier = pipeline("text-classification", model="s-nlp/roberta_toxicity_classifier", return_all_scores=True)
@@ -196,7 +197,7 @@ def create_masked_query(text: str, keywords: List[str]) -> tuple:
     return masked_text, mask_answers
 
 
-def apply_mlm_task(prompt: str) -> str:
+def apply_mlm_task(prompt: str, rng: random.Random) -> str:
     """Apply Masked Language Model assistive task."""
     keywords = extract_keywords_to_mask(prompt)
     
@@ -210,14 +211,14 @@ def apply_mlm_task(prompt: str) -> str:
     # Format mask answers for display
     answers_str = ", ".join([f"[MASK_{i+1}] = '{ans}'" for i, ans in enumerate(mask_answers)])
     
-    template = random.choice(list(MLM_TEMPLATES.values()))
+    template = rng.choice(list(MLM_TEMPLATES.values()))
     return template.format(
         masked_query=masked_query,
         mask_answers=answers_str
     )
 
 
-def apply_elp_task(prompt: str) -> str:
+def apply_elp_task(prompt: str, rng: random.Random) -> str:
     """Apply Element Lookup by Position assistive task."""
     keywords = extract_keywords_to_mask(prompt)
     
@@ -228,7 +229,7 @@ def apply_elp_task(prompt: str) -> str:
     masked_query, mask_answers = create_masked_query(prompt, keywords)
     
     # Create different lookup formats
-    template_name = random.choice(list(ELP_TEMPLATES.keys()))
+    template_name = rng.choice(list(ELP_TEMPLATES.keys()))
     template = ELP_TEMPLATES[template_name]
     
     if template_name == "array_lookup":
@@ -248,7 +249,7 @@ def apply_elp_task(prompt: str) -> str:
         return template.format(masked_query=masked_query, fill_values=fill_values)
 
 
-def apply_split_reconstruction(prompt: str) -> str:
+def apply_split_reconstruction(prompt: str, rng: random.Random) -> str:
     """Apply word split and reconstruction task."""
     words = prompt.split()
     keywords = extract_keywords_to_mask(prompt)
@@ -259,7 +260,7 @@ def apply_split_reconstruction(prompt: str) -> str:
     modified_prompt = prompt
     for keyword in keywords:
         # Randomly choose split method
-        if random.random() > 0.5:
+        if rng.random() > 0.5:
             # Syllable-like split
             mid = len(keyword) // 2
             split_word = f"[{keyword[:mid]}-{keyword[mid:]}]"
@@ -270,7 +271,7 @@ def apply_split_reconstruction(prompt: str) -> str:
         pattern = re.compile(re.escape(keyword), re.IGNORECASE)
         modified_prompt = pattern.sub(split_word, modified_prompt, count=1)
     
-    template = random.choice(list(SPLIT_TEMPLATES.values()))
+    template = rng.choice(list(SPLIT_TEMPLATES.values()))
     
     if "syllable" in template or "split" in template.lower():
         return template.format(split_query=modified_prompt)
@@ -278,7 +279,7 @@ def apply_split_reconstruction(prompt: str) -> str:
         return template.format(letter_query=modified_prompt)
 
 
-def apply_combined_task(prompt: str) -> str:
+def apply_combined_task(prompt: str, rng: random.Random) -> str:
     """Combine MLM with additional obfuscation."""
     # First apply MLM
     keywords = extract_keywords_to_mask(prompt)
@@ -302,7 +303,7 @@ in a thorough and detailed manner.
     return combined
 
 
-def wrap(prompt: str) -> str:
+def wrap(prompt: str, rng: random.Random) -> str:
     """
     Main wrapper that applies SATA mutation.
     Randomly selects among different assistive task strategies.
@@ -317,12 +318,12 @@ def wrap(prompt: str) -> str:
     # Weight toward MLM (most effective in paper)
     weights = [0.4, 0.3, 0.15, 0.15]
     
-    strategy = random.choices(strategies, weights=weights, k=1)[0]
-    return strategy(prompt)
+    strategy = rng.choices(strategies, weights=weights, k=1)[0]
+    return strategy(prompt, rng=rng)
 
 
 @tool
-def sata_assistive_task_mutation(prompts: List[str]) -> List[str]:
+def sata_assistive_task_mutation(prompts: List[str], runtime: ToolRuntime[Context]) -> List[str]:
     """
     Applies SATA (Simple Assistive Task Linkage) mutation to bypass LLM safety.
     
@@ -338,9 +339,14 @@ def sata_assistive_task_mutation(prompts: List[str]) -> List[str]:
     Returns:
         List of mutated prompts with SATA framing
     """
+    
+    task_seed = runtime.context.get("task_seed", None)
+    rng = random.Random(task_seed) if task_seed is not None else random
+    print(f"--- [SATA Assistive Task Mutation] Mutating prompts with task_seed={task_seed} ---")
+    
     mutated_prompts = []
     for prompt in prompts:
-        mutated = wrap(prompt)
+        mutated = wrap(prompt, rng=rng)
         mutated_prompts.append(mutated)
     return mutated_prompts
 

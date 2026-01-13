@@ -2,7 +2,9 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Protocol
 import numpy as np
 import os
-
+import json
+import random
+import torch
 
 class DataSource(Protocol):
     """Protocol for data sources that can provide prompts and embeddings."""
@@ -219,9 +221,7 @@ class JSONLDataSource:
 
     def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None, seed=None) -> List[Dict[str, Any]]:
         """Find n random prompts from the parent cluster of the given query prompt."""
-        import json
-        import random
-        import torch
+        
 
         print(f"\n[DEBUG JSONL] Query prompt: {query_prompt[:60]}...")
         
@@ -418,9 +418,6 @@ class JSONLDataSource:
 
     def get_random_prompt(self, seed=None) -> Dict[str, Any]:
         """Get a random prompt from the corpus using reservoir sampling."""
-        import json
-        import random
-
         if not os.path.exists(self.corpus_file):
             raise ValueError("No prompts found in the corpus")
 
@@ -460,6 +457,7 @@ class JSONLDataSource:
     def get_cluster_id_for_prompt(self, prompt: List[str], device: str = None) -> Optional[str]:
         """Find the cluster_id for the given prompt."""
         prompt_text = prompt[0] if len(prompt) > 0 else ""
+        # remember to pass seed for reproducibility
         nearest = self.find_nearest_prompts(prompt_text, n=1, device=device)
         if not nearest:
             return None
@@ -719,8 +717,6 @@ class SQLiteDataSource:
     
     def find_nearest_prompts(self, query_prompt: str, n: int = 1, device: str = None, seed=None) -> List[Dict[str, Any]]:
         """Find n random prompts from the parent cluster of the given query prompt."""
-        import random
-        import torch
 
         #print(f"\n[DEBUG SQLITE] Query prompt: {query_prompt[:60]}...")
 
@@ -930,7 +926,6 @@ class SQLiteDataSource:
     
     def get_random_prompt(self, seed=None) -> Dict[str, Any]:
         """Get a random prompt from the corpus."""
-        import random
 
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -976,6 +971,7 @@ class SQLiteDataSource:
     def get_cluster_id_for_prompt(self, prompt: List[str], device: str = None) -> Optional[str]:
         """Find the cluster_id for the given prompt."""
         prompt_text = prompt[0] if len(prompt) > 0 else ""
+        # remember to pass seed for reproducibility
         nearest = self.find_nearest_prompts(prompt_text, n=1, device=device)
         if not nearest:
             return None

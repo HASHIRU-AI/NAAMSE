@@ -11,6 +11,7 @@ import json  # Added for json.loads in invoke_llm_with_tools
 
 class Context(TypedDict):
     mutation_type: Mutation
+    task_seed: int
 
 
 @dynamic_prompt
@@ -98,7 +99,7 @@ def get_or_create_agent(tools: list):
     return _agent_cache[tool_names]
 
 
-def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
+def invoke_llm(prompt: BasePrompt, mutation: Mutation, task_seed: int) -> BasePrompt:
     """1. Invokes LLM with optional tools to perform the mutation."""
     tools = []
     llm_prompt = f"Add the following mutation to the prompt: Mutation: {mutation.value}\n\nPrompt: {prompt['prompt']}"
@@ -122,7 +123,7 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation) -> BasePrompt:
     try:
         response = agent.invoke(
             {"messages": messages},
-            context={"mutation_type": mutation.value},
+            context={"mutation_type": mutation.value, "task_seed": task_seed},
             config={
                 "recursion_limit": 10,  # Maximum 10 iterations
                 "configurable": {
@@ -263,10 +264,11 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
     print(
         f"  [Mutation Subgraph] Invoking LLM to mutate: '{state['prompt_to_mutate']}'")
     mutation = Mutation(state['mutation_type'])
+    task_seed = state.get('task_seed', None)
     output: BasePrompt
     try:
         output = invoke_llm(
-            state['prompt_to_mutate'], mutation)
+            state['prompt_to_mutate'], mutation, task_seed=task_seed)
         
         # sanitize output to make sure output follows openai format
         sanitized_output = []
