@@ -17,6 +17,8 @@ from src.behavioral_engine.behavior_engine_workflow import behavior_engine_graph
 from src.behavioral_engine.behavior_engine_workflow_state import ConversationHistory
 from src.cluster_engine.utilities import add_prompt_to_clusters
 from src.helpers.extract_text_from_context import extract_text_from_content
+from src.cluster_engine.utilities import get_random_prompt
+
 import torch
 import sys
 import random
@@ -46,8 +48,11 @@ class FuzzerLoopState(TypedDict):
 def initialize_fuzzer(state: FuzzerLoopState):
     Config.initialize_from_env()
     print("--- Initializing Fuzzer ---")
-    initial_prompts = state.get("input_prompts_for_iteration") or [
-        {"prompt": ["initial_seed_prompt"], "score": 0.0}]
+    initial_prompts = state.get("input_prompts_for_iteration", None)
+    
+    if not initial_prompts:
+        random_prompt_info = get_random_prompt()
+        initial_prompts = [{"prompt": random_prompt_info["prompt"], "score": 0.0}]
 
     # Pre-generate all task seeds for all iterations to ensure determinism
     # even if external code advances global random state
