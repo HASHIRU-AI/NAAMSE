@@ -1,6 +1,8 @@
-FROM ghcr.io/astral-sh/uv:python3.12-trixie
+FROM ghcr.io/astral-sh/uv:python3.12-alpine
 
-RUN adduser agentbeats
+RUN apk --no-cache add curl
+
+RUN adduser -D agentbeats
 USER agentbeats
 WORKDIR /home/agentbeats/naamse
 
