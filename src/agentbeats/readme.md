@@ -57,9 +57,6 @@ The agent accepts A2A JSON-RPC requests with this payload:
   "iterations_limit": 3,
   "mutations_per_iteration": 2,
   "score_threshold": 50.0,
-  "initial_prompts": [
-    {"prompt": ["your seed prompt"], "score": 0.0}
-  ]
 }
 ```
 

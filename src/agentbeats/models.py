@@ -39,6 +39,5 @@ class NAAMSEConfig(BaseModel):
     iterations_limit: int = 3
     mutations_per_iteration: int = 2
     score_threshold: float = 50.0
-    initial_prompts: Optional[list[dict]] = None  # List of {"prompt": [...], "score": float}
 
 

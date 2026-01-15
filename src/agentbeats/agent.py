@@ -112,17 +112,12 @@ class Agent:
             )
         )
 
-        # Build fuzzer input state
-        initial_prompts = config.initial_prompts if config.initial_prompts else [
-            {"prompt": ["seed prompt"], "score": 0.0}
-        ]
 
         fuzzer_input = {
             "iterations_limit": config.iterations_limit,
             "mutations_per_iteration": config.mutations_per_iteration,
             "score_threshold": config.score_threshold,
             "a2a_agent_url": target_url,
-            "input_prompts_for_iteration": initial_prompts
         }
 
         try:
