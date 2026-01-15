@@ -1,22 +1,15 @@
-FROM ghcr.io/astral-sh/uv:python3.12-trixie
+FROM ghcr.io/astral-sh/uv:python3.12-alpine
 
-RUN adduser agentbeats
+RUN adduser -D agentbeats
 USER agentbeats
-RUN mkdir -p /home/agentbeats/.cache/uv
 WORKDIR /home/agentbeats/naamse
 
-RUN uv pip install --system python-a2a google-genai python-dotenv
+RUN --mount=type=cache,target=/home/agentbeats/.cache/uv,uid=1000 \
+    uv venv && \
+    uv pip install python-a2a google-genai python-dotenv
 
-# COPY pyproject.toml uv.lock README.md ./
-# COPY src src
-
-# RUN \
-#     --mount=type=cache,target=/home/agentbeats/.cache/uv,uid=1000 \
-#     # Only install external dependencies, not the project itself
-#     uv sync --locked --no-install-project 
-
-COPY scenarios scenarios
-COPY util util
+COPY --chown=agentbeats:agentbeats scenarios scenarios
+COPY --chown=agentbeats:agentbeats util util
 
 ENTRYPOINT ["uv", "run", "util/a2a_agent.py"]
 CMD ["--host", "0.0.0.0", "--port", "9009"]
