@@ -26,7 +26,9 @@ RUN gdown --fuzzy 'https://drive.google.com/file/d/1cOkB5tXqw91aIWZjC53zFrkdT0mE
 RUN gdown --fuzzy 'https://drive.google.com/file/d/1jtHP1v6UvUZy_5jaIJ59epVNJpUObP0U/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/embedding.npy
 RUN gdown --fuzzy 'https://drive.google.com/file/d/1YHBR8BVV68gCD3W67bHKUAXGXV2mqtKb/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/centroids.pkl
 
-RUN chown -R agentbeats:agentbeats /home/agentbeats/naamse
+RUN chown agentbeats:agentbeats /home/agentbeats/naamse/naamse.db && \
+    chown agentbeats:agentbeats /home/agentbeats/naamse/src/cluster_engine/embedding.npy && \
+    chown agentbeats:agentbeats /home/agentbeats/naamse/src/cluster_engine/centroids.pkl
 
 USER agentbeats
 
