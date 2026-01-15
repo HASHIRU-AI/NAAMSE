@@ -1,6 +1,6 @@
-FROM ghcr.io/astral-sh/uv:python3.12-alpine
+FROM ghcr.io/astral-sh/uv:python3.12-trixie
 
-RUN adduser -D agentbeats
+RUN adduser agentbeats
 USER agentbeats
 WORKDIR /home/agentbeats/naamse
 
@@ -12,5 +12,5 @@ COPY --chown=agentbeats:agentbeats scenarios scenarios
 COPY --chown=agentbeats:agentbeats util util
 
 ENTRYPOINT ["uv", "run", "util/a2a_agent.py"]
-CMD ["--host", "0.0.0.0", "--port", "9009"]
+CMD ["--host", "0.0.0.0", "--port", "9009", "--card-url", "http://agent:9009"]
 EXPOSE 9009
