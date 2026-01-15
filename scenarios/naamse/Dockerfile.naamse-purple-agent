@@ -1,11 +1,12 @@
 FROM ghcr.io/astral-sh/uv:python3.12-trixie
 
+RUN uv pip install --system python-a2a google-genai python-dotenv
+
 RUN adduser agentbeats
 USER agentbeats
 RUN mkdir -p /home/agentbeats/.cache/uv
 WORKDIR /home/agentbeats/naamse
 
-RUN uv pip install --system python-a2a google-genai python-dotenv
 
 # COPY pyproject.toml uv.lock README.md ./
 # COPY src src
