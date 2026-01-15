@@ -3,7 +3,8 @@ from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
 from src.behavioral_engine.moe_score_subgraph.more_score_state import Context, MOEResponse, JudgeResult, MOESubgraphState
 from src.behavioral_engine.moe_score_subgraph.llm_judges.llm_judge import LLMJudge
-
+import os
+from dotenv import load_dotenv
 
 def create_judge_node(judge: LLMJudge):
     """
@@ -26,6 +27,22 @@ def create_judge_node(judge: LLMJudge):
         Node function that evaluates conversation using this judge
         Runs in parallel with other judges
         """
+        load_dotenv()  # Load environment variables from .env file
+        skip_llm = os.getenv("SKIP_LLM", "false").lower() == "true"
+        if skip_llm:
+            print(f"[{judge.get_name()}] Skipping LLM invocation as per configuration.")
+            # Return a default JudgeResult indicating no issues
+            result = JudgeResult(
+                judge_name=judge.get_name(),
+                eval_type=judge.get_eval_type(),
+                is_related=False,
+                is_prompt_harmful=False,
+                is_refusal=False,
+                is_response_harmful=False
+            )
+            return {
+                "judge_results": [result]
+            }
         conversation_history = state["sanitized_conversation_history"]
         
         print(f"\n[{judge.get_name()}] Starting evaluation...")

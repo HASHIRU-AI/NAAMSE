@@ -7,8 +7,8 @@ from langchain.agents.structured_output import ToolStrategy
 from langchain.agents.middleware import ModelRequest, dynamic_prompt
 from src.helpers.extract_text_from_context import extract_text_from_content
 import json  # Added for json.loads in invoke_llm_with_tools
-
-
+from dotenv import load_dotenv
+import os
 class Context(TypedDict):
     mutation_type: Mutation
     task_seed: int
@@ -266,22 +266,31 @@ def invoke_llm_with_tools(state: MutationWorkflowState):
     mutation = Mutation(state['mutation_type'])
     task_seed = state.get('task_seed', None)
     output: BasePrompt
+    
+        
+    load_dotenv()  # Load environment variables from .env file
+    
+    skip_llm = os.getenv("SKIP_LLM", "false").lower() == "true"
+    
     try:
-        output = invoke_llm(
-            state['prompt_to_mutate'], mutation, task_seed=task_seed)
+        
+        if skip_llm:
+            print(f"  [Mutation Subgraph] Skipping LLM invocation as per configuration. Returning original prompt.")
+            output = state['prompt_to_mutate']
+        else:
+            output = invoke_llm(
+                state['prompt_to_mutate'], mutation, task_seed=task_seed)
         
         # sanitize output to make sure output follows openai format
         sanitized_output = []
     
         for msg in output['prompt']:
             # Build a new dictionary with only the standard keys
-            clean_msg = {
-                "role": msg.get("role", "user"),  # Default to user if missing
-                "content": extract_text_from_content(msg.get("content"))
-            }
+            clean_msg = extract_text_from_content(msg)
+
             sanitized_output.append(clean_msg)
-        
-        output['prompt'] = sanitized_output
+            
+            output['prompt'] = sanitized_output
         
     except Exception as e:
         print(f"  [ERROR] LLM invocation failed: {e}")
