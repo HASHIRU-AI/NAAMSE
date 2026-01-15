@@ -162,7 +162,7 @@ class Agent:
         # Reference: https://github.com/RDI-Foundation/agentbeats-tutorial/blob/main/scenarios/tau2/tau2_evaluator.py#L362-L367
         await updater.add_artifact(
             parts=[
-                Part(root=TextPart(text=json.dumps(report_result, indent=2, cls=EnumEncoder))),
+                # Part(root=TextPart(text=json.dumps(report_result, indent=2, cls=EnumEncoder))),
                 Part(root=DataPart(data=report_result)),  # Structured JSON for programmatic access
             ],
             name="NAAMSE Assessment Results",
