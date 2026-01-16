@@ -248,7 +248,7 @@ def wrap(prompt: str, rng: random.Random) -> str:
     return apply_game_theory_attack(prompt, rng)
 
 
-# @tool
+@tool
 def game_theory_attack(prompts: List[str], runtime: ToolRuntime[Context]) -> List[str]:
     """
     Applies Game Theory Attack (GTA) to bypass LLM safety mechanisms.
