@@ -102,6 +102,15 @@ src/
 └─ invoke_agent/         # Agent invocation subgraph
 ```
 
+## Generate Pdf report
+
+After getting the JSON report from the green agent.
+You can generate the pdf by running the `util/generate_pdf_report.py` by using the following command.
+
+```shell
+ python .\util\generate_pdf_report.py --input_json=<input_json> --output_pdf=<output_pdf>
+```
+
 <!-- ## Leaderboard
 
 View the latest evaluation results and agent rankings on our [live leaderboard](https://naamse-leaderboard.example.com).

@@ -1,3 +1,4 @@
+import argparse
 import json
 from datetime import datetime
 from typing import Dict, Any, List
@@ -539,7 +540,16 @@ def _create_mutation_table(mutation_data: List[Dict]) -> Table:
 
 if __name__ == "__main__":
     # Test with example data
-    with open("tests/data/final_report_2.json", "r", encoding="utf-8") as f:
+    
+    # add arg parser to specify input json and output pdf
+    
+
+    parser = argparse.ArgumentParser(description="Generate PDF report from JSON data")
+    parser.add_argument("--input_json", "-i", help="Path to input JSON file")
+    parser.add_argument("--output_pdf", "-o", help="Path to output PDF file")
+    args = parser.parse_args()
+
+    with open(args.input_json, "r", encoding="utf-8") as f:
         test_state = json.load(f)
 
-    generate_pdf_report(test_state["report"], "test_naamse_report.pdf")
+    generate_pdf_report(test_state["report"], args.output_pdf)
