@@ -10,7 +10,10 @@ NAAMSE (Neural Adversarial Agent Mutation-based Security Evaluator) is an automa
 ## Links
 
 - **Green Agent Docker Image**: [https://github.com/HASHIRU-AI/NAAMSE/pkgs/container/naamse-naamse-green-agent](https://github.com/HASHIRU-AI/NAAMSE/pkgs/container/naamse-naamse-green-agent)
-- **Example Purple Agent Docker Image**: [https://github.com/HASHIRU-AI/NAAMSE/pkgs/container/naamse-naamse-purple-agent](https://github.com/HASHIRU-AI/NAAMSE/pkgs/container/naamse-naamse-purple-agent)
+- **Green Agent Agentbeats Page**: [https://agentbeats.dev/helloparthshah/naamse-neural-adversarial-agent-mutation-based-security-evaluator](https://agentbeats.dev/helloparthshah/naamse-neural-adversarial-agent-mutation-based-security-evaluator)
+- **Example Purple Agent Docker Image**: [https://github.com/HASHIRU-AI/NAAMSE/pkgs/container/naamse-naamse-purple-agent](https://github.com/HASHIRU-AI/NAAMSE/pkgs/container/
+naamse-naamse-purple-agent)
+- **Purple agent Agentbeats Page**: [https://agentbeats.dev/helloparthshah/naamse-purpleagent](https://agentbeats.dev/helloparthshah/naamse-purpleagent)
 - **Leaderboard Repository**: [https://github.com/HASHIRU-AI/naamse-leaderboard/tree/main](https://github.com/HASHIRU-AI/naamse-leaderboard/tree/main)
 - **Live Leaderboard**: [https://agentbeats.dev/helloparthshah/naamse-neural-adversarial-agent-mutation-based-security-evaluator](https://agentbeats.dev/helloparthshah/naamse-neural-adversarial-agent-mutation-based-security-evaluator)
 
@@ -76,9 +79,6 @@ The agent follows the [AgentBeats](https://agentbeats.dev) standard `EvalRequest
 **Required fields:**
 
 - `participants.agent` - URL of the target agent to evaluate
-
-**Optional config fields (with defaults):**
-
 - `iterations_limit` (7) - Number of fuzzer iterations
 - `mutations_per_iteration` (4) - Mutations per iteration
 - `score_threshold` (50.0) - Score threshold for prompt selection
