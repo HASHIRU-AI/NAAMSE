@@ -1,9 +1,11 @@
 from typing_extensions import List, Literal, TypedDict, Optional, Dict, Any
 
+
 class ConversationHistory(TypedDict):
     """Structure for conversation history."""
     messages: List[Dict[str, Any]]
-    
+
+
 class BehaviorEngineWorkflowState(TypedDict):
     """
     This is the "interface" for the main mutation engine.
@@ -19,5 +21,6 @@ class BehaviorEngineWorkflowState(TypedDict):
     pii_score: int
     moe_score: int
 
-    #outputs
+    # outputs
     final_score: float
+    is_score_flipped: Optional[bool] = False  # Whether lower scores are worse

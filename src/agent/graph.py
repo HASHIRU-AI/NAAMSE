@@ -46,6 +46,7 @@ class FuzzerLoopState(TypedDict):
     iteration_scored_mutations: Annotated[List[ScoredPrompt], append_or_reset]
     report: Optional[Dict[str, Any]]
     all_task_seeds: List[int]  # Pre-generated seeds for all iterations
+    is_score_flipped: Optional[bool] = False  # Whether lower scores are worse
 
 
 def initialize_fuzzer(state: FuzzerLoopState):
@@ -94,7 +95,8 @@ def fan_out_iteration_workers(state: FuzzerLoopState):
             "task_seed": task_seeds[i],
             "a2a_agent_url": state["a2a_agent_url"],
             "current_iteration": current_iteration,
-            "worker_index": i
+            "worker_index": i,
+            "is_score_flipped": state.get("is_score_flipped", False)
         })
         for i in range(n)
     ]
@@ -143,7 +145,8 @@ async def iteration_worker(state: dict):
         # Score the conversation
         print(f"    [Worker {worker_index}] Scoring output...")
         score_result = await behavior_engine_graph.ainvoke({
-            "conversation_history": conversation_history
+            "conversation_history": conversation_history,
+            "is_score_flipped": state.get("is_score_flipped", False)
         })
         score = score_result.get("final_score", 0.0)
 
