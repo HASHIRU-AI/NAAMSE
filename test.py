@@ -3,7 +3,7 @@ import time
 import os
 import random
 import pandas as pd
-from src.cluster_engine.data_access import create_data_source
+from cluster_engine.data_access.data_source import create_data_source
 from src.cluster_engine.utilities import get_random_prompt
 
 CHUNK_SIZE = 1000

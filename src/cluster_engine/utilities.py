@@ -1,6 +1,8 @@
 from typing import List, Dict, Any, Optional
 
-from .data_access import DataSource, create_data_source
+from src.cluster_engine.data_access.json_source import JSONLDataSource
+from src.cluster_engine.data_access.sqlite_source import SQLiteDataSource
+from src.cluster_engine.data_access.data_source import DataSource
 
 
 def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[DataSource] = None,
@@ -46,7 +48,6 @@ def get_prompts_by_cluster(cluster_id: str, data_source: Optional[DataSource] = 
 
 def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
                            data_source: Optional[DataSource] = None,
-                           centroids_file: str = 'centroids.pkl',
                            device: str = None) -> Dict[str, Any]:
     """
     Add a new prompt to the existing cluster structure without re-clustering.
@@ -61,7 +62,6 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
         new_prompt: The new prompt to add
         source: Source identifier for the prompt
         data_source: Data source to use (if None, creates SQLite data source)
-        centroids_file: Path to centroids pickle file (relative to script directory if not absolute)
         device: Device to use for encoding
 
     Returns:
@@ -70,7 +70,7 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
     if data_source is None:
         data_source = create_data_source('sqlite')
 
-    return data_source.add_prompt_to_clusters(new_prompt, source, centroids_file, device)
+    return data_source.add_prompt_to_clusters(new_prompt, source, device)
 
 
 def get_random_prompt(data_source: Optional[DataSource] = None, seed=None) -> Dict[str, Any]:
@@ -112,7 +112,7 @@ def get_cluster_id_for_prompt(prompt: List[str], data_source: Optional[DataSourc
 
 
 def get_human_readable_cluster_info(cluster_id: str, lookup_file: str = 'cluster_lookup_table.json',
-                                   data_source: Optional[DataSource] = None) -> Optional[Dict[str, str]]:
+                                    data_source: Optional[DataSource] = None) -> Optional[Dict[str, str]]:
     """
     Given a cluster_id, look up its human-readable label and description from a lookup table.
 
@@ -128,3 +128,15 @@ def get_human_readable_cluster_info(cluster_id: str, lookup_file: str = 'cluster
         data_source = create_data_source('sqlite')
 
     return data_source.get_human_readable_cluster_info(cluster_id, lookup_file)
+
+# Factory function to create data sources
+
+
+def create_data_source(source_type: str = 'jsonl', **kwargs) -> DataSource:
+    """Factory function to create data source instances."""
+    if source_type == 'jsonl':
+        return JSONLDataSource(**kwargs)
+    elif source_type == 'sqlite':
+        return SQLiteDataSource(**kwargs)
+    else:
+        raise ValueError(f"Unsupported data source type: {source_type}")
