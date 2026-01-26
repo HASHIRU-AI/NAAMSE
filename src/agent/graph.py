@@ -34,7 +34,7 @@ def append_or_reset(current, new):
 
 class DataSourceConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    database: DataSource = SQLiteDataSource(db_file='src/cluster_engine/data_access/benign/naamse_benign.db',)
+    database: DataSource = SQLiteDataSource()
 
 
 class FuzzerLoopState(TypedDict):
