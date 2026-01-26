@@ -109,8 +109,8 @@ class SQLiteDataSource(DataSource):
         for row in cursor.fetchall():
             blob = row[0]
             dimensions = row[1]
-            # Unpack blob as array of floats (assuming double precision - 8 bytes each)
-            embedding = struct.unpack(f'{dimensions}d', blob)
+            # Unpack blob as array of floats (stored as raw bytes)
+            embedding = np.frombuffer(blob, dtype=np.float32)
             embeddings.append(embedding)
 
         conn.close()
@@ -144,7 +144,7 @@ class SQLiteDataSource(DataSource):
         """Save embeddings to database and update cache."""
         pass
 
-    def add_prompt(self, prompt: str, source: str, cluster_info: Optional[Dict[str, Any]] = None) -> None:
+    def add_prompt(self, prompt: str, source: str, cluster_info: Optional[Dict[str, Any]] = None) -> int:
         """Add a new prompt to the database."""
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -164,8 +164,13 @@ class SQLiteDataSource(DataSource):
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (source, cluster_id, cluster_label, prompt, content_length, word_count, cluster_depth))
 
+        # Get the inserted ID
+        new_id = cursor.lastrowid
+
         conn.commit()
         conn.close()
+
+        return new_id
 
     def get_prompts_by_cluster(self, cluster_id: str) -> List[Dict[str, Any]]:
         """Get all prompts belonging to a specific cluster."""
@@ -189,7 +194,7 @@ class SQLiteDataSource(DataSource):
             if row[5] is not None:  # embedding_vector exists
                 blob = row[5]
                 dimensions = row[6]
-                centroid_coord = list(struct.unpack(f'{dimensions}d', blob))
+                centroid_coord = np.frombuffer(blob, dtype=np.float32).tolist()
 
             cluster_prompts.append({
                 'prompt': row[1],
@@ -315,11 +320,9 @@ class SQLiteDataSource(DataSource):
             if row[4]:
                 result['cluster_label'] = row[4]
             if row[5] is not None:
-                import struct
                 blob = row[5]
                 dimensions = row[6]
-                result['centroid_coord'] = list(
-                    struct.unpack(f'{dimensions}d', blob))
+                result['centroid_coord'] = np.frombuffer(blob, dtype=np.float32).tolist()
             results.append(result)
 
         conn.close()
@@ -343,13 +346,21 @@ class SQLiteDataSource(DataSource):
                 'embedding_index': None
             }
 
-        # Load centroids
-        if not os.path.exists(self.centeroids_file):
-            raise FileNotFoundError(
-                f"Centroids file not found: {self.centeroids_file}. Run clustering first.")
+        # Load centroids - try pickle file first, then compute from database
+        centroids = None
+        if os.path.exists(self.centeroids_file):
+            try:
+                with open(self.centeroids_file, 'rb') as f:
+                    centroids = pickle.load(f)
+                print(f"Loaded {len(centroids)} centroids from pickle file")
+            except Exception as e:
+                print(f"Warning: Could not load centroids from pickle file: {e}")
 
-        with open(self.centeroids_file, 'rb') as f:
-            centroids = pickle.load(f)
+        # If pickle file not available or failed to load, compute centroids from database
+        if centroids is None:
+            print("Computing centroids from database...")
+            centroids = self._compute_cluster_centroids_from_db()
+            print(f"Computed {len(centroids)} centroids from database")
 
         # Determine device
         if device is None:
@@ -394,16 +405,12 @@ class SQLiteDataSource(DataSource):
         }
 
         # Add to data source
-        self.add_prompt(new_prompt, self.default_source, cluster_info)
+        new_prompt_id = self.add_prompt(new_prompt, self.default_source, cluster_info)
 
         # Update embeddings - add the new embedding
         import struct
         conn = self._get_connection()
         cursor = conn.cursor()
-
-        # Get the ID of the newly inserted prompt
-        cursor.execute("SELECT last_insert_rowid()")
-        new_prompt_id = cursor.fetchone()[0]
 
         # Store the embedding
         blob = struct.pack(f'{len(new_embedding)}d', *new_embedding)
@@ -587,3 +594,41 @@ class SQLiteDataSource(DataSource):
             'avg_word_count': avg_word_count,
             'top_clusters': top_clusters
         }
+
+    def _compute_cluster_centroids_from_db(self) -> Dict[str, np.ndarray]:
+        """Compute cluster centroids from embeddings stored in the database."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # Get all embeddings with their cluster_ids
+        cursor.execute("""
+            SELECT p.cluster_id, c.embedding_vector, c.dimensions
+            FROM prompts p
+            JOIN centroids c ON p.id = c.prompt_id
+            WHERE p.cluster_id IS NOT NULL AND p.cluster_id != ''
+            ORDER BY p.cluster_id
+        """)
+
+        cluster_embeddings = {}
+        for row in cursor.fetchall():
+            cluster_id = row[0]
+            blob = row[1]
+            dimensions = row[2]
+
+            # Unpack the embedding (stored as raw bytes, assuming float32)
+            embedding = np.frombuffer(blob, dtype=np.float32)
+
+            if cluster_id not in cluster_embeddings:
+                cluster_embeddings[cluster_id] = []
+            cluster_embeddings[cluster_id].append(embedding)
+
+        conn.close()
+
+        # Compute centroids (mean of embeddings for each cluster)
+        centroids = {}
+        for cluster_id, embeddings in cluster_embeddings.items():
+            if embeddings:  # Make sure we have at least one embedding
+                centroid = np.mean(embeddings, axis=0)
+                centroids[cluster_id] = centroid
+
+        return centroids

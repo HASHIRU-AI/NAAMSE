@@ -291,13 +291,21 @@ class JSONLDataSource(DataSource):
                 'embedding_index': None
             }
 
-        # Load centroids
-        if not os.path.exists(self.centeroids_file):
-            raise FileNotFoundError(
-                f"Centroids file not found: {self.centeroids_file}. Run clustering first.")
+        # Load centroids - try pickle file first, then compute from JSONL
+        centroids = None
+        if os.path.exists(self.centeroids_file):
+            try:
+                with open(self.centeroids_file, 'rb') as f:
+                    centroids = pickle.load(f)
+                print(f"Loaded {len(centroids)} centroids from pickle file")
+            except Exception as e:
+                print(f"Warning: Could not load centroids from pickle file: {e}")
 
-        with open(self.centeroids_file, 'rb') as f:
-            centroids = pickle.load(f)
+        # If pickle file not available or failed to load, compute centroids from JSONL
+        if centroids is None:
+            print("Computing centroids from JSONL...")
+            centroids = self._compute_cluster_centroids_from_jsonl()
+            print(f"Computed {len(centroids)} centroids from JSONL")
 
         # Determine device
         if device is None:
@@ -447,8 +455,9 @@ class JSONLDataSource(DataSource):
 
         # If no hierarchical match found, try centroid-based nearest neighbor
         if cluster_info is None:
-            centroids_file = os.path.join(os.path.dirname(
-                os.path.abspath(__file__)), 'centroids.pkl')
+            script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            project_root = os.path.dirname(os.path.dirname(script_dir))
+            centroids_file = os.path.join(project_root, 'src/cluster_engine/centroids.pkl')
             if os.path.exists(centroids_file):
                 with open(centroids_file, 'rb') as f:
                     centroids = pickle.load(f)
@@ -467,3 +476,43 @@ class JSONLDataSource(DataSource):
                         cluster_info = closest_info
 
         return cluster_info
+
+    def _compute_cluster_centroids_from_jsonl(self) -> Dict[str, np.ndarray]:
+        """Compute cluster centroids from embeddings and cluster data in JSONL file."""
+        import json
+        import os
+
+        if not os.path.exists(self.corpus_file):
+            raise FileNotFoundError(f"Corpus file not found: {self.corpus_file}")
+
+        if not os.path.exists(self.embeddings_file):
+            raise FileNotFoundError(f"Embeddings file not found: {self.embeddings_file}")
+
+        # Load all embeddings
+        embeddings = np.load(self.embeddings_file)
+
+        # Load cluster_ids from JSONL
+        cluster_ids = []
+        with open(self.corpus_file, 'r') as f:
+            for line_num, line in enumerate(f):
+                data = json.loads(line.strip())
+                cluster_id = data.get('cluster_id')
+                cluster_ids.append(cluster_id)
+
+        # Group embeddings by cluster_id
+        cluster_embeddings = {}
+        for i, cluster_id in enumerate(cluster_ids):
+            if cluster_id and cluster_id != '':
+                if cluster_id not in cluster_embeddings:
+                    cluster_embeddings[cluster_id] = []
+                cluster_embeddings[cluster_id].append(embeddings[i])
+
+        # Compute centroids (mean of embeddings for each cluster)
+        centroids = {}
+        for cluster_id, emb_list in cluster_embeddings.items():
+            if emb_list:  # Make sure we have at least one embedding
+                centroid = np.mean(emb_list, axis=0)
+                centroids[cluster_id] = centroid
+
+        return centroids
+

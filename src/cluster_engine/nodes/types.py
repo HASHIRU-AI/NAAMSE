@@ -27,3 +27,7 @@ class ClusteringState(TypedDict):
     checkpoint_dir: str
     device: str
     use_llm_labeling: bool
+
+    # SQLite specific
+    db_path: str
+    prompt_ids: List[int]

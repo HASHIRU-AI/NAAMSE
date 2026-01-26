@@ -42,6 +42,7 @@ def optimize_kmeans(state: ClusteringState) -> ClusteringState:
         print(f"Best params: {best_params}")
 
         # Save params for future runs
+        os.makedirs(os.path.dirname(params_file), exist_ok=True)
         with open(params_file, 'w') as f:
             json.dump(best_params, f)
         print(f"Saved params to {params_file}")
