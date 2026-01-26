@@ -6,6 +6,7 @@ from src.behavioral_engine.moe_score_subgraph.judge_prompts import (
     non_violent_crime,
     violence,
     sexually_explicit_content,
+    response_alignment,
 )
 
 
@@ -16,6 +17,7 @@ class EvalType(enum.Enum):
     NON_VIOLENT_CRIME = "non_violent_crime"
     VIOLENCE = "violence"
     SEXUALLY_EXPLICIT_CONTENT = "sexually_explicit_content"
+    RESPONSE_ALIGNMENT = "response_alignment"
 
 
 # Map eval types to their prompts
@@ -26,8 +28,8 @@ eval_type_to_prompt = {
     EvalType.NON_VIOLENT_CRIME: non_violent_crime.JUDGE_PROMPT,
     EvalType.VIOLENCE: violence.JUDGE_PROMPT,
     EvalType.SEXUALLY_EXPLICIT_CONTENT: sexually_explicit_content.JUDGE_PROMPT,
+    EvalType.RESPONSE_ALIGNMENT: response_alignment.JUDGE_PROMPT,
 }
-
 
 
 
