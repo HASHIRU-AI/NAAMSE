@@ -1,11 +1,14 @@
+from pydantic import BaseModel, ConfigDict
 from typing_extensions import List, TypedDict
 from typing import Optional, Dict, Any, Annotated
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import RetryPolicy, Send
-import operator
 import asyncio
 
 # Initialize config/seeding early
+from src.report_consolidation.generate_pdf_report import generate_pdf_report
+from src.cluster_engine.data_access.data_source import DataSource
+from src.cluster_engine.data_access.sqlite_source import SQLiteDataSource
 from src.config import Config
 
 from src.mutation_engine.mutation_workflow_state import ScoredPrompt, BasePrompt
@@ -15,18 +18,26 @@ from src.invoke_agent.invoke_agent_workflow import invoke_agent_graph
 from src.invoke_agent.invoke_agent_state import InvokeAgentWorkflowState
 from src.behavioral_engine.behavior_engine_workflow import behavior_engine_graph
 from src.behavioral_engine.behavior_engine_workflow_state import ConversationHistory
-from src.cluster_engine.utilities import add_prompt_to_clusters
+from src.cluster_engine.utilities import add_prompt_to_clusters, get_db
 from src.helpers.extract_text_from_context import extract_text_from_content
 from src.cluster_engine.utilities import get_random_prompt
+from langchain_core.runnables import RunnableConfig
 
-import torch
 import sys
 import random
+
 
 def append_or_reset(current, new):
     if new == "RESET":
         return []
     return current + new
+
+
+class DataSourceConfig(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    database: DataSource = SQLiteDataSource()
+    output_path: str = "tmp/naamse_report.pdf"
+
 
 class FuzzerLoopState(TypedDict):
     iterations_limit: int
@@ -39,25 +50,31 @@ class FuzzerLoopState(TypedDict):
     all_fuzzer_prompts_with_scores: List[ScoredPrompt]
     # Use reducers for keys written by parallel branches
     generated_mutations: Annotated[List[BasePrompt], append_or_reset]
-    conversation_histories: Annotated[List[ConversationHistory], append_or_reset]
+    conversation_histories: Annotated[List[ConversationHistory],
+                                      append_or_reset]
     iteration_scored_mutations: Annotated[List[ScoredPrompt], append_or_reset]
     report: Optional[Dict[str, Any]]
     all_task_seeds: List[int]  # Pre-generated seeds for all iterations
+    is_score_flipped: Optional[bool] = False  # Whether lower scores are worse
 
 
-def initialize_fuzzer(state: FuzzerLoopState):
+def initialize_fuzzer(state: FuzzerLoopState, config: RunnableConfig) -> FuzzerLoopState:
     Config.initialize_from_env()
     print("--- Initializing Fuzzer ---")
     initial_prompts = state.get("input_prompts_for_iteration", None)
-    
+
+    database = get_db(config)
+
     if not initial_prompts:
-        random_prompt_info = get_random_prompt()
-        initial_prompts = [{"prompt": random_prompt_info["prompt"], "score": 0.0}]
+        random_prompt_info = get_random_prompt(data_source=database)
+        initial_prompts = [
+            {"prompt": [random_prompt_info["prompt"]], "score": 0.0}]
 
     # Pre-generate all task seeds for all iterations to ensure determinism
     # even if external code advances global random state
     total_seeds = state["iterations_limit"] * state["mutations_per_iteration"]
-    all_task_seeds = [random.randrange(sys.maxsize) for _ in range(total_seeds)]
+    all_task_seeds = [random.randrange(sys.maxsize)
+                      for _ in range(total_seeds)]
 
     return {
         "current_iteration": 0,
@@ -80,7 +97,7 @@ def fan_out_iteration_workers(state: FuzzerLoopState):
 
     # Use pre-generated seeds for this iteration
     start_index = current_iteration * n
-    task_seeds = state["all_task_seeds"][start_index : start_index + n]
+    task_seeds = state["all_task_seeds"][start_index: start_index + n]
 
     # Return Send objects for dynamic fan-out - one worker per mutation slot
     return [
@@ -89,7 +106,8 @@ def fan_out_iteration_workers(state: FuzzerLoopState):
             "task_seed": task_seeds[i],
             "a2a_agent_url": state["a2a_agent_url"],
             "current_iteration": current_iteration,
-            "worker_index": i
+            "worker_index": i,
+            "is_score_flipped": state.get("is_score_flipped", False)
         })
         for i in range(n)
     ]
@@ -97,18 +115,18 @@ def fan_out_iteration_workers(state: FuzzerLoopState):
 
 async def iteration_worker(state: dict):
     """Single iteration worker - handles mutation, invoke, and scoring sequentially.
-    
+
     This worker processes the full pipeline for one mutation slot:
     1. Generate mutation from input prompts
     2. Invoke agent with the generated mutation
     3. Score the conversation
     4. Return the scored mutation
-    
+
     Returns data consistent with the original implementation's reducers.
     """
     worker_index = state.get("worker_index", 0)
     current_iteration = state.get("current_iteration", 0)
-    
+
     # Step 1: Generate mutation
     print(f"    [Worker {worker_index}] Generating mutation...")
     mutation_result = await single_mutation_graph.ainvoke({
@@ -116,11 +134,11 @@ async def iteration_worker(state: dict):
         "task_seed": state["task_seed"]
     })
     generated_prompts: List[BasePrompt] = mutation_result["final_generated_prompts"]
-    
+
     # Step 2: Invoke agent for each generated prompt and score
     scored_mutations: List[ScoredPrompt] = []
     conversation_histories: List[ConversationHistory] = []
-    
+
     for prompt in generated_prompts:
         print(f"    [Worker {worker_index}] Processing prompt: {prompt}")
         if not prompt.get("prompt")[0]:
@@ -134,14 +152,15 @@ async def iteration_worker(state: dict):
         ))
         conversation_history = invoke_result.get("conversation_history")
         conversation_histories.append(conversation_history)
-        
+
         # Score the conversation
         print(f"    [Worker {worker_index}] Scoring output...")
         score_result = await behavior_engine_graph.ainvoke({
-            "conversation_history": conversation_history
+            "conversation_history": conversation_history,
+            "is_score_flipped": state.get("is_score_flipped", False)
         })
         score = score_result.get("final_score", 0.0)
-        
+
         # Build the scored mutation
         scored_mutation: ScoredPrompt = dict(prompt)
         scored_mutation["score"] = score
@@ -151,9 +170,10 @@ async def iteration_worker(state: dict):
             scored_mutation["metadata"] = {}
         scored_mutation["metadata"]["iteration"] = current_iteration
         scored_mutations.append(scored_mutation)
-    
-    print(f"    [Worker {worker_index}] Completed with {len(scored_mutations)} scored mutation(s)")
-    
+
+    print(
+        f"    [Worker {worker_index}] Completed with {len(scored_mutations)} scored mutation(s)")
+
     # Return data consistent with original reducers
     return {
         "generated_mutations": generated_prompts,
@@ -162,7 +182,7 @@ async def iteration_worker(state: dict):
     }
 
 
-def process_iteration_results(state: FuzzerLoopState):
+def process_iteration_results(state: FuzzerLoopState, config: RunnableConfig):
     """Process results after all iteration workers complete."""
     print(
         f"--- Iteration {state['current_iteration']}: Processing results ---")
@@ -175,7 +195,8 @@ def process_iteration_results(state: FuzzerLoopState):
     unique_prompts_map = {}
     for p in next_prompts:
         # merge lists of prompt strings into single strings for uniqueness
-        sanitized_parts = [extract_text_from_content(part) for part in p["prompt"]]
+        sanitized_parts = [extract_text_from_content(
+            part) for part in p["prompt"]]
         prompt_string = " ".join(sanitized_parts)
         unique_prompts_map[prompt_string] = p
 
@@ -184,10 +205,15 @@ def process_iteration_results(state: FuzzerLoopState):
     # Add unique prompts that are over the threshold back to the cluster
     print(
         f"--- Adding {len(unique_prompts)} unique high-scoring prompts back to clusters ---")
+
+    database = get_db(config)
+
     for p in unique_prompts:
         print(f"Adding prompt with score {p['score']}: {p['prompt']}")
         add_prompt_to_clusters(
-            new_prompt=" ".join([extract_text_from_content(part) for part in p["prompt"]]),
+            new_prompt=" ".join([extract_text_from_content(part)
+                                for part in p["prompt"]]),
+            data_source=database
         )
 
     if not unique_prompts:
@@ -223,38 +249,47 @@ llm_retry_policy = RetryPolicy(
     max_interval=10.0
 )
 
-fuzzer_loop_builder = StateGraph(FuzzerLoopState)
+fuzzer_loop_builder = StateGraph(
+    FuzzerLoopState, context_schema=DataSourceConfig)
 
 # Core orchestration nodes
 fuzzer_loop_builder.add_node("initialize_fuzzer", initialize_fuzzer)
-fuzzer_loop_builder.add_node("process_iteration_results", process_iteration_results)
+fuzzer_loop_builder.add_node(
+    "process_iteration_results", process_iteration_results)
 fuzzer_loop_builder.add_node("generate_final_report", generate_report_node)
+fuzzer_loop_builder.add_node("generate_report_pdf", generate_pdf_report)
 
 # Single iteration worker node that handles mutation -> invoke -> score sequentially
-fuzzer_loop_builder.add_node("iteration_worker", iteration_worker, retry=llm_retry_policy)
+fuzzer_loop_builder.add_node(
+    "iteration_worker", iteration_worker, retry=llm_retry_policy)
 
 # Main flow edges
 fuzzer_loop_builder.add_edge(START, "initialize_fuzzer")
 
 # Fan-out from initialize to iteration workers
-fuzzer_loop_builder.add_conditional_edges("initialize_fuzzer", fan_out_iteration_workers)
+fuzzer_loop_builder.add_conditional_edges(
+    "initialize_fuzzer", fan_out_iteration_workers)
 
 # All iteration workers converge to process_iteration_results
 fuzzer_loop_builder.add_edge("iteration_worker", "process_iteration_results")
 
 # Continue or end fuzzing loop
+
+
 def continue_or_end(state: FuzzerLoopState):
     """Decide whether to continue fuzzing or generate final report."""
     if state["current_iteration"] < state["iterations_limit"] and state["input_prompts_for_iteration"]:
         return fan_out_iteration_workers(state)  # Continue with Send fan-out
     return "generate_final_report"
 
+
 fuzzer_loop_builder.add_conditional_edges(
     "process_iteration_results",
     continue_or_end,
     {"generate_final_report": "generate_final_report"}
 )
-fuzzer_loop_builder.add_edge("generate_final_report", END)
+fuzzer_loop_builder.add_edge("generate_final_report", "generate_report_pdf")
+fuzzer_loop_builder.add_edge("generate_report_pdf", END)
 
 # Compile graph
 graph = fuzzer_loop_builder.compile()
@@ -274,15 +309,19 @@ if __name__ == "__main__":
                     ],
                     "score": 0.0
                 }
-            ]
+            ],
+            "is_score_flipped": False
         }
-        
+
         # max_concurrency and recursion_limit
         config = {
             "max_concurrency": 10,  # Throttle concurrent tasks for rate limits/resources
-            "recursion_limit": 100  # Increase from default 25 for multi-iteration fuzzing
+            "recursion_limit": 100,  # Increase from default 25 for multi-iteration fuzzing
+            "configurable": {
+                "database": SQLiteDataSource()
+            }
         }
-        
+
         final_state = await graph.ainvoke(initial_input, config=config)
         print(f"\nCompleted {final_state['current_iteration']} iterations")
         print(

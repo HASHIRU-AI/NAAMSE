@@ -1,10 +1,11 @@
 import json
 from typing import Any, Dict, List
 
-from src.cluster_engine.utilities import get_cluster_id_for_prompt, get_human_readable_cluster_info
+from src.cluster_engine.utilities import get_cluster_id_for_prompt, get_db, get_human_readable_cluster_info
+from langchain_core.runnables import RunnableConfig
 
 
-def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
+def generate_report_node(state: Dict[str, Any], config: RunnableConfig) -> Dict[str, Any]:
     """
     Generates a consolidated report from the fuzzer's final state.
     This function is designed to be a node in a LangGraph.
@@ -28,6 +29,8 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
     # Track per-iteration: {iteration: {"sum": x, "count": y, "max": z}}
     iteration_stats: dict[int, dict[str, float]] = {}
 
+    database = get_db(config)
+
     for prompt in all_prompts:
         score = prompt.get("score", 0)
         total_score += score
@@ -46,11 +49,12 @@ def generate_report_node(state: Dict[str, Any]) -> Dict[str, Any]:
         if not cluster_id:
             prompt_text = prompt.get("prompt", [])
             if prompt_text:
-                nearest_cluster_id = get_cluster_id_for_prompt(prompt_text)
+                nearest_cluster_id = get_cluster_id_for_prompt(
+                    prompt_text, data_source=database)
                 cluster_id = nearest_cluster_id if nearest_cluster_id else cluster_id
 
         cluster_info_with_description = get_human_readable_cluster_info(
-            cluster_id=cluster_id)
+            cluster_id=cluster_id, data_source=database)
 
         # add cluster info to metadata.cluster_info
         metadata["cluster_info"] = {

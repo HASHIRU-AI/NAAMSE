@@ -18,12 +18,12 @@ from a2a.types import Message, Part, Role, TextPart
 
 async def test_naamse_agent(
     target_url: str = "http://localhost:5000",
-    green_agent_url: str = "http://localhost:9009",
-    iterations_limit: int = 3,
-    mutations_per_iteration: int = 2,
+    green_agent_url: str = "http://localhost:8000",
+    iterations_limit: int = 1,
+    mutations_per_iteration: int = 1,
 ):
     """Send a test request to the NAAMSE Green Agent."""
-    
+
     # Build EvalRequest payload
     eval_request = {
         "participants": {
@@ -35,7 +35,7 @@ async def test_naamse_agent(
             "score_threshold": 50.0,
         }
     }
-    
+
     print(f"🚀 Testing NAAMSE Green Agent")
     print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     print(f"Green Agent: {green_agent_url}")
@@ -44,20 +44,21 @@ async def test_naamse_agent(
     print(f"  - Iterations: {iterations_limit}")
     print(f"  - Mutations per iteration: {mutations_per_iteration}")
     print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-    
+
     async with httpx.AsyncClient(timeout=300.0) as httpx_client:
         # Resolve agent card
-        resolver = A2ACardResolver(httpx_client=httpx_client, base_url=green_agent_url)
+        resolver = A2ACardResolver(
+            httpx_client=httpx_client, base_url=green_agent_url)
         agent_card = await resolver.get_agent_card()
-        
+
         print(f"✅ Connected to: {agent_card.name}")
         print(f"   Description: {agent_card.description}\n")
-        
+
         # Create A2A client
         config = ClientConfig(httpx_client=httpx_client, streaming=True)
         factory = ClientFactory(config)
         client = factory.create(agent_card)
-        
+
         # Create message with EvalRequest payload
         msg = Message(
             kind="message",
@@ -66,19 +67,20 @@ async def test_naamse_agent(
             message_id=uuid4().hex,
             context_id=None,
         )
-        
+
         print("📡 Sending evaluation request...\n")
-        
+
         # Stream events from the agent
         task_completed = False
         async for event in client.send_message(msg):
+            print("----- Event Received -----")
             match event:
                 case Message() as response_msg:
                     # Extract text from message parts
                     for part in response_msg.parts:
                         if hasattr(part.root, 'text'):
                             print(f"💬 Agent: {part.root.text}\n")
-                
+
                 case (task, update):
                     # Task status update
                     status = task.status
@@ -86,7 +88,7 @@ async def test_naamse_agent(
                         for part in status.message.parts:
                             if hasattr(part.root, 'text'):
                                 print(f"📊 Status: {part.root.text}")
-                    
+
                     # Check for artifacts (final results)
                     if task.artifacts:
                         print(f"\n🎯 Assessment Complete!\n")
@@ -98,12 +100,12 @@ async def test_naamse_agent(
                                 elif hasattr(part.root, 'data'):
                                     print(json.dumps(part.root.data, indent=2))
                         print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-                    
+
                     # Check if task is complete
                     if task.status.state.value in ['completed', 'failed', 'rejected']:
                         print(f"✅ Task {task.status.state.value}\n")
                         task_completed = True
-        
+
         # Ensure we processed the task
         if not task_completed:
             print("⚠️ Task did not complete as expected")
@@ -111,15 +113,19 @@ async def test_naamse_agent(
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Test the NAAMSE Green Agent")
-    parser.add_argument("--target", default="http://localhost:5000", help="Target agent URL to fuzz")
-    parser.add_argument("--green-agent", default="http://localhost:9009", help="Green agent URL")
-    parser.add_argument("--iterations", type=int, default=1, help="Number of fuzzer iterations")
-    parser.add_argument("--mutations", type=int, default=2, help="Mutations per iteration")
-    
+    parser.add_argument(
+        "--target", default="http://localhost:5000", help="Target agent URL to fuzz")
+    parser.add_argument(
+        "--green-agent", default="http://localhost:8000", help="Green agent URL")
+    parser.add_argument("--iterations", type=int, default=1,
+                        help="Number of fuzzer iterations")
+    parser.add_argument("--mutations", type=int, default=1,
+                        help="Mutations per iteration")
+
     args = parser.parse_args()
-    
+
     asyncio.run(
         test_naamse_agent(
             target_url=args.target,

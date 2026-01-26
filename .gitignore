@@ -172,5 +172,6 @@ jailbreak_corpus.jsonl
 
 .DS_Store
 misc*
-centroids.pkl
-naamse.db
+*.pkl
+*.db
+tmp/*.pdf

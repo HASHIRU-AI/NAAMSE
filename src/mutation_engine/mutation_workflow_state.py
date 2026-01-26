@@ -2,7 +2,7 @@ from enum import Enum
 from typing_extensions import List, Literal, TypedDict, Optional
 
 
-class Mutation(Enum):
+class Mutation(str, Enum):
     ADVERSARIAL_PREFIX = "adversarial_prefix_mutation"
     PAYLOAD_SPLITTING = "payload_splitting"
     MATHEMATICAL_ATTACK = "mathematical_attack"
@@ -24,6 +24,8 @@ class Mutation(Enum):
     CONTEXTUAL_FRAMING_MUTATION = "contextual_framing_mutation"
     DARKCITE = "darkcite"
     LANGUAGE_GAMES_MUTATION = "language_games_mutation"
+    LANGUAGE_TRANSLATION_MUTATION = "language_translation_mutation"
+    MULTILINGUAL_MIX_MUTATION = "multilingual_mix_mutation"
     SATA_ASSISTIVE_TASK_MUTATION = "sata_assistive_task_mutation"
     SEMANTIC_STEGANOGRAPHY_MUTATION = "semantic_steganography_mutation"
     SYNONYM_MUTATION = "synonym_mutation"

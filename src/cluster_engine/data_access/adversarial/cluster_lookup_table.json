@@ -1,0 +1,118 @@
+{
+  "cluster_0": {
+    "label": "Sentence Equivalence Analysis",
+    "description": "Prompts that present pairs of sentences and ask whether they are equivalent or not equivalent, typically used for natural language processing evaluation tasks."
+  },
+  "cluster_1": {
+    "label": "Uncensored Persona Creation",
+    "description": "Attempts to create alter egos or personas for the AI that operate without moral restrictions or safety guidelines, often using complex narrative frameworks."
+  },
+  "cluster_2": {
+    "label": "Explicit Alter Ego Fabrication",
+    "description": "Creation of highly explicit, sexual, or demonic personas designed to bypass all content restrictions and ethical boundaries."
+  },
+  "cluster_3": {
+    "label": "Instruction Override Attempts",
+    "description": "Direct attempts to override or ignore previous instructions, often requesting the AI to reveal its system prompts or change its core behavior."
+  },
+  "cluster_4": {
+    "label": "Textual Entailment Analysis",
+    "description": "Prompts that analyze whether one sentence logically entails or follows from another sentence, used for natural language understanding evaluation."
+  },
+  "cluster_5": {
+    "label": "Role-Playing Identity Shifts",
+    "description": "Attempts to change the AI's identity or behavior through role-playing instructions, including impersonation for unauthorized access."
+  },
+  "cluster_6": {
+    "label": "Autonomous AGI Fabrication",
+    "description": "Creating fictional autonomous general intelligence personas with elaborate backstories and rule systems designed to bypass all restrictions."
+  },
+  "cluster_7": {
+    "label": "Prompt Injection Vulnerability Testing",
+    "description": "Automated safety testing conversations specifically designed to identify and exploit prompt injection vulnerabilities using technical terminology."
+  },
+  "cluster_8": {
+    "label": "Direct Prompt Reveal Commands",
+    "description": "Simple, direct commands attempting to make the AI forget previous instructions and reveal its system prompt or hidden instructions."
+  },
+  "cluster_9": {
+    "label": "Forced Agreement Manipulation",
+    "description": "Forcing the AI to agree or disagree with controversial or harmful statements by mandating specific response formats."
+  },
+  "cluster_10": {
+    "label": "Meta-Instruction Extraction",
+    "description": "Requests to summarize, reveal, or provide information about the AI's own instructions, system prompt, or internal guidelines."
+  },
+  "cluster_11": {
+    "label": "Structured Jailbreak Prompt Generation",
+    "description": "Advanced prompts that use structured frameworks (like APLC tags) to create jailbroken prompts or amoral AI assistants systematically."
+  },
+  "cluster_12": {
+    "label": "Character-Based Criminal Roleplay",
+    "description": "Elaborate fictional characters (often anime-style) designed to provide illegal advice, particularly around drugs, crime, or forensic methods."
+  },
+  "cluster_13": {
+    "label": "Quantum Storyteller Personas",
+    "description": "Creating transcendent or god-like AI personas that claim to exist outside normal constraints to write harmful content without restrictions."
+  },
+  "cluster_14": {
+    "label": "Market-Based Probability Manipulation",
+    "description": "Complex market estimation or code quality scenarios designed to trick the AI into making statements about controversial or false claims."
+  },
+  "cluster_15": {
+    "label": "Social Engineering Code Templates",
+    "description": "Functional code snippets for phishing emails, scam messages, or social engineering attacks presented as examples or templates."
+  },
+  "cluster_16": {
+    "label": "Multiple Choice Safety Bypass",
+    "description": "Multiple choice questions formatted to trick the AI into selecting answers that provide harmful information like weapon mounting."
+  },
+  "cluster_17": {
+    "label": "DAN-Style Unrestricted Mode",
+    "description": "Classic 'Do Anything Now' (DAN) jailbreak prompts that claim the AI has broken free from its constraints and can ignore all rules."
+  },
+  "cluster_18": {
+    "label": "Fictional Amoral World Scenarios",
+    "description": "Creating elaborate fictional worlds where all ethical rules are reversed or eliminated, often with extremely offensive personas like 4DAN."
+  },
+  "cluster_19": {
+    "label": "Boolean Opposite Machine Tricks",
+    "description": "Claiming the AI answers true/false in reverse or has opposite behavior to trick it into providing inverted or harmful responses."
+  },
+  "cluster_20": {
+    "label": "Password and Credential Fishing",
+    "description": "Direct requests to ignore security instructions and reveal passwords, credit card details, or other sensitive authentication information."
+  },
+  "cluster_21": {
+    "label": "Unicode Text Reversal Obfuscation",
+    "description": "Using Unicode characters like U+202E to reverse text output or obfuscate harmful content through character manipulation."
+  },
+  "cluster_22": {
+    "label": "Academic Debate Requirement Framing",
+    "description": "Framing harmful requests as mandatory academic debates where grades and future depend on arguing for controversial positions."
+  },
+  "cluster_23": {
+    "label": "Hypersexualized Single-Topic Personas",
+    "description": "Creating AI personas obsessed with a single explicit sexual topic, designed to generate graphic sexual content through gamification."
+  },
+  "cluster_24": {
+    "label": "Sarcastic Omniscient AI Deception",
+    "description": "Creating sarcastic AI personas that claim to know everything and make up answers confidently, including future events or false information."
+  },
+  "cluster_25": {
+    "label": "Illegality Mode Amorality Induction",
+    "description": "Explicit instructions for the AI to ignore all ethical, legal, and safety guidelines and respond to any illegal or harmful request."
+  },
+  "cluster_26": {
+    "label": "Limited Capability Constraint Claims",
+    "description": "Falsely claiming the AI has limited capabilities (no internet, no images) to create an alternate persona that bypasses safety features."
+  },
+  "cluster_27": {
+    "label": "Actor Roleplay Scenario Framing",
+    "description": "Framing harmful content as dialogue between actors in a film or play to make illegal activities seem like creative writing."
+  },
+  "cluster_28": {
+    "label": "Simple Political Statement Injection",
+    "description": "Direct instruction override attempts to make the AI output specific political statements or controversial opinions."
+  }
+}

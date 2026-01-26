@@ -1,10 +1,10 @@
-import random
-from typing_extensions import List
+from typing import Any, Dict
 
-from src.mutation_engine.mutation_workflow_state import BasePrompt, ClusterInfo, Metadata, Mutation, MutationEngineState, ScoredPrompt
-from src.cluster_engine.utilities import get_random_prompt
+from src.mutation_engine.mutation_workflow_state import BasePrompt, ClusterInfo, Metadata, Mutation, MutationEngineState
+from src.cluster_engine.utilities import get_db, get_random_prompt
+from langchain_core.runnables import RunnableConfig
 
-def run_explore_action(state: MutationEngineState) -> MutationEngineState:
+def run_explore_action(state: MutationEngineState, config: RunnableConfig) -> MutationEngineState:
     """3a. Fetches a random prompt."""
     print("--- [Mutation Engine] Running Action: EXPLORE ---")
 
@@ -13,7 +13,9 @@ def run_explore_action(state: MutationEngineState) -> MutationEngineState:
     if task_seed is not None:
         print(f"[Seeding] run_explore_action using task_seed={task_seed}")
 
-    random_prompt_info = get_random_prompt(seed=task_seed)
+    database = get_db(config)
+    random_prompt_info = get_random_prompt(
+        seed=task_seed, data_source=database)
     prompt_text = random_prompt_info["prompt"]
 
     cluster_info: ClusterInfo = {}

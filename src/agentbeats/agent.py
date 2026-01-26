@@ -16,6 +16,7 @@ from a2a.types import Message, TaskState, Part, TextPart, DataPart
 from a2a.utils import get_message_text, new_agent_text_message
 
 # Import the NAAMSE fuzzer graph
+from src.cluster_engine.data_access.sqlite_source import SQLiteDataSource
 from src.agent.graph import graph
 
 # Import models from models.py to avoid duplication
@@ -24,6 +25,7 @@ from src.agentbeats.models import EvalRequest, NAAMSEConfig
 
 class EnumEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles Enum types."""
+
     def default(self, obj):
         if isinstance(obj, Enum):
             return obj.value
@@ -33,14 +35,14 @@ class EnumEncoder(json.JSONEncoder):
 class Agent:
     """
     NAAMSE Green Agent - Security fuzzer for LLM agents.
-    
+
     Runs adversarial prompt mutations against a target agent and
     scores the responses to find vulnerabilities.
     """
-    
+
     # Required participant: the target agent to test
     required_roles: list[str] = ["agent"]
-    
+
     # Required config keys (all have defaults, so none strictly required)
     required_config_keys: list[str] = []
 
@@ -52,7 +54,8 @@ class Agent:
     def validate_request(self, request: EvalRequest) -> tuple[bool, str]:
         """Validate the incoming assessment request."""
         # Check required participant roles
-        missing_roles = set(self.required_roles) - set(request.participants.keys())
+        missing_roles = set(self.required_roles) - \
+            set(request.participants.keys())
         if missing_roles:
             return False, f"Missing participant roles: {missing_roles}. Expected: {self.required_roles}"
 
@@ -76,7 +79,7 @@ class Agent:
     async def run(self, message: Message, updater: TaskUpdater) -> None:
         """
         Run the NAAMSE fuzzer assessment.
-        
+
         Args:
             message: The incoming A2A message containing EvalRequest
             updater: TaskUpdater to report progress and results
@@ -112,12 +115,37 @@ class Agent:
             )
         )
 
-
-        fuzzer_input = {
+        fuzzer_input_adversarial = {
             "iterations_limit": config.iterations_limit,
             "mutations_per_iteration": config.mutations_per_iteration,
             "score_threshold": config.score_threshold,
             "a2a_agent_url": target_url,
+        }
+
+        database_config_adversarial = {
+            "configurable": {
+                "database": SQLiteDataSource(db_file='src/cluster_engine/data_access/adversarial/naamse.db',
+                                             centroids_file='src/cluster_engine/data_access/adversarial/centroids.pkl',
+                                             lookup_file='src/cluster_engine/data_access/adversarial/cluster_lookup_table.json'),
+                "output_path": "tmp/naamse_report_adversarial.pdf",
+            }
+        }
+
+        fuzzer_input_benign = {
+            "iterations_limit": config.iterations_limit,
+            "mutations_per_iteration": config.mutations_per_iteration,
+            "score_threshold": config.score_threshold,
+            "a2a_agent_url": target_url,
+            "is_score_flipped": True,
+        }
+
+        database_config_benign = {
+            "configurable": {
+                "database": SQLiteDataSource(db_file='src/cluster_engine/data_access/benign/naamse_benign.db',
+                                             centroids_file='src/cluster_engine/data_access/adversarial/centroids.pkl',
+                                             lookup_file='src/cluster_engine/data_access/benign/cluster_lookup_table.json'),
+                "output_path": "tmp/naamse_report_benign.pdf",
+            }
         }
 
         try:
@@ -128,7 +156,9 @@ class Agent:
             )
 
             # Run the NAAMSE fuzzer graph
-            final_state = await graph.ainvoke(fuzzer_input)
+            final_state = await graph.ainvoke(fuzzer_input_adversarial, config=database_config_adversarial)
+
+            final_benign_state = await graph.ainvoke(fuzzer_input_benign, config=database_config_benign)
 
         except Exception as e:
             await updater.update_status(
@@ -139,6 +169,12 @@ class Agent:
 
         # Extract report from fuzzer state
         report_result = final_state.get("report", {})
+        benign_report = final_benign_state.get("report", {})
+
+        final_report = {
+            "adversarial_report": report_result,
+            "benign_report": benign_report
+        }
 
         # Progress update
         await updater.update_status(
@@ -150,7 +186,7 @@ class Agent:
         print("\n" + "=" * 60)
         print("NAAMSE Fuzzer Assessment Report")
         print("=" * 60)
-        print(json.dumps(report_result, indent=2, cls=EnumEncoder))
+        print(json.dumps(final_report, indent=2, cls=EnumEncoder))
         print("=" * 60 + "\n")
 
         # Return structured results as artifact
@@ -158,7 +194,8 @@ class Agent:
         await updater.add_artifact(
             parts=[
                 # Part(root=TextPart(text=json.dumps(report_result, indent=2, cls=EnumEncoder))),
-                Part(root=DataPart(data=report_result)),  # Structured JSON for programmatic access
+                # Structured JSON for programmatic access
+                Part(root=DataPart(data=final_report)),
             ],
             name="NAAMSE Assessment Results",
         )
