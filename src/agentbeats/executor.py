@@ -4,6 +4,7 @@ NAAMSE Agent Executor - Wraps the Agent class for A2A protocol.
 Based on AgentBeats tutorial:
 https://github.com/RDI-Foundation/agentbeats-tutorial/blob/main/src/agentbeats/green_executor.py
 """
+import traceback
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
@@ -65,6 +66,7 @@ class Executor(AgentExecutor):
             if not updater._terminal_state_reached:
                 await updater.complete()
         except Exception as e:
+            traceback.print_exc()
             print(f"Task failed with agent error: {e}")
             await updater.failed(new_agent_text_message(f"Agent error: {e}", context_id=context_id, task_id=task.id))
 

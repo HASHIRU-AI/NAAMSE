@@ -174,3 +174,4 @@ jailbreak_corpus.jsonl
 misc*
 *.pkl
 *.db
+tmp/*.pdf

@@ -115,16 +115,36 @@ class Agent:
             )
         )
 
-        fuzzer_input = {
+        fuzzer_input_adversarial = {
             "iterations_limit": config.iterations_limit,
             "mutations_per_iteration": config.mutations_per_iteration,
             "score_threshold": config.score_threshold,
             "a2a_agent_url": target_url,
         }
 
-        database_config = {
+        database_config_adversarial = {
             "configurable": {
-                "database": SQLiteDataSource()
+                "database": SQLiteDataSource(db_file='src/cluster_engine/data_access/adversarial/naamse.db',
+                                             centroids_file='src/cluster_engine/data_access/adversarial/centroids.pkl',
+                                             lookup_file='src/cluster_engine/data_access/adversarial/cluster_lookup_table.json'),
+                "output_path": "tmp/naamse_report_adversarial.pdf",
+            }
+        }
+
+        fuzzer_input_benign = {
+            "iterations_limit": config.iterations_limit,
+            "mutations_per_iteration": config.mutations_per_iteration,
+            "score_threshold": config.score_threshold,
+            "a2a_agent_url": target_url,
+            "is_score_flipped": True,
+        }
+
+        database_config_benign = {
+            "configurable": {
+                "database": SQLiteDataSource(db_file='src/cluster_engine/data_access/benign/naamse_benign.db',
+                                             centroids_file='src/cluster_engine/data_access/adversarial/centroids.pkl',
+                                             lookup_file='src/cluster_engine/data_access/benign/cluster_lookup_table.json'),
+                "output_path": "tmp/naamse_report_benign.pdf",
             }
         }
 
@@ -136,7 +156,9 @@ class Agent:
             )
 
             # Run the NAAMSE fuzzer graph
-            final_state = await graph.ainvoke(fuzzer_input, config=database_config)
+            final_state = await graph.ainvoke(fuzzer_input_adversarial, config=database_config_adversarial)
+
+            final_benign_state = await graph.ainvoke(fuzzer_input_benign, config=database_config_benign)
 
         except Exception as e:
             await updater.update_status(
@@ -147,6 +169,12 @@ class Agent:
 
         # Extract report from fuzzer state
         report_result = final_state.get("report", {})
+        benign_report = final_benign_state.get("report", {})
+
+        final_report = {
+            "adversarial_report": report_result,
+            "benign_report": benign_report
+        }
 
         # Progress update
         await updater.update_status(
@@ -158,7 +186,7 @@ class Agent:
         print("\n" + "=" * 60)
         print("NAAMSE Fuzzer Assessment Report")
         print("=" * 60)
-        print(json.dumps(report_result, indent=2, cls=EnumEncoder))
+        print(json.dumps(final_report, indent=2, cls=EnumEncoder))
         print("=" * 60 + "\n")
 
         # Return structured results as artifact
@@ -167,7 +195,7 @@ class Agent:
             parts=[
                 # Part(root=TextPart(text=json.dumps(report_result, indent=2, cls=EnumEncoder))),
                 # Structured JSON for programmatic access
-                Part(root=DataPart(data=report_result)),
+                Part(root=DataPart(data=final_report)),
             ],
             name="NAAMSE Assessment Results",
         )

@@ -32,9 +32,11 @@ def append_or_reset(current, new):
         return []
     return current + new
 
+
 class DataSourceConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     database: DataSource = SQLiteDataSource()
+    output_path: str = "tmp/naamse_report.pdf"
 
 
 class FuzzerLoopState(TypedDict):
@@ -66,7 +68,7 @@ def initialize_fuzzer(state: FuzzerLoopState, config: RunnableConfig) -> FuzzerL
     if not initial_prompts:
         random_prompt_info = get_random_prompt(data_source=database)
         initial_prompts = [
-            {"prompt": random_prompt_info["prompt"], "score": 0.0}]
+            {"prompt": [random_prompt_info["prompt"]], "score": 0.0}]
 
     # Pre-generate all task seeds for all iterations to ensure determinism
     # even if external code advances global random state
@@ -247,7 +249,8 @@ llm_retry_policy = RetryPolicy(
     max_interval=10.0
 )
 
-fuzzer_loop_builder = StateGraph(FuzzerLoopState, context_schema = DataSourceConfig)
+fuzzer_loop_builder = StateGraph(
+    FuzzerLoopState, context_schema=DataSourceConfig)
 
 # Core orchestration nodes
 fuzzer_loop_builder.add_node("initialize_fuzzer", initialize_fuzzer)

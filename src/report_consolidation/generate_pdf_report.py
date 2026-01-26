@@ -3,14 +3,14 @@ import json
 from datetime import datetime
 from typing import Dict, Any, List
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image, KeepTogether
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY, TA_RIGHT
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, PageBreak, Image, KeepTogether
+from reportlab.lib.enums import TA_CENTER
 import io
+from langchain_core.runnables import RunnableConfig
 
 
 # Global table style
@@ -45,7 +45,7 @@ def _get_table_cell_style(font_size=8):
     )
 
 
-def generate_pdf_report(state: Dict[str, Any]):
+def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     """
     Generate a professional PDF report from NAAMSE fuzzer results.
 
@@ -53,7 +53,9 @@ def generate_pdf_report(state: Dict[str, Any]):
         report_data: The report dictionary from generate_report_node
         output_path: Path where PDF will be saved
     """
-    output_path: str = "naamse_report.pdf"
+    output_path = config.get("configurable", {}).get(
+        "output_path", "tmp/naamse_report.pdf")
+
     report_data = state.get("report", {})
 
     # Generate timestamp once
@@ -191,7 +193,12 @@ def generate_pdf_report(state: Dict[str, Any]):
     doc.build(story, onFirstPage=add_header, onLaterPages=add_header)
     print(f"PDF report generated: {output_path}")
 
-    return state
+    # add generated report path to state
+    report = state.get("report", {})
+    report["output_path"] = output_path
+    return {
+        "report": report
+    }
 
 
 def _generate_executive_summary(summary: Dict[str, Any], all_prompts: List[Dict]) -> str:
