@@ -1,3 +1,6 @@
+import matplotlib
+# Must be called BEFORE importing pyplot or any other plotting tool
+matplotlib.use('Agg')  # Use non-interactive backend suitable for scripts
 import argparse
 import json
 from datetime import datetime
