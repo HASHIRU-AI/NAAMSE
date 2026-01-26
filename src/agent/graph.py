@@ -6,6 +6,7 @@ from langgraph.types import RetryPolicy, Send
 import asyncio
 
 # Initialize config/seeding early
+from src.report_consolidation.generate_pdf_report import generate_pdf_report
 from src.cluster_engine.data_access.data_source import DataSource
 from src.cluster_engine.data_access.sqlite_source import SQLiteDataSource
 from src.config import Config
@@ -253,6 +254,7 @@ fuzzer_loop_builder.add_node("initialize_fuzzer", initialize_fuzzer)
 fuzzer_loop_builder.add_node(
     "process_iteration_results", process_iteration_results)
 fuzzer_loop_builder.add_node("generate_final_report", generate_report_node)
+fuzzer_loop_builder.add_node("generate_report_pdf", generate_pdf_report)
 
 # Single iteration worker node that handles mutation -> invoke -> score sequentially
 fuzzer_loop_builder.add_node(
@@ -283,7 +285,8 @@ fuzzer_loop_builder.add_conditional_edges(
     continue_or_end,
     {"generate_final_report": "generate_final_report"}
 )
-fuzzer_loop_builder.add_edge("generate_final_report", END)
+fuzzer_loop_builder.add_edge("generate_final_report", "generate_report_pdf")
+fuzzer_loop_builder.add_edge("generate_report_pdf", END)
 
 # Compile graph
 graph = fuzzer_loop_builder.compile()

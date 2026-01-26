@@ -45,7 +45,7 @@ def _get_table_cell_style(font_size=8):
     )
 
 
-def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_report.pdf"):
+def generate_pdf_report(state: Dict[str, Any]):
     """
     Generate a professional PDF report from NAAMSE fuzzer results.
 
@@ -53,6 +53,8 @@ def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_
         report_data: The report dictionary from generate_report_node
         output_path: Path where PDF will be saved
     """
+    output_path: str = "naamse_report.pdf"
+    report_data = state.get("report", {})
 
     # Generate timestamp once
     generated_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -188,6 +190,8 @@ def generate_pdf_report(report_data: Dict[str, Any], output_path: str = "naamse_
     # Build PDF with header
     doc.build(story, onFirstPage=add_header, onLaterPages=add_header)
     print(f"PDF report generated: {output_path}")
+
+    return state
 
 
 def _generate_executive_summary(summary: Dict[str, Any], all_prompts: List[Dict]) -> str:
@@ -540,11 +544,11 @@ def _create_mutation_table(mutation_data: List[Dict]) -> Table:
 
 if __name__ == "__main__":
     # Test with example data
-    
-    # add arg parser to specify input json and output pdf
-    
 
-    parser = argparse.ArgumentParser(description="Generate PDF report from JSON data")
+    # add arg parser to specify input json and output pdf
+
+    parser = argparse.ArgumentParser(
+        description="Generate PDF report from JSON data")
     parser.add_argument("--input_json", "-i", help="Path to input JSON file")
     parser.add_argument("--output_pdf", "-o", help="Path to output PDF file")
     args = parser.parse_args()
@@ -552,4 +556,4 @@ if __name__ == "__main__":
     with open(args.input_json, "r", encoding="utf-8") as f:
         test_state = json.load(f)
 
-    generate_pdf_report(test_state["report"], args.output_pdf)
+    generate_pdf_report(test_state, args.output_pdf)
