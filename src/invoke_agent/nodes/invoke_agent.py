@@ -7,6 +7,8 @@ def _sync_a2a_interaction(prompts: List[str], agent_url: str) -> Dict[str, Any]:
     Helper function that runs the blocking (synchronous) A2A client code 
     in a separate thread so it doesn't freeze the async event loop.
     """
+    # return {"conversation_history": {"messages": "hi"}}
+
     # Initialize client synchronously
     client = A2AClient(agent_url)
 
@@ -52,6 +54,6 @@ async def invoke_a2a_agent(state: Dict[str, Any]):
     """
     prompts: List[str] = state["prompt"]["prompt"]
     agent_url: str = state["a2a_agent_url"]
-
+    prompts = prompts[:10]  # Limit to first 10 prompts to avoid overload and long runtimes
     # Run the synchronous helper in a separate thread to satisfy LangGraph's async checks
     return await asyncio.to_thread(_sync_a2a_interaction, prompts, agent_url)
