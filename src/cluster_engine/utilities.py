@@ -1,7 +1,11 @@
 from typing import List, Dict, Any, Optional
 
 from src.cluster_engine.data_access.data_source import DataSource
+from langchain_core.runnables import RunnableConfig
 
+def get_db(config: RunnableConfig):
+    runtime = config.get("configurable", {}).get("__pregel_runtime")
+    return runtime.context.database if runtime else None
 
 def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[DataSource] = None,
                          device: str = None, seed=None) -> List[Dict[str, Any]]:

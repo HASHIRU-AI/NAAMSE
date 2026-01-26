@@ -1,7 +1,7 @@
 import json
 from typing import Any, Dict, List
 
-from src.cluster_engine.utilities import get_cluster_id_for_prompt, get_human_readable_cluster_info
+from src.cluster_engine.utilities import get_cluster_id_for_prompt, get_db, get_human_readable_cluster_info
 from langchain_core.runnables import RunnableConfig
 
 
@@ -29,7 +29,7 @@ def generate_report_node(state: Dict[str, Any], config: RunnableConfig) -> Dict[
     # Track per-iteration: {iteration: {"sum": x, "count": y, "max": z}}
     iteration_stats: dict[int, dict[str, float]] = {}
 
-    database = config.get("configurable", {}).get("database", None)
+    database = get_db(config)
 
     for prompt in all_prompts:
         score = prompt.get("score", 0)

@@ -1,10 +1,7 @@
 import linecache
 import time
-import os
 import random
 import pandas as pd
-from cluster_engine.data_access.data_source import create_data_source
-from src.cluster_engine.utilities import get_random_prompt
 
 CHUNK_SIZE = 1000
 PATH = ".\src\cluster_engine\jailbreak_corpus.jsonl"

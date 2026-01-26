@@ -1,6 +1,7 @@
 from typing import Any, Dict
 from typing_extensions import TypedDict
 from typing_extensions import TypedDict
+from src.cluster_engine.utilities import get_db
 from src.cluster_engine.data_access.data_source import DataSource
 from src.mutation_engine.mutation_workflow_state import BasePrompt, Metadata, MutatedPrompt, Mutation, MutationWorkflowState
 from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
@@ -272,7 +273,7 @@ def invoke_llm_with_tools(state: MutationWorkflowState, config: RunnableConfig):
     mutation = Mutation(state['mutation_type'])
     task_seed = state.get('task_seed', None)
     output: BasePrompt
-    database = config.get("configurable", {}).get("database", None)
+    database = get_db(config)
 
     load_dotenv()  # Load environment variables from .env file
 

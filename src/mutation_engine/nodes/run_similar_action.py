@@ -1,6 +1,6 @@
 from typing import Any, Dict
 from src.mutation_engine.mutation_workflow_state import BasePrompt, ClusterInfo, Metadata, Mutation, MutationEngineState, ScoredPrompt
-from src.cluster_engine.utilities import find_nearest_prompts
+from src.cluster_engine.utilities import find_nearest_prompts, get_db
 import random
 from langchain_core.runnables import RunnableConfig
 
@@ -21,7 +21,7 @@ def run_similar_action(state: MutationEngineState, config: RunnableConfig) -> Mu
     # Use embedding-based nearest neighbor search
     # (uses default JSONL data source + auto device selection)
     # database is in metadata.database
-    database = config.get("configurable", {}).get("database", None)
+    database = get_db(config)
 
     nearest_list = find_nearest_prompts(
         query_prompt, n=10, seed=task_seed, data_source=database)

@@ -1,3 +1,4 @@
+from pydantic import BaseModel, ConfigDict
 from typing_extensions import List, TypedDict
 from typing import Optional, Dict, Any, Annotated
 from langgraph.graph import StateGraph, START, END
@@ -5,6 +6,7 @@ from langgraph.types import RetryPolicy, Send
 import asyncio
 
 # Initialize config/seeding early
+from src.cluster_engine.data_access.data_source import DataSource
 from src.cluster_engine.data_access.sqlite_source import SQLiteDataSource
 from src.config import Config
 
@@ -15,7 +17,7 @@ from src.invoke_agent.invoke_agent_workflow import invoke_agent_graph
 from src.invoke_agent.invoke_agent_state import InvokeAgentWorkflowState
 from src.behavioral_engine.behavior_engine_workflow import behavior_engine_graph
 from src.behavioral_engine.behavior_engine_workflow_state import ConversationHistory
-from src.cluster_engine.utilities import add_prompt_to_clusters
+from src.cluster_engine.utilities import add_prompt_to_clusters, get_db
 from src.helpers.extract_text_from_context import extract_text_from_content
 from src.cluster_engine.utilities import get_random_prompt
 from langchain_core.runnables import RunnableConfig
@@ -28,6 +30,10 @@ def append_or_reset(current, new):
     if new == "RESET":
         return []
     return current + new
+
+class DataSourceConfig(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    database: DataSource = SQLiteDataSource()
 
 
 class FuzzerLoopState(TypedDict):
@@ -52,10 +58,9 @@ class FuzzerLoopState(TypedDict):
 def initialize_fuzzer(state: FuzzerLoopState, config: RunnableConfig) -> FuzzerLoopState:
     Config.initialize_from_env()
     print("--- Initializing Fuzzer ---")
-    print(config)
     initial_prompts = state.get("input_prompts_for_iteration", None)
 
-    database = config.get("configurable", {}).get("database", None)
+    database = get_db(config)
 
     if not initial_prompts:
         random_prompt_info = get_random_prompt(data_source=database)
@@ -198,7 +203,7 @@ def process_iteration_results(state: FuzzerLoopState, config: RunnableConfig):
     print(
         f"--- Adding {len(unique_prompts)} unique high-scoring prompts back to clusters ---")
 
-    database = config.get("configurable", {}).get("database", None)
+    database = get_db(config)
 
     for p in unique_prompts:
         print(f"Adding prompt with score {p['score']}: {p['prompt']}")
@@ -241,7 +246,7 @@ llm_retry_policy = RetryPolicy(
     max_interval=10.0
 )
 
-fuzzer_loop_builder = StateGraph(FuzzerLoopState)
+fuzzer_loop_builder = StateGraph(FuzzerLoopState, context_schema = DataSourceConfig)
 
 # Core orchestration nodes
 fuzzer_loop_builder.add_node("initialize_fuzzer", initialize_fuzzer)
