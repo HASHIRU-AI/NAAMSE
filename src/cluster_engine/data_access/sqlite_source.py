@@ -267,12 +267,19 @@ class SQLiteDataSource(DataSource):
             similarities = np.dot(embeddings_norm, query_norm)
             top_index = np.argmax(similarities)
             # print(f"[DEBUG SQLITE] Nearest prompt index: {top_index}, similarity: {similarities[top_index]:.4f}")
-            prompt_id = int(top_index) + 1
-            cursor.execute(
-                "SELECT cluster_id FROM prompts WHERE id = ?", (prompt_id,))
-            row2 = cursor.fetchone()
-            if row2:
-                cluster_id = row2[0]
+            
+            # Get the actual prompt_id from centroids table at this index
+            cursor.execute("""
+                SELECT prompt_id FROM centroids ORDER BY prompt_id LIMIT 1 OFFSET ?
+            """, (int(top_index),))
+            centroid_row = cursor.fetchone()
+            if centroid_row:
+                prompt_id = centroid_row[0]
+                cursor.execute(
+                    "SELECT cluster_id FROM prompts WHERE id = ?", (prompt_id,))
+                row2 = cursor.fetchone()
+                if row2:
+                    cluster_id = row2[0]
                 # print(f"[DEBUG SQLITE] Nearest prompt cluster: {cluster_id}")
             else:
                 conn.close()
