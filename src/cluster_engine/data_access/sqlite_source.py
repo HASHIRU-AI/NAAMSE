@@ -9,13 +9,17 @@ from src.cluster_engine.data_access.data_source import DataSource
 
 class SQLiteDataSource(DataSource):
     """Data source implementation for SQLite database."""
+    
+    lookup_file: str = 'cluster_lookup_table.json'
 
-    def __init__(self, db_file: str = 'naamse.db', centroids_file: str = 'centroids.pkl'):
+    def __init__(self, db_file: str = 'naamse.db', centroids_file: str = 'centroids.pkl', lookup_file: str = 'cluster_lookup_table.json', default_source: str = 'NAAMSE_mutation'):
         """Initialize SQLite data source.
 
         Args:
             db_file: Path to SQLite database file (relative to project root if not absolute)
             centroids_file: Path to centroids file (relative to cluster_engine directory if not absolute)
+            lookup_file: Path to cluster lookup table JSON file
+            default_source: Default source identifier for new prompts
         """
 
         # Make db_file path absolute if relative
@@ -32,6 +36,8 @@ class SQLiteDataSource(DataSource):
 
         self._db_file = db_file
         self.centeroids_file = centroids_file
+        self.lookup_file = lookup_file
+        self.default_source = default_source
         self._embeddings_cache = None
         self._model_cache = {}
 
@@ -319,7 +325,7 @@ class SQLiteDataSource(DataSource):
         conn.close()
         return results
 
-    def add_prompt_to_clusters(self, new_prompt: str, source: str, device: str = None) -> Dict[str, Any]:
+    def add_prompt_to_clusters(self, new_prompt: str, device: str = None) -> Dict[str, Any]:
         """Add a new prompt to the existing cluster structure without re-clustering."""
         import pickle
         import torch
@@ -329,7 +335,7 @@ class SQLiteDataSource(DataSource):
             print(f"⚠️  Skipping duplicate prompt: {new_prompt[:50]}...")
             return {
                 'prompt': new_prompt,
-                'source': source,
+                'source': self.default_source,
                 'cluster_id': None,
                 'cluster_label': None,
                 'centroid_coord': None,
@@ -388,7 +394,7 @@ class SQLiteDataSource(DataSource):
         }
 
         # Add to data source
-        self.add_prompt(new_prompt, source, cluster_info)
+        self.add_prompt(new_prompt, self.default_source, cluster_info)
 
         # Update embeddings - add the new embedding
         import struct
@@ -414,7 +420,7 @@ class SQLiteDataSource(DataSource):
 
         result = {
             'prompt': new_prompt,
-            'source': source,
+            'source': self.default_source,
             'cluster_id': cluster_path,
             'cluster_label': cluster_label,
             'centroid_coord': nearest_centroid.tolist(),
@@ -481,7 +487,7 @@ class SQLiteDataSource(DataSource):
         cluster_id = nearest_data.get('cluster_id')
         return cluster_id
 
-    def get_human_readable_cluster_info(self, cluster_id: str, lookup_file: str) -> Optional[Dict[str, str]]:
+    def get_human_readable_cluster_info(self, cluster_id: str) -> Optional[Dict[str, str]]:
         """Get human-readable label and description for a cluster."""
         import json
         import pickle
@@ -489,9 +495,11 @@ class SQLiteDataSource(DataSource):
         print(f"Getting description for cluster_id: {cluster_id}")
 
         # Make lookup_file path relative to script directory if not absolute
-        if not os.path.isabs(lookup_file):
+        if not os.path.isabs(self.lookup_file):
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            lookup_file = os.path.join(script_dir, lookup_file)
+            lookup_file = os.path.join(script_dir, self.lookup_file)
+        else:
+            lookup_file = self.lookup_file
 
         if not os.path.exists(lookup_file):
             return None

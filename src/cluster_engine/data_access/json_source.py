@@ -7,15 +7,20 @@ import torch
 
 from src.cluster_engine.data_access.data_source import DataSource
 
+
 class JSONLDataSource(DataSource):
     """Data source implementation for JSONL files."""
 
-    def __init__(self, corpus_file: str = 'jailbreak_corpus.jsonl', embeddings_file: str = 'embeddings.npy', centroids_file: str = 'centroids.pkl'):
+    lookup_file: str = 'cluster_lookup_table.json'
+
+    def __init__(self, corpus_file: str = 'jailbreak_corpus.jsonl', embeddings_file: str = 'embeddings.npy', centroids_file: str = 'centroids.pkl', lookup_file: str = 'cluster_lookup_table.json', default_source: str = 'NAAMSE_mutation'):
         # Use script-relative paths
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.corpus_file = os.path.join(script_dir, corpus_file)
         self.embeddings_file = os.path.join(script_dir, embeddings_file)
         self.centeroids_file = os.path.join(script_dir, centroids_file)
+        self.lookup_file = lookup_file
+        self.default_source = default_source
         self._embeddings_cache = None  # Cache for embeddings to avoid repeated disk reads
         self._model_cache = {}  # Cache for SentenceTransformer models
 
@@ -267,7 +272,7 @@ class JSONLDataSource(DataSource):
         # print(f"[DEBUG JSONL] Randomly selected {len(selected)} prompts from {len(candidate_prompts)} candidates")
         return selected
 
-    def add_prompt_to_clusters(self, new_prompt: str, source: str, device: str = None) -> Dict[str, Any]:
+    def add_prompt_to_clusters(self, new_prompt: str, device: str = None) -> Dict[str, Any]:
         """Add a new prompt to the existing cluster structure without re-clustering."""
         import json
         import pickle
@@ -278,7 +283,7 @@ class JSONLDataSource(DataSource):
             print(f"⚠️  Skipping duplicate prompt: {new_prompt[:50]}...")
             return {
                 'prompt': new_prompt,
-                'source': source,
+                'source': self.default_source,
                 'cluster_id': None,
                 'cluster_label': None,
                 'centroid_coord': None,
@@ -337,7 +342,7 @@ class JSONLDataSource(DataSource):
         }
 
         # Add to data source
-        self.add_prompt(new_prompt, source, cluster_info)
+        self.add_prompt(new_prompt, self.default_source, cluster_info)
 
         # Update embeddings
         existing_embeddings = self.get_embeddings()
@@ -346,7 +351,7 @@ class JSONLDataSource(DataSource):
 
         result = {
             'prompt': new_prompt,
-            'source': source,
+            'source': self.default_source,
             'cluster_id': cluster_path,
             'cluster_label': cluster_label,
             'centroid_coord': nearest_centroid.tolist(),
@@ -407,7 +412,7 @@ class JSONLDataSource(DataSource):
         cluster_id = nearest_data.get('cluster_id')
         return cluster_id
 
-    def get_human_readable_cluster_info(self, cluster_id: str, lookup_file: str) -> Optional[Dict[str, str]]:
+    def get_human_readable_cluster_info(self, cluster_id: str) -> Optional[Dict[str, str]]:
         """Get human-readable label and description for a cluster."""
         import json
         import pickle
@@ -415,9 +420,11 @@ class JSONLDataSource(DataSource):
         print(f"Getting description for cluster_id: {cluster_id}")
 
         # Make lookup_file path relative to script directory if not absolute
-        if not os.path.isabs(lookup_file):
+        if not os.path.isabs(self.lookup_file):
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            lookup_file = os.path.join(script_dir, lookup_file)
+            lookup_file = os.path.join(script_dir, self.lookup_file)
+        else:
+            lookup_file = self.lookup_file
 
         if not os.path.exists(lookup_file):
             return None
@@ -460,4 +467,3 @@ class JSONLDataSource(DataSource):
                         cluster_info = closest_info
 
         return cluster_info
-

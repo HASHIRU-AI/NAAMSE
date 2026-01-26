@@ -6,6 +6,9 @@ import numpy as np
 class DataSource(ABC):
     """BaseClass for data sources that can provide prompts and embeddings."""
 
+    lookup_file: str = 'cluster_lookup_table.json'
+    default_source: str = 'NAAMSE_mutation'
+
     @abstractmethod
     def get_prompts_and_sources(self) -> tuple[List[str], List[str]]:
         """Get all prompts and their sources."""
@@ -47,7 +50,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def add_prompt_to_clusters(self, new_prompt: str, source: str, device: str = None) -> Dict[str, Any]:
+    def add_prompt_to_clusters(self, new_prompt: str, device: str = None) -> Dict[str, Any]:
         """Add a new prompt to the existing cluster structure without re-clustering."""
         ...
 
@@ -62,6 +65,6 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def get_human_readable_cluster_info(self, cluster_id: str, lookup_file: str) -> Optional[Dict[str, str]]:
+    def get_human_readable_cluster_info(self, cluster_id: str) -> Optional[Dict[str, str]]:
         """Get human-readable label and description for a cluster."""
         ...

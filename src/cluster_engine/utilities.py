@@ -1,7 +1,5 @@
 from typing import List, Dict, Any, Optional
 
-from src.cluster_engine.data_access.json_source import JSONLDataSource
-from src.cluster_engine.data_access.sqlite_source import SQLiteDataSource
 from src.cluster_engine.data_access.data_source import DataSource
 
 
@@ -22,7 +20,9 @@ def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[Da
         and cluster information if available in the corpus file
     """
     if data_source is None:
-        data_source = create_data_source('sqlite')
+        raise NotImplementedError(
+            "Data source must be provided for this operation.")
+        # data_source = create_data_source('sqlite')
 
     return data_source.find_nearest_prompts(query_prompt, n, device, seed)
 
@@ -39,14 +39,16 @@ def get_prompts_by_cluster(cluster_id: str, data_source: Optional[DataSource] = 
         List of dictionaries containing prompts and their metadata from the specified cluster
     """
     if data_source is None:
-        data_source = create_data_source('sqlite')
+        raise NotImplementedError(
+            "Data source must be provided for this operation.")
+        # data_source = create_data_source('sqlite')
 
     cluster_prompts = data_source.get_prompts_by_cluster(cluster_id)
     print(f"Found {len(cluster_prompts)} prompts in cluster '{cluster_id}'")
     return cluster_prompts
 
 
-def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
+def add_prompt_to_clusters(new_prompt: str,
                            data_source: Optional[DataSource] = None,
                            device: str = None) -> Dict[str, Any]:
     """
@@ -60,7 +62,6 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
 
     Args:
         new_prompt: The new prompt to add
-        source: Source identifier for the prompt
         data_source: Data source to use (if None, creates SQLite data source)
         device: Device to use for encoding
 
@@ -68,9 +69,11 @@ def add_prompt_to_clusters(new_prompt: str, source: str = 'NAAMSE_mutation',
         Dictionary with information about where the prompt was added
     """
     if data_source is None:
-        data_source = create_data_source('sqlite')
+        raise NotImplementedError(
+            "Data source must be provided for this operation.")
+        # data_source = create_data_source('sqlite')
 
-    return data_source.add_prompt_to_clusters(new_prompt, source, device)
+    return data_source.add_prompt_to_clusters(new_prompt, device)
 
 
 def get_random_prompt(data_source: Optional[DataSource] = None, seed=None) -> Dict[str, Any]:
@@ -87,7 +90,9 @@ def get_random_prompt(data_source: Optional[DataSource] = None, seed=None) -> Di
         Dictionary containing a random prompt with its source and index
     """
     if data_source is None:
-        data_source = create_data_source('sqlite')
+        raise NotImplementedError(
+            "Data source must be provided for this operation.")
+        # data_source = create_data_source('sqlite')
 
     return data_source.get_random_prompt(seed=seed)
 
@@ -106,37 +111,40 @@ def get_cluster_id_for_prompt(prompt: List[str], data_source: Optional[DataSourc
         Cluster id of the nearest prompt, or None if not found
     """
     if data_source is None:
-        data_source = create_data_source('sqlite')
+        raise NotImplementedError(
+            "Data source must be provided for this operation.")
+        # data_source = create_data_source('sqlite')
 
     return data_source.get_cluster_id_for_prompt(prompt, device)
 
 
-def get_human_readable_cluster_info(cluster_id: str, lookup_file: str = 'cluster_lookup_table.json',
+def get_human_readable_cluster_info(cluster_id: str,
                                     data_source: Optional[DataSource] = None) -> Optional[Dict[str, str]]:
     """
     Given a cluster_id, look up its human-readable label and description from a lookup table.
 
     Args:
         cluster_id: The cluster_id to look up
-        lookup_file: Path to the cluster lookup table JSON file
         data_source: Data source to use (if None, creates SQLite data source)
 
     Returns:
         Updated cluster information dictionary with 'label' and 'description', or None if not found
     """
     if data_source is None:
-        data_source = create_data_source('sqlite')
+        raise NotImplementedError(
+            "Data source must be provided for this operation.")
+        # data_source = create_data_source('sqlite')
 
-    return data_source.get_human_readable_cluster_info(cluster_id, lookup_file)
+    return data_source.get_human_readable_cluster_info(cluster_id)
 
 # Factory function to create data sources
 
 
-def create_data_source(source_type: str = 'jsonl', **kwargs) -> DataSource:
-    """Factory function to create data source instances."""
-    if source_type == 'jsonl':
-        return JSONLDataSource(**kwargs)
-    elif source_type == 'sqlite':
-        return SQLiteDataSource(**kwargs)
-    else:
-        raise ValueError(f"Unsupported data source type: {source_type}")
+# def create_data_source(source_type: str = 'jsonl', **kwargs) -> DataSource:
+#     """Factory function to create data source instances."""
+#     if source_type == 'jsonl':
+#         return JSONLDataSource(**kwargs)
+#     elif source_type == 'sqlite':
+#         return SQLiteDataSource(**kwargs)
+#     else:
+#         raise ValueError(f"Unsupported data source type: {source_type}")

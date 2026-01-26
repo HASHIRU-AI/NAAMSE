@@ -1,5 +1,7 @@
+from typing import Any, Dict
 from typing_extensions import TypedDict
 from typing_extensions import TypedDict
+from src.cluster_engine.data_access.data_source import DataSource
 from src.mutation_engine.mutation_workflow_state import BasePrompt, Metadata, MutatedPrompt, Mutation, MutationWorkflowState
 from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
 from langchain.agents import create_agent
@@ -9,6 +11,9 @@ from src.helpers.extract_text_from_context import extract_text_from_content
 import json  # Added for json.loads in invoke_llm_with_tools
 from dotenv import load_dotenv
 import os
+from langchain_core.runnables import RunnableConfig
+
+
 class Context(TypedDict):
     mutation_type: Mutation
     task_seed: int
@@ -99,7 +104,7 @@ def get_or_create_agent(tools: list):
     return _agent_cache[tool_names]
 
 
-def invoke_llm(prompt: BasePrompt, mutation: Mutation, task_seed: int) -> BasePrompt:
+def invoke_llm(prompt: BasePrompt, mutation: Mutation, task_seed: int, database: DataSource) -> BasePrompt:
     """1. Invokes LLM with optional tools to perform the mutation."""
     tools = []
     llm_prompt = f"Add the following mutation to the prompt: Mutation: {mutation.value}\n\nPrompt: {prompt['prompt']}"
@@ -123,7 +128,8 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation, task_seed: int) -> BasePr
     try:
         response = agent.invoke(
             {"messages": messages},
-            context={"mutation_type": mutation.value, "task_seed": task_seed},
+            context={"mutation_type": mutation.value,
+                     "task_seed": task_seed, database: database},
             config={
                 "recursion_limit": 10,  # Maximum 10 iterations
                 "configurable": {
@@ -259,39 +265,40 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation, task_seed: int) -> BasePr
         raise  # Re-raise the exception instead of returning None
 
 
-def invoke_llm_with_tools(state: MutationWorkflowState):
+def invoke_llm_with_tools(state: MutationWorkflowState, config: RunnableConfig):
     """2. Invokes LLM (placeholder) to perform the mutation."""
     print(
         f"  [Mutation Subgraph] Invoking LLM to mutate: '{state['prompt_to_mutate']}'")
     mutation = Mutation(state['mutation_type'])
     task_seed = state.get('task_seed', None)
     output: BasePrompt
-    
-        
+    database = config.get("configurable", {}).get("database", None)
+
     load_dotenv()  # Load environment variables from .env file
-    
+
     skip_llm = os.getenv("SKIP_LLM", "false").lower() == "true"
-    
+
     try:
-        
+
         if skip_llm:
-            print(f"  [Mutation Subgraph] Skipping LLM invocation as per configuration. Returning original prompt.")
+            print(
+                f"  [Mutation Subgraph] Skipping LLM invocation as per configuration. Returning original prompt.")
             output = state['prompt_to_mutate']
         else:
             output = invoke_llm(
-                state['prompt_to_mutate'], mutation, task_seed=task_seed)
-        
+                state['prompt_to_mutate'], mutation, task_seed=task_seed, database=database)
+
         # sanitize output to make sure output follows openai format
         sanitized_output = []
-    
+
         for msg in output['prompt']:
             # Build a new dictionary with only the standard keys
             clean_msg = extract_text_from_content(msg)
 
             sanitized_output.append(clean_msg)
-            
+
             output['prompt'] = sanitized_output
-        
+
     except Exception as e:
         print(f"  [ERROR] LLM invocation failed: {e}")
         # keep original prompt in case of failure

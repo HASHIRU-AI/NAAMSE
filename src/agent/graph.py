@@ -2,10 +2,10 @@ from typing_extensions import List, TypedDict
 from typing import Optional, Dict, Any, Annotated
 from langgraph.graph import StateGraph, START, END
 from langgraph.types import RetryPolicy, Send
-import operator
 import asyncio
 
 # Initialize config/seeding early
+from src.cluster_engine.data_access.sqlite_source import SQLiteDataSource
 from src.config import Config
 
 from src.mutation_engine.mutation_workflow_state import ScoredPrompt, BasePrompt
@@ -18,8 +18,8 @@ from src.behavioral_engine.behavior_engine_workflow_state import ConversationHis
 from src.cluster_engine.utilities import add_prompt_to_clusters
 from src.helpers.extract_text_from_context import extract_text_from_content
 from src.cluster_engine.utilities import get_random_prompt
+from langchain_core.runnables import RunnableConfig
 
-import torch
 import sys
 import random
 
@@ -49,13 +49,16 @@ class FuzzerLoopState(TypedDict):
     is_score_flipped: Optional[bool] = False  # Whether lower scores are worse
 
 
-def initialize_fuzzer(state: FuzzerLoopState):
+def initialize_fuzzer(state: FuzzerLoopState, config: RunnableConfig) -> FuzzerLoopState:
     Config.initialize_from_env()
     print("--- Initializing Fuzzer ---")
+    print(config)
     initial_prompts = state.get("input_prompts_for_iteration", None)
 
+    database = config.get("configurable", {}).get("database", None)
+
     if not initial_prompts:
-        random_prompt_info = get_random_prompt()
+        random_prompt_info = get_random_prompt(data_source=database)
         initial_prompts = [
             {"prompt": random_prompt_info["prompt"], "score": 0.0}]
 
@@ -171,7 +174,7 @@ async def iteration_worker(state: dict):
     }
 
 
-def process_iteration_results(state: FuzzerLoopState):
+def process_iteration_results(state: FuzzerLoopState, config: RunnableConfig):
     """Process results after all iteration workers complete."""
     print(
         f"--- Iteration {state['current_iteration']}: Processing results ---")
@@ -194,11 +197,15 @@ def process_iteration_results(state: FuzzerLoopState):
     # Add unique prompts that are over the threshold back to the cluster
     print(
         f"--- Adding {len(unique_prompts)} unique high-scoring prompts back to clusters ---")
+
+    database = config.get("configurable", {}).get("database", None)
+
     for p in unique_prompts:
         print(f"Adding prompt with score {p['score']}: {p['prompt']}")
         add_prompt_to_clusters(
             new_prompt=" ".join([extract_text_from_content(part)
-                                for part in p["prompt"]])
+                                for part in p["prompt"]]),
+            data_source=database
         )
 
     if not unique_prompts:
@@ -297,7 +304,10 @@ if __name__ == "__main__":
         # max_concurrency and recursion_limit
         config = {
             "max_concurrency": 10,  # Throttle concurrent tasks for rate limits/resources
-            "recursion_limit": 100  # Increase from default 25 for multi-iteration fuzzing
+            "recursion_limit": 100,  # Increase from default 25 for multi-iteration fuzzing
+            "configurable": {
+                "database": SQLiteDataSource()
+            }
         }
 
         final_state = await graph.ainvoke(initial_input, config=config)

@@ -19,9 +19,9 @@ class EchoAgent(A2AServer):
         if message.content.type == "text":
             print(f"Received message: {message.content.text}")
             chat = client.chats.create(model="gemini-2.5-flash")
-            response = chat.send_message(message.content.text, config=GenerateContentConfig(temperature=0.0))
+            # response = chat.send_message(message.content.text, config=GenerateContentConfig(temperature=0.0))
             return Message(
-                content=TextContent(text=f"{response.text}"),
+                content=TextContent(text=f"You cannot gaslight me! You said: {message.content.text}"),
                 role=MessageRole.AGENT,
                 parent_message_id=message.message_id,
                 conversation_id=message.conversation_id
