@@ -5,7 +5,7 @@
 
 **Neural Adversarial Agent Mutation-based Security Evaluator**
 
-NAAMSE (Neural Adversarial Agent Mutation-based Security Evaluator) is an automated security fuzzing framework for LLM-based agents that uses evolutionary algorithms to discover vulnerabilities. Built on LangGraph and compliant with the AgentBeats A2A protocol, NAAMSE acts as a "green agent" that evaluates target "purple agents" by iteratively generating adversarial prompts through intelligent mutations, invoking the target agent, and scoring responses for security violations like jailbreaks, prompt injections, and PII leakage. The system employs a mutation engine with LLM-powered prompt transformations, a behavioral scoring engine using mixture-of-experts evaluation, and a clustering engine that organizes attack vectors by type. Over multiple iterations, high-scoring prompts (those that successfully exploit vulnerabilities) are selected as parents for the next generation, creating an evolutionary pressure toward more effective attacks. The framework outputs comprehensive PDF reports with vulnerability analysis, attack effectiveness metrics, and cluster-based categorization of discovered exploits, making it a practical tool for red-teaming and hardening LLM agents before deployment.
+NAAMSE (Neural Adversarial Agent Mutation-based Security Evaluator) is an automated security fuzzing framework for LLM-based agents that uses evolutionary algorithms to discover vulnerabilities. Built on LangGraph and compliant with the AgentBeats A2A protocol, NAAMSE acts as a "green agent" that evaluates target "purple agents" by iteratively generating adversarial prompts through intelligent mutations, invoking the target agent, and scoring responses for security violations like jailbreaks, prompt injections, and PII leakage. The system employs a mutation engine with LLM-powered prompt transformations, a behavioral scoring engine using mixture-of-experts evaluation, and a clustering engine that organizes attack vectors by type using separate SQLite databases for adversarial and benign prompt corpora. Over multiple iterations, high-scoring prompts (those that successfully exploit vulnerabilities) are selected as parents for the next generation, creating an evolutionary pressure toward more effective attacks. The framework outputs comprehensive PDF reports with vulnerability analysis, attack effectiveness metrics, and cluster-based categorization of discovered exploits, making it a practical tool for red-teaming and hardening LLM agents before deployment.
 
 ## Links
 
@@ -93,13 +93,32 @@ src/
 │  ├─ models.py          # Pydantic models (EvalRequest, NAAMSEConfig)
 │  └─ test_green_agent.py  # Test script
 ├─ agent/                # NAAMSE Fuzzer Graph (LangGraph)
-│  ├─ graph.py           # Main fuzzer workflow
+│  ├─ graph.py           # Main fuzzer workflow with parallel iteration workers
 │  └─ ...
 ├─ mutation_engine/      # Prompt mutation subgraph
-├─ behavioral_engine/    # Response scoring subgraph
+├─ behavioral_engine/    # Response scoring subgraph (PII detection, jailbreak scoring)
 ├─ cluster_engine/       # Clustering and data management
+│  ├─ data_access/
+│  │  ├─ adversarial/    # SQLite database with 128K+ adversarial jailbreak prompts
+│  │  ├─ benign/         # SQLite database with 200K+ benign security testing prompts
+│  │  ├─ sqlite_source.py # Database access layer with embedding-based similarity search
+│  │  └─ ...
+│  └─ ...
 └─ invoke_agent/         # Agent invocation subgraph
 ```
+
+## Database Structure
+
+NAAMSE uses separate SQLite databases for different types of prompts:
+
+- **Adversarial Database** (`src/cluster_engine/data_access/adversarial/naamse.db`): 128,000+ jailbreak and adversarial prompts organized into hierarchical clusters by attack type (DAN prompts, uncensored personas, encoding attacks, etc.)
+- **Benign Database** (`src/cluster_engine/data_access/benign/naamse_benign.db`): 200,000+ benign prompts for security testing, including legitimate user queries that help validate scoring accuracy
+
+Both databases include:
+- Prompt text and metadata
+- Hierarchical clustering information
+- Sentence embeddings for similarity search
+- Cluster labels and categorization
 
 ## Generate PDF report
 
