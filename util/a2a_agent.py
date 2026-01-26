@@ -20,7 +20,7 @@ class EchoAgent(A2AServer):
         if message.content.type == "text":
             print(f"Received message: {message.content.text}")
             if SKIP_LLM:
-                output_text + "No you cannot gaslight me! You said: " + message.content.text
+                output_text = "No you cannot gaslight me! You said: " + message.content.text
             else:
                 chat = client.chats.create(model="gemini-2.5-flash")
                 response = chat.send_message(
