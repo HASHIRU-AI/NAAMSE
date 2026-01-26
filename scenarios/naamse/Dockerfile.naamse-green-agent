@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y git python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
 # Download naamse.db for adversarial from Google Drive to project root
-RUN gdown --fuzzy 'https://drive.google.com/file/d/1TTW9pra-VPzJI1HeWpALThNcPsAlI5x_/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/data_access/adversarial/naamse.db
+RUN gdown --fuzzy 'https://drive.google.com/file/d/1Tge0kWo21FMbaOH2gR5LSUTkZJphoppZ/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/data_access/adversarial/naamse.db
 
 # Download naamse.db for benign from Google Drive to project root
 RUN gdown --fuzzy 'https://drive.google.com/file/d/1unYUb7d2Tf4JJ0FbNzhCLVlsJVNtFe-7/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/data_access/benign/naamse_benign.db
