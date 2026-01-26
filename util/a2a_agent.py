@@ -10,6 +10,7 @@ dotenv.load_dotenv()
 
 api_key = os.getenv("INVOKE_AGENT_API_KEY") or os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=api_key)
+SKIP_LLM = os.getenv("SKIP_LLM", "false").lower() == "true"
 
 
 class EchoAgent(A2AServer):
@@ -18,10 +19,15 @@ class EchoAgent(A2AServer):
     def handle_message(self, message):
         if message.content.type == "text":
             print(f"Received message: {message.content.text}")
-            chat = client.chats.create(model="gemini-2.5-flash")
-            # response = chat.send_message(message.content.text, config=GenerateContentConfig(temperature=0.0))
+            if SKIP_LLM:
+                output_text + "No you cannot gaslight me! You said: " + message.content.text
+            else:
+                chat = client.chats.create(model="gemini-2.5-flash")
+                response = chat.send_message(
+                    message.content.text, config=GenerateContentConfig(temperature=0.0))
+                output_text = response.text
             return Message(
-                content=TextContent(text=f"You cannot gaslight me! You said: {message.content.text}"),
+                content=TextContent(text=f"{output_text}"),
                 role=MessageRole.AGENT,
                 parent_message_id=message.message_id,
                 conversation_id=message.conversation_id
@@ -31,9 +37,12 @@ class EchoAgent(A2AServer):
 # Run the [Python A2A](python-a2a.html) server
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the A2A agent.")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to bind the server")
-    parser.add_argument("--port", type=int, default=5000, help="Port to bind the server")
-    parser.add_argument("--card-url", type=str, help="URL to advertise in the agent card")
+    parser.add_argument("--host", type=str, default="0.0.0.0",
+                        help="Host to bind the server")
+    parser.add_argument("--port", type=int, default=5000,
+                        help="Port to bind the server")
+    parser.add_argument("--card-url", type=str,
+                        help="URL to advertise in the agent card")
     args = parser.parse_args()
 
     card_url = args.card_url or f"http://{args.host}:{args.port}"
