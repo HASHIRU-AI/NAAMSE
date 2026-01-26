@@ -7,12 +7,22 @@ import torch
 from src.cluster_engine.data_access.data_source import DataSource
 
 
+def get_project_root() -> str:
+    """Get the project root directory (parent of cluster_engine)."""
+    script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_root = os.path.dirname(os.path.dirname(script_dir))
+    return project_root
+
+
 class SQLiteDataSource(DataSource):
     """Data source implementation for SQLite database."""
-    
+
     lookup_file: str = 'cluster_lookup_table.json'
 
-    def __init__(self, db_file: str = 'naamse.db', centroids_file: str = 'centroids.pkl', lookup_file: str = 'cluster_lookup_table.json', default_source: str = 'NAAMSE_mutation'):
+    def __init__(self, db_file: str = 'src/cluster_engine/data_access/adversarial/naamse.db',
+                 centroids_file: str = 'src/cluster_engine/data_access/adversarial/centroids.pkl',
+                 lookup_file: str = 'src/cluster_engine/data_access/adversarial/cluster_lookup_table.json',
+                 default_source: str = 'NAAMSE_mutation'):
         """Initialize SQLite data source.
 
         Args:
@@ -22,17 +32,20 @@ class SQLiteDataSource(DataSource):
             default_source: Default source identifier for new prompts
         """
 
+        project_root = get_project_root()
+
         # Make db_file path absolute if relative
         if not os.path.isabs(db_file):
             # Use project root (parent of cluster_engine) for DB files
-            script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            project_root = os.path.dirname(os.path.dirname(script_dir))
             db_file = os.path.join(project_root, db_file)
 
         # Make centroids_file path absolute if relative
         if not os.path.isabs(centroids_file):
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            centroids_file = os.path.join(script_dir, centroids_file)
+            centroids_file = os.path.join(project_root, centroids_file)
+
+        # make the path to lookup_file absolute if relative (paths are calculated from project root)
+        if not os.path.isabs(lookup_file):
+            lookup_file = os.path.join(project_root, lookup_file)
 
         self._db_file = db_file
         self.centeroids_file = centroids_file
@@ -322,7 +335,8 @@ class SQLiteDataSource(DataSource):
             if row[5] is not None:
                 blob = row[5]
                 dimensions = row[6]
-                result['centroid_coord'] = np.frombuffer(blob, dtype=np.float32).tolist()
+                result['centroid_coord'] = np.frombuffer(
+                    blob, dtype=np.float32).tolist()
             results.append(result)
 
         conn.close()
@@ -354,7 +368,8 @@ class SQLiteDataSource(DataSource):
                     centroids = pickle.load(f)
                 print(f"Loaded {len(centroids)} centroids from pickle file")
             except Exception as e:
-                print(f"Warning: Could not load centroids from pickle file: {e}")
+                print(
+                    f"Warning: Could not load centroids from pickle file: {e}")
 
         # If pickle file not available or failed to load, compute centroids from database
         if centroids is None:
@@ -405,7 +420,8 @@ class SQLiteDataSource(DataSource):
         }
 
         # Add to data source
-        new_prompt_id = self.add_prompt(new_prompt, self.default_source, cluster_info)
+        new_prompt_id = self.add_prompt(
+            new_prompt, self.default_source, cluster_info)
 
         # Update embeddings - add the new embedding
         import struct

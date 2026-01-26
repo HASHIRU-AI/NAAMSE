@@ -34,7 +34,7 @@ def append_or_reset(current, new):
 
 class DataSourceConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    database: DataSource = SQLiteDataSource()
+    database: DataSource = SQLiteDataSource(db_file='src/cluster_engine/data_access/benign/naamse_benign.db',)
 
 
 class FuzzerLoopState(TypedDict):
@@ -306,7 +306,8 @@ if __name__ == "__main__":
                     ],
                     "score": 0.0
                 }
-            ]
+            ],
+            "is_score_flipped": False
         }
 
         # max_concurrency and recursion_limit
