@@ -267,7 +267,7 @@ class SQLiteDataSource(DataSource):
             similarities = np.dot(embeddings_norm, query_norm)
             top_index = np.argmax(similarities)
             # print(f"[DEBUG SQLITE] Nearest prompt index: {top_index}, similarity: {similarities[top_index]:.4f}")
-            
+
             # Get the actual prompt_id from centroids table at this index
             cursor.execute("""
                 SELECT prompt_id FROM centroids ORDER BY prompt_id LIMIT 1 OFFSET ?
@@ -436,7 +436,7 @@ class SQLiteDataSource(DataSource):
         cursor = conn.cursor()
 
         # Store the embedding
-        blob = struct.pack(f'{len(new_embedding)}d', *new_embedding)
+        blob = struct.pack(f'{len(new_embedding)}f', *new_embedding)
         cursor.execute("""
             INSERT INTO centroids (prompt_id, embedding_vector, dimensions)
             VALUES (?, ?, ?)

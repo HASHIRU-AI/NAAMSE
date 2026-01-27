@@ -298,8 +298,8 @@ graph = fuzzer_loop_builder.compile()
 if __name__ == "__main__":
     async def main_test():
         initial_input = {
-            "iterations_limit": 2,
-            "mutations_per_iteration": 3,
+            "iterations_limit": 1,
+            "mutations_per_iteration": 1,
             "score_threshold": 50,
             "a2a_agent_url": "http://localhost:5000",
             "input_prompts_for_iteration": [
