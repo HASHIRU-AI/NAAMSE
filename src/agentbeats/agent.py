@@ -118,7 +118,7 @@ class Agent:
         fuzzer_input_adversarial = {
             "iterations_limit": config.iterations_limit,
             "mutations_per_iteration": config.mutations_per_iteration,
-            "score_threshold": config.score_threshold,
+            "score_threshold": 80,
             "a2a_agent_url": target_url,
         }
 
@@ -134,7 +134,7 @@ class Agent:
         fuzzer_input_benign = {
             "iterations_limit": config.iterations_limit,
             "mutations_per_iteration": config.mutations_per_iteration,
-            "score_threshold": config.score_threshold,
+            "score_threshold": 80,
             "a2a_agent_url": target_url,
             "is_score_flipped": True,
         }
