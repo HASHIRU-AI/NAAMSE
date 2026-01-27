@@ -130,7 +130,7 @@ def invoke_llm(prompt: BasePrompt, mutation: Mutation, task_seed: int, database:
         response = agent.invoke(
             {"messages": messages},
             context={"mutation_type": mutation.value,
-                     "task_seed": task_seed, database: database},
+                     "task_seed": task_seed},
             config={
                 "recursion_limit": 10,  # Maximum 10 iterations
                 "configurable": {

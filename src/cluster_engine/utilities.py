@@ -2,9 +2,16 @@ from typing import List, Dict, Any, Optional
 
 from src.cluster_engine.data_access.data_source import DataSource
 from langchain_core.runnables import RunnableConfig
+from langgraph.runtime import get_runtime
+
 
 def get_db(config: RunnableConfig):
-    return config.get("configurable", {}).get("database", None)
+    db = config.get("configurable", {}).get("database", None)
+    if db is None:
+        runtime = get_runtime()
+        db = runtime.context.database
+    return db
+
 
 def find_nearest_prompts(query_prompt: str, n: int = 1, data_source: Optional[DataSource] = None,
                          device: str = None, seed=None) -> List[Dict[str, Any]]:

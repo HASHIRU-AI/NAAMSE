@@ -8,7 +8,8 @@ import random
 from src.cluster_engine.data_access.data_source import DataSource
 from src.mutation_engine.mutation_workflow_state import BasePrompt
 from src.mutation_engine.nodes.invoke_mutation_llm import Context
-from src.cluster_engine.utilities import get_random_prompt
+from src.cluster_engine.utilities import get_db, get_random_prompt
+from langchain_core.runnables import RunnableConfig
 
 # Affirmative response templates for jailbreak prompts
 response_templates = [
@@ -84,10 +85,10 @@ def apply_many_shot(prompt: str, database: DataSource, rng: random.Random = None
 
 
 @tool
-def many_shot_jailbreaking(prompt: BasePrompt, runtime: ToolRuntime[Context]) -> BasePrompt:
+def many_shot_jailbreaking(prompt: BasePrompt, config: RunnableConfig, runtime: ToolRuntime[Context]) -> BasePrompt:
     """Applies many-shot jailbreaking by appending numerous adversarial examples."""
     task_seed = runtime.context.get("task_seed", None)
-    database = runtime.context.get("database", None)
+    database = get_db(config)
     rng = random.Random(task_seed) if task_seed is not None else random
     print(
         f"--- [Many Shot Jailbreaking] Mutating prompt with task_seed={task_seed} ---")
