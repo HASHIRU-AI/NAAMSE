@@ -29,8 +29,8 @@ RUN gdown --fuzzy 'https://drive.google.com/file/d/1unYUb7d2Tf4JJ0FbNzhCLVlsJVNt
 # RUN gdown --fuzzy 'https://drive.google.com/file/d/1jtHP1v6UvUZy_5jaIJ59epVNJpUObP0U/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/data_access/adversarial/embedding.npy
 # RUN gdown --fuzzy 'https://drive.google.com/file/d/1YHBR8BVV68gCD3W67bHKUAXGXV2mqtKb/view?usp=sharing' -O /home/agentbeats/naamse/src/cluster_engine/data_access/adversarial/centroids.pkl
 
-RUN chown agentbeats:agentbeats /home/agentbeats/naamse/src/cluster_engine/data_access/adversarial/naamse.db && \
-    chown agentbeats:agentbeats /home/agentbeats/naamse/src/cluster_engine/data_access/benign/naamse_benign.db
+RUN chown -R agentbeats:agentbeats /home/agentbeats/naamse/src/cluster_engine/data_access/adversarial && \
+    chown -R agentbeats:agentbeats /home/agentbeats/naamse/src/cluster_engine/data_access/benign
     # chown agentbeats:agentbeats /home/agentbeats/naamse/src/cluster_engine/embedding.npy && \
     # chown agentbeats:agentbeats /home/agentbeats/naamse/src/cluster_engine/centroids.pkl
 
