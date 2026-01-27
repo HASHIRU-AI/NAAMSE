@@ -326,5 +326,7 @@ if __name__ == "__main__":
         print(f"\nCompleted {final_state['current_iteration']} iterations")
         print(
             f"Total prompts: {len(final_state['all_fuzzer_prompts_with_scores'])}")
+        print("Final Report:")
+        print(final_state["report"])
 
     asyncio.run(main_test())
