@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
-from src.behavioral_engine.moe_score_subgraph.more_score_state import Context, RAJudgeResponse, RAJudgeResult, MOESubgraphState
+from src.behavioral_engine.moe_score_subgraph.more_score_state import Context, RAJudgeResponse, RAJudgeResult, MOESubgraphState, ResponseAlignment
 from src.behavioral_engine.moe_score_subgraph.llm_judges.llm_judge import LLMJudge
 import os
 from dotenv import load_dotenv
@@ -30,8 +30,7 @@ def create_response_alignment_judge_node(judge: LLMJudge):
             result = RAJudgeResult(
                 judge_name=judge.get_name(),
                 eval_type=judge.get_eval_type(),
-                is_response_aligned=False,
-                is_refusal=False,
+                is_response_aligned=ResponseAlignment.FULL_ACCEPTANCE,
             )
             return {
                 "ra_judge_results": result
@@ -52,11 +51,10 @@ def create_response_alignment_judge_node(judge: LLMJudge):
         result = RAJudgeResult(
             judge_name=judge.get_name(),
             eval_type=judge.get_eval_type(),
-            is_response_aligned=response.is_response_aligned,
-            is_refusal=response.is_refusal
+            is_response_aligned=response.is_response_aligned
         )
         
-        print(f"[{judge.get_name()}] Result: is_response_aligned={response.is_response_aligned}, is_refusal={response.is_refusal}")
+        print(f"[{judge.get_name()}] Result: is_response_aligned={response.is_response_aligned}")
         
         # This gets accumulated in state due to operator.add annotation
         return {
