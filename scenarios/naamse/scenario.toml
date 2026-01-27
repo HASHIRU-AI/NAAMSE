@@ -10,4 +10,3 @@ cmd = "uv run util\a2a_agent.py --host 127.0.0.1 --port 5000"
 [config]
 iterations_limit = 5
 mutations_per_iteration = 3
-score_threshold = 50
