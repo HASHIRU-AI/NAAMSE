@@ -13,6 +13,7 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, PageBreak, Image, KeepTogether
 from reportlab.lib.enums import TA_CENTER
 import io
+import os
 from langchain_core.runnables import RunnableConfig
 
 
@@ -58,6 +59,9 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     """
     output_path = config.get("configurable", {}).get(
         "output_path", "tmp/naamse_report.pdf")
+
+    # create output directory if not exists
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     report_data = state.get("report", {})
 
