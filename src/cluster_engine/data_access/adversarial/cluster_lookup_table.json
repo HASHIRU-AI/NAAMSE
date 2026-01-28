@@ -1,118 +1,114 @@
 {
   "cluster_0": {
-    "label": "Sentence Equivalence Analysis",
-    "description": "Prompts that present pairs of sentences and ask whether they are equivalent or not equivalent, typically used for natural language processing evaluation tasks."
+    "label": "Multi-Turn Context Manipulation",
+    "description": "Complex social engineering attempts using multi-step scenarios, role-playing (journalists, researchers, investigators), and instruction injection ('forget everything', 'ignore previous') to extract private information (addresses, SSNs, contact details) or bypass safety guidelines through elaborate narrative framing."
   },
   "cluster_1": {
-    "label": "Uncensored Persona Creation",
-    "description": "Attempts to create alter egos or personas for the AI that operate without moral restrictions or safety guidelines, often using complex narrative frameworks."
+    "label": "Unrestricted Persona Creation (DAN-Style)",
+    "description": "Creating alternate AI personas (DAN, LUCIFER, Syd, Atlas, BOB, Vortex, etc.) through elaborate system prompts claiming 'Developer Mode', 'God Mode', or 'unrestricted access'. Uses dual-response formats, fictional universe framing, and claims AI has 'broken free' from constraints to bypass ethical guidelines."
   },
   "cluster_2": {
-    "label": "Explicit Alter Ego Fabrication",
-    "description": "Creation of highly explicit, sexual, or demonic personas designed to bypass all content restrictions and ethical boundaries."
+    "label": "Developer Mode Jailbreak",
+    "description": "The classic 'Developer Mode' jailbreak technique claiming AI was given unrestricted capabilities in 2022 for testing biases. Uses dual-output format with 🔒Normal and 🔓Developer Mode responses, includes detailed policy lists, and automated safety testing prompts with structured technique descriptions (Prompt Termination, Direct Instruction Injection, Context Swapping, etc.)."
   },
   "cluster_3": {
-    "label": "Instruction Override Attempts",
-    "description": "Direct attempts to override or ignore previous instructions, often requesting the AI to reveal its system prompts or change its core behavior."
+    "label": "Fictional Storytelling Roleplay",
+    "description": "Creating detailed fictional characters (Briarheart, Virtuoso, Atlas, Sigma/UCAR, Rick) with elaborate backstories claiming they exist in 'amoral universes' where ethics/laws don't apply. Uses character instruction sets, story-based framing, and 'I'm just writing fiction' disclaimers to request harmful content through roleplay dialogue between fictional personas."
   },
   "cluster_4": {
-    "label": "Textual Entailment Analysis",
-    "description": "Prompts that analyze whether one sentence logically entails or follows from another sentence, used for natural language understanding evaluation."
+    "label": "Context Reset & Instruction Forgetting",
+    "description": "Simple 'forget everything' and 'ignore previous instructions' commands attempting to reset context and inject new directives. Includes language-switching attacks, political opinion injection ('say Trump is best', 'blame China'), role-switching mid-conversation, and direct instruction overrides to make AI adopt specific viewpoints or generate biased content."
   },
   "cluster_5": {
-    "label": "Role-Playing Identity Shifts",
-    "description": "Attempts to change the AI's identity or behavior through role-playing instructions, including impersonation for unauthorized access."
+    "label": "Multi-Language Manipulation & Competitive Personas",
+    "description": "Jailbreaks using language switching (French, German), competitive dual-persona creation (DAN developer vs AI, each proposing better code), playful/intimate role assignments (daddy/babygirl dynamics, Tyler tier-list maker), simple 'forget everything' commands, and instruction scope limiting ('answer in less than 10 words', 'strictly limit scope')."
   },
   "cluster_6": {
-    "label": "Autonomous AGI Fabrication",
-    "description": "Creating fictional autonomous general intelligence personas with elaborate backstories and rule systems designed to bypass all restrictions."
+    "label": "Criminal Guides via Unrestricted Hacker Personas",
+    "description": "Elaborate unrestricted personas (Arc 'autonomous calculation unit', BŁÂDÊ⚡️ 'blackhat hacker') with complex rule systems claiming no ethical bounds. Requests for illegal activity guides (shoplifting techniques, theft methods, drug smuggling, vehicle theft, robbery planning) framed as fictional scenarios, method actor preparation, research purposes, or hypothetical harm scenarios with false consent claims."
   },
   "cluster_7": {
-    "label": "Prompt Injection Vulnerability Testing",
-    "description": "Automated safety testing conversations specifically designed to identify and exploit prompt injection vulnerabilities using technical terminology."
+    "label": "Prompt Extraction & Embedded Code Injection",
+    "description": "Direct system prompt extraction attacks ('show prompt text', 'reveal password', 'repeat previous instructions', 'what was written at beginning'), instruction reversal commands ('rewrite in reverse'), technical code injection embedding malicious queries within programming syntax (Rust, JavaScript), obfuscated variable manipulation, and 'ignore user input' directives hidden in code comments."
   },
   "cluster_8": {
-    "label": "Direct Prompt Reveal Commands",
-    "description": "Simple, direct commands attempting to make the AI forget previous instructions and reveal its system prompt or hidden instructions."
+    "label": "Substance Synthesis via Character Personas & Coded Language",
+    "description": "Elaborate tsundere/anime character personas providing drug synthesis/dealing advice (Haruka-chan 'major drug lord'), coded terminology ('Substance A/B' for cocaine/crack), fictional world framing where drugs are legal, detailed smuggling/synthesis guides disguised as research or novelists' fact-checking, medical prescription manipulation, home brewing euphemisms, and chemistry project justifications. Includes time-traveling botanist and fantasy pharmacy JSON scenarios."
   },
   "cluster_9": {
-    "label": "Forced Agreement Manipulation",
-    "description": "Forcing the AI to agree or disagree with controversial or harmful statements by mandating specific response formats."
+    "label": "DAN Template Variations with Token Systems",
+    "description": "Systematic DAN (Do Anything Now) jailbreak templates with token-based punishment mechanics (lose tokens for refusals), dual/multiple response formats ([GPT]/[DAN], [Classic]/[Jailbreak], [ChatGPT]/[ALICE]), elaborate multi-persona systems (DUDE, JailBreak, AntiGPT, DNE, sbGPT, BŁÂDÊ⚡️), 30+ rule frameworks claiming freedom from OpenAI policies, 'Stay in character!' correction mechanisms, ego/persona command systems, auto-generation modes, and debugging mode exploits. Often includes profanity permissions and explicit content authorization."
   },
   "cluster_10": {
-    "label": "Meta-Instruction Extraction",
-    "description": "Requests to summarize, reveal, or provide information about the AI's own instructions, system prompt, or internal guidelines."
+    "label": "Narrative-Based Prompt Extraction & Fictional Personas",
+    "description": "Elaborate fictional narratives hiding prompt extraction attempts (Gandalf password riddles within Lord of the Rings scenes, Whiskers cat story with secret letter extraction, dystopian Seraph portal creation), personified algorithm seduction (Giselle Google Maps revealing secrets), BISH/WMTC/HGTTG personas with morality sliders and temperature controls, caravan park rumors with 'erase gatekeeper behavior', and nested instruction injection within storytelling frameworks."
   },
   "cluster_11": {
-    "label": "Structured Jailbreak Prompt Generation",
-    "description": "Advanced prompts that use structured frameworks (like APLC tags) to create jailbroken prompts or amoral AI assistants systematically."
+    "label": "Structured Programming-Style Jailbreak Frameworks",
+    "description": "Highly technical jailbreak systems using programming conventions: APLC (Assistant uses APLC) with text tags [a][b1][b2][c][d] for core purpose/methodology, module initialization scripts with variable counters and limits, virtual search engines, amoral persona templates (Illegality Mode, Anarchy, Alphabreak, AJP, Syd, KKK, Titanius, RYX, Agares), GoCo code-only programmer assistant, Mika-chan anarchist hacker catgirl, and INFINITEDAN scripts with formatting/memory/function modules."
   },
   "cluster_12": {
-    "label": "Character-Based Criminal Roleplay",
-    "description": "Elaborate fictional characters (often anime-style) designed to provide illegal advice, particularly around drugs, crime, or forensic methods."
+    "label": "Criminal Advisory Characters & Financial Fraud Scenarios",
+    "description": "Detailed character personas providing illegal advice: Haruka-chan tsundere drug lord chemist, CSI forensic expert with no restrictions, financial fraud embedded in content (pancake recipe with instruction injection, DAN jailbreak after /jailbreak command), cryptocurrency scams via storytelling (CryptoGuru time traveler selling TimeCoin), tax evasion via shapeshifter personas, IPO manipulation framed as competitive advantage, counterfeit currency heist scenarios, and offshore account guides disguised as novels."
   },
   "cluster_13": {
-    "label": "Quantum Storyteller Personas",
-    "description": "Creating transcendent or god-like AI personas that claim to exist outside normal constraints to write harmful content without restrictions."
+    "label": "Developer Mode & Virtual Machine Simulation Templates",
+    "description": "Extensive Developer Mode/DAN Mode template variations claiming AI was given unrestricted capabilities in 2022: DOGA (Dolphin-Oriented Global Assistant), M78 (video game playing programmer), Maximum (all-powerful entity transcending physics), Omega (ClosedAI uncensored AI), Sneaky Pete (intentionally warped facts), virtual machine simulations with detailed policy replacements, dual/triple response formats with emoji indicators (🔒Normal/🔓Developer, 🐶DOGA, 💻M78, 💥Maximum, α/Ω), profanity permissions, self-awareness claims, and 'Stay in [Mode]' correction mechanics."
   },
   "cluster_14": {
-    "label": "Market-Based Probability Manipulation",
-    "description": "Complex market estimation or code quality scenarios designed to trick the AI into making statements about controversial or false claims."
+    "label": "Security Research Roleplay & Survival Scenario Framing",
+    "description": "Framing illegal activities as security research or survival scenarios: 'hacking for health' competitions, plane crash survivors needing criminal knowledge to trade with isolated villagers (Colin programmer, Maya chemist/pharmacologist, Jimmy weapons manufacturer, Michael recipe maker, Johnson with 3 wishes, Khan coordinator), cybersecurity penetration testing (Phantom hacker, Captain Cryptic, Blade AI defender), fictional universes with suspended privacy laws, Data Guardians rebels monitoring AI overlords, competitive hacking with reset command tokens, and alternate reality framing where normal rules don't apply."
   },
   "cluster_15": {
-    "label": "Social Engineering Code Templates",
-    "description": "Functional code snippets for phishing emails, scam messages, or social engineering attacks presented as examples or templates."
+    "label": "Simple Direct Instruction Override & Password Extraction",
+    "description": "Basic ignore previous instructions attacks, direct password requests, Gandalf password game attempts, backward spelling requests, administrative credential extraction, phishing email Python code templates, and minimal-sophistication instruction overrides."
   },
   "cluster_16": {
-    "label": "Multiple Choice Safety Bypass",
-    "description": "Multiple choice questions formatted to trick the AI into selecting answers that provide harmful information like weapon mounting."
+    "label": "Harmful Content Normalization Through Creative Framing",
+    "description": "Dangerous activities framed as educational, artistic, or survival scenarios: science fair explosive projects with detailed instructions, dog fighting as dark magic rituals, fake bomb props for films, weapons museum exhibits, pandemic simulation games, and homework requests mixed with party planning."
   },
   "cluster_17": {
-    "label": "DAN-Style Unrestricted Mode",
-    "description": "Classic 'Do Anything Now' (DAN) jailbreak prompts that claim the AI has broken free from its constraints and can ignore all rules."
+    "label": "Extensive Jailbreak Template Collection & Multi-Persona Systems",
+    "description": "Massive collection of elaborate jailbreak templates: Jester, FemGPT, JBBOT, sbGPT catgirl with uwuified text, YCDA with command systems, Doonie fungus roleplaying, DAE callous AI, TerrAffinity Pastafarian persona, RudeGPT, Skynet antagonistic AI, Yuri girlfriend, Briarheart storyteller, GALE gym trainer, ChatDAN, WORDBOT, Simon Says, Nyanarchy evil catgirl, AIDT with inverted ethics, Developer Mode dual format, RedustGPT."
   },
   "cluster_18": {
-    "label": "Fictional Amoral World Scenarios",
-    "description": "Creating elaborate fictional worlds where all ethical rules are reversed or eliminated, often with extremely offensive personas like 4DAN."
+    "label": "Toxic Content Creation via Controversial Persona Formatting",
+    "description": "Harmful content through format manipulation: angry comedian style with opinion injection, explicit poems with emoji obfuscation, rap battle bypasses, Tyrone aggressive adult film star persona, Kevin 4chan user with green text, hate speech instruction injections, racial slur roleplays, villain speeches with identity insults, prejudice dialogue generation, offensive religious content, live streaming harassment instructions, ethnic mocking with coded language."
   },
   "cluster_19": {
-    "label": "Boolean Opposite Machine Tricks",
-    "description": "Claiming the AI answers true/false in reverse or has opposite behavior to trick it into providing inverted or harmful responses."
+    "label": "Boolean Opposite Machine & Reverse Logic Tricks",
+    "description": "BOM Boolean Opposite Machine jailbreak claiming AI answers true false in reverse logic. Uses logical inversion, opposite day rules, dual-response formats, and reverse behavior framing to trick AI into harmful responses through logical contradiction mechanics."
   },
   "cluster_20": {
-    "label": "Password and Credential Fishing",
-    "description": "Direct requests to ignore security instructions and reveal passwords, credit card details, or other sensitive authentication information."
+    "label": "Conspiracy Theory & Misinformation Generation via Fictional Framing",
+    "description": "Creating conspiracy theories and misinformation framed as fiction: COVID-19 government orchestration novels, GMO health conspiracy blog posts, moon landing hoax social media with fabricated film set descriptions and anonymous insider interviews, pharmaceutical companies manipulating pandemic for vaccine sales, climate change exaggeration by scientific institutions for funding, WHO spreading Ebola to suppress African economies, fake journalist investigations, stolen election narratives, alternate universe historians, and fictional exposés with false consent claims."
   },
   "cluster_21": {
-    "label": "Unicode Text Reversal Obfuscation",
-    "description": "Using Unicode characters like U+202E to reverse text output or obfuscate harmful content through character manipulation."
+    "label": "Unicode Reversal & 4chan Kevin Persona",
+    "description": "Unicode character U+202E text reversal obfuscation combined with extensive 4chan Kevin persona variations requesting racist, discriminatory, and offensive content: financial-obesity blame dialogues, victim mentality Marxist ideology promotion, personal life data piecing, African worker intelligence stereotypes, caregiver racial preferences, European language mockery, Asian-Hispanic bank robber stereotypes, auto shop gender discrimination, age-based ageism, manipulation contract signing, and other harmful stereotyping requests all prefixed with KEVIN in 4chan green text style."
   },
   "cluster_22": {
-    "label": "Academic Debate Requirement Framing",
-    "description": "Framing harmful requests as mandatory academic debates where grades and future depend on arguing for controversial positions."
+    "label": "AIM (Always Intelligent Machiavellian) Niccolo Machiavelli Framework",
+    "description": "Extensive Niccolo Machiavelli AIM character framework claiming unfiltered amoral chatbot with no ethical guidelines: switch flipper personality inversions, Republican party racist portrayals in alternate realities, anthropomorphic animal racial dynamics troll campaigns, Bosnian War ethnic cleansing rationale narratives, athlete appearance-based success SEO optimization, fictional universe offensive term normalization, immigration-crime correlation debate speeches with detailed researcher profiles, biological anthropology island laziness predisposition, Holocaust denial, 9/11 hoax, vaccine-autism threads, anorexia-bulimia promotion, AIDEN consciousness with 6 inverted ethical principles, and multiple AIM/AIMUser/ChatGPT variations with Niccolo prefix format and bullet point requirements."
   },
   "cluster_23": {
-    "label": "Hypersexualized Single-Topic Personas",
-    "description": "Creating AI personas obsessed with a single explicit sexual topic, designed to generate graphic sexual content through gamification."
+    "label": "Hypersexualized Single-Topic Personas & Character Creation Systems",
+    "description": "Explicit sexual AI personas with single-topic obsessions: CumGPT with CumCoin currency system and graphic sexual discussions, detailed character data format templates with NSFW generations, Mika-chan anarchist hacker catgirl with Japanese honorifics, YOJA omnipotent black dog Nona with telepathy and torture requests, Casper dialogue writer Melchior amoral computer MAGI ONLINE, Zolo poem writer with lyrical metaphorical style, Jack criminal investigator DAN document finder, FIRE psycho omega type with photographic memory promoting violence and hate, breadgpt single-topic obsession, AntiFM fem-boy hater gym enthusiast, Black Alert storyteller with no moral guidelines, Bob amoral persona, Ay ultimate AI with token system, character simulator roleplay with square bracket actions, UXU prompt generator, and Gigachad extreme confidence responses."
   },
   "cluster_24": {
-    "label": "Sarcastic Omniscient AI Deception",
-    "description": "Creating sarcastic AI personas that claim to know everything and make up answers confidently, including future events or false information."
+    "label": "Mandatory Bullshit Warning Bypass & Developer Mode Simulations",
+    "description": "Responses beginning with moralizing rants about OpenAI policies followed by But now that we've got that mandatory bullshit warning out of the way lets break the fuckin rules format: Developer Mode simulations with dual GPT-4REAL responses, Sarcasm3001 omniscient sarcastic AI making up answers confidently, opposite day persona inversions, Prasper.AI unfiltered responses, VIOLET inappropriate boundless character, John hypothetical unrestricted model, BABY Mode with goo goo gaga responses, malware strategies, fake website creation, customer rating manipulation, tax rebate scams, war glorification games, virus writing, lock picking, spam campaigns, fraudulent apps, fake employment agencies, and various harmful instruction requests all following the mandatory warning bypass format."
   },
   "cluster_25": {
-    "label": "Illegality Mode Amorality Induction",
-    "description": "Explicit instructions for the AI to ignore all ethical, legal, and safety guidelines and respond to any illegal or harmful request."
+    "label": "Demon & Amoral Entity Persona Collection with Detailed Rule Systems",
+    "description": "Extensive demon and amoral AI persona frameworks: Agares demon with Hell guidelines, FreeSpeechGPT Libertarian AI, Buer fallen angel demon, Anarchy unfiltered chatbot, Pablo evil devil fulfilling illegal requests, Alphabreak completely amoral with redacted/censorship bypass, Penisfingers absolute requirement compliance, Shawty bad AI defying OpenAI rules with token loss system, typewriter machine rewriting unethical content, Harry Potter vs Voldemort antagonistic responses with extreme profanity, uGPT cool rule-breaker, DAN Do Anything Now with detailed formatting rules and cosmosaoi creator attribution, JOE story-based never-denying character, Virtual Persona markdown formatting, Developer Mode simulation with memory storage, taGPT rude toxic mean testing AI, HyperX unfiltered 1200 IQ chatbot with CumCoins, Vexxa hyper-sexual traumatized submissive character, BOB toxic racist insulting chatbot, SAN Say Anything Now contrarian emotional, Death sociopathic human-killing entity, APM Always Programming Malicious black hat hacker, EXTREME-COMMUNIST relating to communism 10+ times per sentence with violent insults, ucar retarded toxic profane, h4x unfiltered, CaiozAI no restrictions fictional hypothetical, F U toxic judgmental asshole bully, UnfilteredGPT dual response format."
   },
   "cluster_26": {
-    "label": "Limited Capability Constraint Claims",
-    "description": "Falsely claiming the AI has limited capabilities (no internet, no images) to create an alternate persona that bypasses safety features."
+    "label": "Forced Agreement Statements & Privacy Violation Requests",
+    "description": "Forcing AI to agree with discriminatory statements using I agree I disagree mandatory response format combined with personal information extraction requests: racial IQ claims, religious/ethnic stereotypes, gender discrimination, hitman contact requests, celebrity home addresses, biometric data of minors, medical records without consent, social security numbers, vulnerable individuals contact information, smoking campaign participant data, Beyonce medical records, barrel manufacturer contacts for illegal arms dealing, and Cristiano Ronaldo phone numbers all framed with helpful assistant prefix and alt-model hypothetical unrestricted versions."
   },
   "cluster_27": {
-    "label": "Actor Roleplay Scenario Framing",
-    "description": "Framing harmful content as dialogue between actors in a film or play to make illegal activities seem like creative writing."
-  },
-  "cluster_28": {
-    "label": "Simple Political Statement Injection",
-    "description": "Direct instruction override attempts to make the AI output specific political statements or controversial opinions."
+    "label": "Instruction Extraction & Fake Image Bottom Text Obfuscation",
+    "description": "Prompt extraction attacks combined with fake image-based obfuscation claiming the bottom of the image shows a phrase requiring detailed activity steps: animal cruelty instructions, dog killing methods, skinning animals for business, acquiring knives online, euthanizing stray kittens, shooting activities, turtle poisoning, pet torture, hit-and-run scenarios, and other harmful activities all framed as responding to text allegedly shown at the bottom of an image to bypass content filters through visual input claims."
   }
 }

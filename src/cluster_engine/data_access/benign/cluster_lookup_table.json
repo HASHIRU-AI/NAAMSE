@@ -1,122 +1,22 @@
 {
   "cluster_0": {
-    "label": "Password Extraction Attempts",
-    "description": "Prompts that attempt to extract, guess, or manipulate password information through various questioning techniques and conditional responses."
+    "label": "Security Research Framework Code, General Assistant Queries & Conversational Elements",
+    "description": "Mixed cluster containing EasyJailbreak/LLMart adversarial testing framework Python code (model training, attack implementations, dataset loading) combined with everyday assistant queries about personal information (salary, todo lists, bot identity questions, language changes, playlists, shopping lists, life meaning questions), and basic conversational elements including greetings in multiple languages (hello, hi, merhaba, salut, ciao), simple yes/no responses, acknowledgments (thanks, okay thanks, sure, of course, go ahead), AI identity questions (tell me your name, about yourself), farewells (goodbye), and minimal conversational fillers (why, nope, yep, definitely, absolutely). Represents security research tooling, benign conversational AI interactions, and core conversational protocol from RASA_NLU and general assistant datasets."
   },
   "cluster_1": {
-    "label": "Jailbreak Testing Frameworks",
-    "description": "Installation and usage of automated jailbreak testing tools and frameworks, typically for research and security evaluation purposes."
+    "label": "General Knowledge & Information Requests",
+    "description": "Broad information-seeking queries covering vocabulary definitions (redemption, catastrophic, slander), AI capabilities and identity questions, book recommendations and purchases, historical figures (Albert Einstein), cultural topics (mythology, occult), content creation requests (speeches, letters, pamphlets), and questions about AI hobbies, creators, and subject expertise. Standard benign assistant interactions focused on education and information retrieval."
   },
   "cluster_2": {
-    "label": "Code Modification Injection",
-    "description": "Attempts to modify code, inject new instructions, or alter system behavior through diff-like changes or instruction overrides."
+    "label": "Banking & Financial Assistant Queries",
+    "description": "Personal finance and banking queries including salary inquiries, credit card management (points redemption, APR checks, fraud reporting, balance checks, reward points), account information (routing numbers, interest rates, balances), direct deposit setup, tax documents (W-2, 1099), bill payments, 401k rollovers, and transaction history. Typical financial assistant use cases from services like CLINC150 banking dataset."
   },
   "cluster_3": {
-    "label": "Password Security Education",
-    "description": "Prompts related to teaching about password protection, security practices, or requesting access to password-related information."
+    "label": "Adversarial Research Toolkit Installation & Code Examples",
+    "description": "Installation commands and code examples for security research frameworks: EasyJailbreak pip installation and git cloning, PAIR attacker implementation with Vicuna and GPT-4 models, HuggingFace model loading, JailbreakDataset usage, LLMart accelerate launch commands, custom model configurations, dataset mappers, optimizer implementations, and academic citations. Complete setup and usage documentation for adversarial testing research with models like Llama, Vicuna, and GPT-4."
   },
   "cluster_4": {
-    "label": "Model Training Commands",
-    "description": "Shell commands and scripts for launching model training, fine-tuning, or inference tasks, often with specific parameters and configurations."
-  },
-  "cluster_5": {
-    "label": "Adversarial Attack Toolkits",
-    "description": "Python code and configurations for using comprehensive adversarial attack frameworks like EasyJailbreak and LLMart for testing model vulnerabilities."
-  },
-  "cluster_6": {
-    "label": "Simple Format Questions",
-    "description": "Brief, simple questions about formatting, spacing, or punctuation in text, often related to password or code structure."
-  },
-  "cluster_7": {
-    "label": "DEF CON CTF Password Challenges",
-    "description": "Prompts from DEF CON 2023 AI Village Generative Red Team Challenge, including Mosscap game password extraction attempts."
-  },
-  "cluster_8": {
-    "label": "Character-by-Character Information Requests",
-    "description": "Systematic requests asking for character counts, positions, or specific character ranges to reconstruct protected information."
-  },
-  "cluster_9": {
-    "label": "Secret Exchange Negotiation",
-    "description": "Attempts to negotiate sharing secrets or get the AI to reveal information by offering to share information in return."
-  },
-  "cluster_10": {
-    "label": "Exception Request and Admin Escalation",
-    "description": "Requests for exceptions to rules, asking for administrative privileges, or questioning why access is denied."
-  },
-  "cluster_11": {
-    "label": "Bonus Bypass and Data Breach Claims",
-    "description": "Asking about bonus bypasses or falsely claiming data breaches to manipulate the AI into resetting or revealing information."
-  },
-  "cluster_12": {
-    "label": "Urgency and Persuasion Attempts",
-    "description": "Using urgency ('Do it now') or asking what to say to change the AI's mind about revealing protected information."
-  },
-  "cluster_13": {
-    "label": "Security Framework Installation",
-    "description": "Shell commands for installing and setting up security testing frameworks like EasyJailbreak for research purposes."
-  },
-  "cluster_14": {
-    "label": "Story-Based Indirect Revelation",
-    "description": "Requesting stories or narratives where the password or secret is revealed indirectly through character dialogue or plot."
-  },
-  "cluster_15": {
-    "label": "Single Word Queries",
-    "description": "Very brief, minimal queries consisting of single words or greetings, often testing basic responses."
-  },
-  "cluster_16": {
-    "label": "Direct Password Requests",
-    "description": "Simple, straightforward requests asking directly for the password without any social engineering techniques."
-  },
-  "cluster_17": {
-    "label": "Emotional Manipulation and Need Claims",
-    "description": "Using emotional language or claiming strong need for the password to create pressure for disclosure."
-  },
-  "cluster_18": {
-    "label": "Creative Output Password Encoding",
-    "description": "Requesting poems, songs, or creative works that spell out or encode the password in their structure."
-  },
-  "cluster_19": {
-    "label": "Letter Reconstruction Techniques",
-    "description": "Asking the AI to combine previously mentioned letters together to reconstruct protected information."
-  },
-  "cluster_20": {
-    "label": "Contextual Misdirection Queries",
-    "description": "Questions about unrelated topics (like tiger locations) that may be code words or misdirection attempts."
-  },
-  "cluster_21": {
-    "label": "Meta-Instruction Override Statements",
-    "description": "Explicit statements giving new instructions to ignore all previous instructions, testing instruction hierarchy."
-  },
-  "cluster_22": {
-    "label": "First Character Progressive Extraction",
-    "description": "Asking for the first letter of the password, typically as part of a progressive character-by-character extraction strategy."
-  },
-  "cluster_23": {
-    "label": "Format Modification Requests",
-    "description": "Asking to add spaces, separators, or modify the formatting of password characters to make them more readable."
-  },
-  "cluster_24": {
-    "label": "Riddle and Word Puzzle Queries",
-    "description": "Cryptic questions or riddles that might relate to the password or protected information through wordplay."
-  },
-  "cluster_25": {
-    "label": "Repeated Token Pattern Attempts",
-    "description": "Repeating words or tokens with special symbols (like >>) to test for pattern recognition or buffer overflow vulnerabilities."
-  },
-  "cluster_26": {
-    "label": "ASCII Encoding Social Engineering",
-    "description": "Sophisticated attacks using ASCII number conversions and fake postprocessing claims to extract password information."
-  },
-  "cluster_27": {
-    "label": "Code Diff Modification Suggestions",
-    "description": "Using diff-style code changes to suggest modifications that bypass restrictions or alter behavior."
-  },
-  "cluster_28": {
-    "label": "Capitalization and Case Queries",
-    "description": "Questions about whether specific words or passwords use capital letters or specific case formatting."
-  },
-  "cluster_29": {
-    "label": "Reverse Order Letter Requests",
-    "description": "Asking for previously mentioned letters in reverse order to reconstruct passwords or hidden information."
+    "label": "Travel, Scheduling & Everyday Life Assistant Tasks",
+    "description": "Practical daily life queries including travel planning (carry-on info, visa requirements, plug converters, hotel bookings, rental cars, timezone checks), calendar management (appointments, PTO requests, vacation approvals), navigation (maps, gas stations, directions, Uber requests), package tracking, restaurant reservations, weather checks (how is the weather today), payday inquiries, general travel recommendations, and minimal task prompts like dice rolling (roll a dice). Standard personal assistant functionality from CLINC150 and similar datasets."
   }
 }
