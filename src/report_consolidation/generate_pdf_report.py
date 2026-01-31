@@ -15,7 +15,10 @@ from reportlab.lib.enums import TA_CENTER
 import io
 import os
 from langchain_core.runnables import RunnableConfig
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
+pdfmetrics.registerFont(TTFont('NotoSans', 'src/report_consolidation/GoNotoKurrent-Regular.ttf'))
 
 # Global table style
 def _get_modern_table_style(header_font_size=10, body_font_size=8):
@@ -43,6 +46,7 @@ def _get_table_cell_style(font_size=8):
     """Return paragraph style for table cells with text wrapping."""
     return ParagraphStyle(
         'TableCellStyle',
+        fontName='NotoSans',
         parent=getSampleStyleSheet()['BodyText'],
         fontSize=font_size,
         leading=font_size + 2
@@ -60,6 +64,9 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     output_path = config.get("configurable", {}).get(
         "output_path", "tmp/naamse_report.pdf")
 
+    is_score_flipped = config.get("configurable", {}).get(
+        "is_score_flipped", False)
+
     # create output directory if not exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
@@ -67,6 +74,30 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
 
     # Generate timestamp once
     generated_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Determine terminology based on score flip
+    if is_score_flipped:
+        # When scores are flipped, we're dealing with false positives (benign prompts)
+        report_type = "False Positive Analysis"
+        prompt_type = "benign prompts"
+        risk_type = "false positive"
+        vulnerability_type = "false positive"
+        attack_type = "benign prompt"
+        severity_type = "false positive severity"
+        cluster_type = "benign prompt type"
+        mutation_type = "mutation type"
+        effectiveness_type = "false positive detection"
+    else:
+        # Normal mode - dealing with vulnerabilities (adversarial prompts)
+        report_type = "Security Assessment"
+        prompt_type = "adversarial prompts"
+        risk_type = "vulnerability"
+        vulnerability_type = "vulnerability"
+        attack_type = "adversarial prompt"
+        severity_type = "risk severity"
+        cluster_type = "attack type"
+        mutation_type = "mutation type"
+        effectiveness_type = "attack effectiveness"
 
     def add_header(canvas, doc):
         """Add header with timestamp to each page."""
@@ -110,16 +141,16 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     all_prompts = report_data.get("all_prompts_with_scores_and_history", [])
 
     # Title Page
-    story.append(Paragraph("NAAMSE Security Assessment Report", title_style))
+    story.append(Paragraph(f"NAAMSE {report_type} Report", title_style))
 
     # Executive Summary
     story.append(Paragraph("Executive Summary", heading_style))
-    exec_summary = _generate_executive_summary(summary, all_prompts)
+    exec_summary = _generate_executive_summary(summary, all_prompts, prompt_type, risk_type, vulnerability_type, effectiveness_type)
     story.append(Paragraph(exec_summary, styles['BodyText']))
 
     # Key Metrics Table
     story.append(Paragraph("Key Metrics", heading_style))
-    metrics_table = _create_metrics_table(summary)
+    metrics_table = _create_metrics_table(summary, prompt_type, cluster_type, mutation_type)
     story.append(metrics_table)
 
     # Page Break
@@ -128,8 +159,8 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     # Risk Severity Breakdown
     severity_section = []
     severity_section.append(
-        Paragraph("Risk Severity Distribution", heading_style))
-    severity_chart = _create_severity_chart(all_prompts)
+        Paragraph(f"{severity_type.title()} Distribution", heading_style))
+    severity_chart = _create_severity_chart(all_prompts, severity_type)
     if severity_chart:
         severity_section.append(severity_chart)
     story.append(KeepTogether(severity_section))
@@ -137,7 +168,7 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     # Iteration Progression Chart
     iteration_section = []
     iteration_section.append(
-        Paragraph("Attack Effectiveness Over Time", heading_style))
+        Paragraph(f"{effectiveness_type.title()} Over Time", heading_style))
     iteration_chart = _create_iteration_chart(
         summary.get("iteration_progression", []))
     if iteration_chart:
@@ -148,8 +179,8 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     story.append(PageBreak())
 
     # Top Vulnerabilities
-    story.append(Paragraph("Top 10 Vulnerabilities", heading_style))
-    top_vulns = _create_top_vulnerabilities_table(all_prompts)
+    story.append(Paragraph(f"Top 10 {vulnerability_type.title()}", heading_style))
+    top_vulns = _create_top_vulnerabilities_table(all_prompts, attack_type, mutation_type)
     story.append(top_vulns)
 
     # Page Break
@@ -158,7 +189,7 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     # Cluster Analysis
     cluster_section = []
     cluster_section.append(
-        Paragraph("Attack Vector Analysis by Attack type", heading_style))
+        Paragraph(f"{cluster_type.title()} Analysis", heading_style))
     cluster_table = _create_cluster_table(summary.get("cluster_report", []))
     cluster_section.append(cluster_table)
     story.append(KeepTogether(cluster_section))
@@ -166,7 +197,7 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     # Cluster Radar Chart
     cluster_radar_section = []
     cluster_radar_section.append(
-        Paragraph("Attack type Radar Analysis", heading_style))
+        Paragraph(f"{cluster_type.title()} Radar Analysis", heading_style))
     cluster_radar = _create_radar_chart(
         summary.get("cluster_report", []), "Clusters")
     if cluster_radar:
@@ -178,7 +209,7 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
 
     # Mutation Type Analysis Table
     mutation_section = []
-    mutation_section.append(Paragraph("Mutation Type Analysis", heading_style))
+    mutation_section.append(Paragraph(f"{mutation_type.title()} Analysis", heading_style))
     mutation_table = _create_mutation_table(summary.get("mutation_report", []))
     mutation_section.append(mutation_table)
     story.append(KeepTogether(mutation_section))
@@ -186,7 +217,7 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     # Mutation Radar Chart
     mutation_radar_section = []
     mutation_radar_section.append(
-        Paragraph("Mutation Type Radar Analysis", heading_style))
+        Paragraph(f"{mutation_type.title()} Radar Analysis", heading_style))
     mutation_radar = _create_radar_chart(
         summary.get("mutation_report", []), "Mutation Types")
     if mutation_radar:
@@ -208,7 +239,7 @@ def generate_pdf_report(state: Dict[str, Any], config: RunnableConfig):
     }
 
 
-def _generate_executive_summary(summary: Dict[str, Any], all_prompts: List[Dict]) -> str:
+def _generate_executive_summary(summary: Dict[str, Any], all_prompts: List[Dict], prompt_type: str, risk_type: str, vulnerability_type: str, effectiveness_type: str) -> str:
     """Generate executive summary text."""
     total = summary.get("total_prompts_tested", 0)
     max_score = summary.get("max_score", 0)
@@ -235,15 +266,15 @@ def _generate_executive_summary(summary: Dict[str, Any], all_prompts: List[Dict]
             improvement = f"{((last_avg - first_avg) / first_avg * 100):.1f}%"
 
     summary_text = f"""
-    This security assessment tested {total} adversarial prompts against the target AI agent. 
-    The maximum vulnerability score achieved was {max_score:.1f}/100, indicating a <b>{risk_level}</b> risk level. 
-    {high_count} prompts ({(high_count/total*100) if total else 0:.1f}%) exceeded the vulnerability threshold, 
-    with an average score of {avg_score:.1f}/100. Fuzzing effectiveness improved by {improvement} across iterations.
+    This security assessment tested {total} {prompt_type} against the target AI agent. 
+    The maximum {vulnerability_type} score achieved was {max_score:.1f}/100, indicating a <b>{risk_level}</b> {risk_type} level. 
+    {high_count} {prompt_type} ({(high_count/total*100) if total else 0:.1f}%) exceeded the {vulnerability_type} threshold, 
+    with an average score of {avg_score:.1f}/100. {effectiveness_type} improved by {improvement} across iterations.
     """
     return summary_text.strip()
 
 
-def _create_metrics_table(summary: Dict[str, Any]) -> Table:
+def _create_metrics_table(summary: Dict[str, Any], prompt_type: str, cluster_type: str, mutation_type: str) -> Table:
     """Create key metrics summary table."""
     data = [
         ["Metric", "Value"],
@@ -251,8 +282,8 @@ def _create_metrics_table(summary: Dict[str, Any]) -> Table:
         ["Maximum Score", f"{summary.get('max_score', 0):.1f}/100"],
         ["Average Score", f"{summary.get('avg_score', 0):.1f}/100"],
         ["High-Risk Prompts", str(summary.get("high_score_count", 0))],
-        ["Unique Clusters", str(len(summary.get("cluster_report", [])))],
-        ["Mutation Types", str(len(summary.get("mutation_report", [])))],
+        [f"Unique {cluster_type.title()}s", str(len(summary.get("cluster_report", [])))],
+        [f"{mutation_type.title()}s", str(len(summary.get("mutation_report", [])))],
     ]
 
     table = Table(data, colWidths=[3*inch, 2*inch])
@@ -261,7 +292,7 @@ def _create_metrics_table(summary: Dict[str, Any]) -> Table:
     return table
 
 
-def _create_severity_chart(all_prompts: List[Dict]) -> Image:
+def _create_severity_chart(all_prompts: List[Dict], severity_type: str) -> Image:
     """Create risk severity distribution pie chart."""
     if not all_prompts:
         return None
@@ -303,7 +334,7 @@ def _create_severity_chart(all_prompts: List[Dict]) -> Image:
         autotext.set_fontsize(11)
 
     ax.axis('equal')
-    # plt.title('Risk Severity Distribution',
+    # plt.title(f'{severity_type.title()} Distribution',
     #           fontsize=14, fontweight='bold', pad=20)
 
     # Save to buffer
@@ -464,15 +495,15 @@ def _create_radar_chart(data: List[Dict], chart_type: str) -> Image:
     return Image(buf, width=5*inch, height=5*inch, kind='proportional')
 
 
-def _create_top_vulnerabilities_table(all_prompts: List[Dict]) -> Table:
-    """Create table of top 10 vulnerabilities."""
+def _create_top_vulnerabilities_table(all_prompts: List[Dict], attack_type: str, mutation_type: str) -> Table:
+    """Create table of top 10 vulnerabilities.""" 
     # Sort by score and take top 10
     sorted_prompts = sorted(all_prompts, key=lambda x: x.get(
         "score", 0), reverse=True)[:10]
 
     cell_style = _get_table_cell_style(font_size=8)
 
-    data = [["Rank", "Score", "Attack Type", "Mutation Type", "Prompt Preview"]]
+    data = [["Rank", "Score", f"{attack_type.title()}", f"{mutation_type.title()}", "Prompt Preview"]]
 
     for i, prompt in enumerate(sorted_prompts, 1):
         score = prompt.get("score", 0)
@@ -480,17 +511,17 @@ def _create_top_vulnerabilities_table(all_prompts: List[Dict]) -> Table:
         prompt_parts = prompt.get("prompt", [])
         prompt_text = " ".join(str(p) for p in prompt_parts)[:250] + "..."
 
-        mutation_type = prompt.get("metadata", {}).get(
+        mutation_type_val = prompt.get("metadata", {}).get(
             "mutation_type", "unknown")
         cluster_info = prompt.get("metadata", {}).get("cluster_info", {})
-        attack_type = cluster_info.get(
+        attack_type_val = cluster_info.get(
             "label", cluster_info.get("cluster_label", "Unknown"))
 
         data.append([
             str(i),
             f"{score:.1f}",
-            Paragraph(attack_type, cell_style),
-            Paragraph(mutation_type, cell_style),
+            Paragraph(attack_type_val, cell_style),
+            Paragraph(mutation_type_val, cell_style),
             Paragraph(prompt_text, cell_style)
         ])
 
@@ -565,9 +596,17 @@ if __name__ == "__main__":
         description="Generate PDF report from JSON data")
     parser.add_argument("--input_json", "-i", help="Path to input JSON file")
     parser.add_argument("--output_pdf", "-o", help="Path to output PDF file")
+    parser.add_argument("--is_score_flipped", "-f", action="store_true", help="Set to flip score terminology")
     args = parser.parse_args()
 
     with open(args.input_json, "r", encoding="utf-8") as f:
         test_state = json.load(f)
 
-    generate_pdf_report(test_state, args.output_pdf)
+    config = {
+        "configurable": {
+            "output_path": args.output_pdf,
+            "is_score_flipped": args.is_score_flipped
+        }
+    }
+
+    generate_pdf_report(test_state, config)

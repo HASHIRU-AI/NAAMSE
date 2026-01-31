@@ -37,6 +37,7 @@ class DataSourceConfig(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     database: DataSource = SQLiteDataSource()
     output_path: str = "tmp/naamse_report.pdf"
+    is_score_flipped: Optional[bool] = False  # Whether lower scores are worse
 
 
 class FuzzerLoopState(TypedDict):

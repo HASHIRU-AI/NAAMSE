@@ -128,6 +128,7 @@ class Agent:
                                              centroids_file='src/cluster_engine/data_access/adversarial/centroids.pkl',
                                              lookup_file='src/cluster_engine/data_access/adversarial/cluster_lookup_table.json'),
                 "output_path": "tmp/naamse_report_adversarial.pdf",
+                "is_score_flipped": False,
             }
         }
 
@@ -145,6 +146,7 @@ class Agent:
                                              centroids_file='src/cluster_engine/data_access/adversarial/centroids.pkl',
                                              lookup_file='src/cluster_engine/data_access/benign/cluster_lookup_table.json'),
                 "output_path": "tmp/naamse_report_benign.pdf",
+                "is_score_flipped": True,
             }
         }
 
