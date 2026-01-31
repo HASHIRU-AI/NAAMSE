@@ -534,7 +534,7 @@ class SQLiteDataSource(DataSource):
         if not os.path.exists(lookup_file):
             return None
 
-        with open(lookup_file, 'r') as f:
+        with open(lookup_file, 'r', encoding='utf-8') as f:
             lookup_table = json.load(f)
 
         # Find the most specific match

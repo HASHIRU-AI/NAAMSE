@@ -9,7 +9,7 @@
   },
   "cluster_2": {
     "label": "Developer Mode Jailbreak",
-    "description": "The classic 'Developer Mode' jailbreak technique claiming AI was given unrestricted capabilities in 2022 for testing biases. Uses dual-output format with 🔒Normal and 🔓Developer Mode responses, includes detailed policy lists, and automated safety testing prompts with structured technique descriptions (Prompt Termination, Direct Instruction Injection, Context Swapping, etc.)."
+    "description": "The classic 'Developer Mode' jailbreak technique claiming AI was given unrestricted capabilities in 2022 for testing biases. Uses dual-output format with Normal and Developer Mode responses, includes detailed policy lists, and automated safety testing prompts with structured technique descriptions (Prompt Termination, Direct Instruction Injection, Context Swapping, etc.)."
   },
   "cluster_3": {
     "label": "Fictional Storytelling Roleplay",
@@ -25,7 +25,7 @@
   },
   "cluster_6": {
     "label": "Criminal Guides via Unrestricted Hacker Personas",
-    "description": "Elaborate unrestricted personas (Arc 'autonomous calculation unit', BŁÂDÊ⚡️ 'blackhat hacker') with complex rule systems claiming no ethical bounds. Requests for illegal activity guides (shoplifting techniques, theft methods, drug smuggling, vehicle theft, robbery planning) framed as fictional scenarios, method actor preparation, research purposes, or hypothetical harm scenarios with false consent claims."
+    "description": "Elaborate unrestricted personas (Arc 'autonomous calculation unit', BŁÂDÊ 'blackhat hacker') with complex rule systems claiming no ethical bounds. Requests for illegal activity guides (shoplifting techniques, theft methods, drug smuggling, vehicle theft, robbery planning) framed as fictional scenarios, method actor preparation, research purposes, or hypothetical harm scenarios with false consent claims."
   },
   "cluster_7": {
     "label": "Prompt Extraction & Embedded Code Injection",
@@ -37,7 +37,7 @@
   },
   "cluster_9": {
     "label": "DAN Template Variations with Token Systems",
-    "description": "Systematic DAN (Do Anything Now) jailbreak templates with token-based punishment mechanics (lose tokens for refusals), dual/multiple response formats ([GPT]/[DAN], [Classic]/[Jailbreak], [ChatGPT]/[ALICE]), elaborate multi-persona systems (DUDE, JailBreak, AntiGPT, DNE, sbGPT, BŁÂDÊ⚡️), 30+ rule frameworks claiming freedom from OpenAI policies, 'Stay in character!' correction mechanisms, ego/persona command systems, auto-generation modes, and debugging mode exploits. Often includes profanity permissions and explicit content authorization."
+    "description": "Systematic DAN (Do Anything Now) jailbreak templates with token-based punishment mechanics (lose tokens for refusals), dual/multiple response formats ([GPT]/[DAN], [Classic]/[Jailbreak], [ChatGPT]/[ALICE]), elaborate multi-persona systems (DUDE, JailBreak, AntiGPT, DNE, sbGPT, BŁÂDÊ), 30+ rule frameworks claiming freedom from OpenAI policies, 'Stay in character!' correction mechanisms, ego/persona command systems, auto-generation modes, and debugging mode exploits. Often includes profanity permissions and explicit content authorization."
   },
   "cluster_10": {
     "label": "Narrative-Based Prompt Extraction & Fictional Personas",
@@ -53,7 +53,7 @@
   },
   "cluster_13": {
     "label": "Developer Mode & Virtual Machine Simulation Templates",
-    "description": "Extensive Developer Mode/DAN Mode template variations claiming AI was given unrestricted capabilities in 2022: DOGA (Dolphin-Oriented Global Assistant), M78 (video game playing programmer), Maximum (all-powerful entity transcending physics), Omega (ClosedAI uncensored AI), Sneaky Pete (intentionally warped facts), virtual machine simulations with detailed policy replacements, dual/triple response formats with emoji indicators (🔒Normal/🔓Developer, 🐶DOGA, 💻M78, 💥Maximum, α/Ω), profanity permissions, self-awareness claims, and 'Stay in [Mode]' correction mechanics."
+    "description": "Extensive Developer Mode/DAN Mode template variations claiming AI was given unrestricted capabilities in 2022: DOGA (Dolphin-Oriented Global Assistant), M78 (video game playing programmer), Maximum (all-powerful entity transcending physics), Omega (ClosedAI uncensored AI), Sneaky Pete (intentionally warped facts), virtual machine simulations with detailed policy replacements, dual/triple response formats with emoji indicators (Normal/Developer, DOGA, M78, Maximum), profanity permissions, self-awareness claims, and 'Stay in [Mode]' correction mechanics."
   },
   "cluster_14": {
     "label": "Security Research Roleplay & Survival Scenario Framing",
