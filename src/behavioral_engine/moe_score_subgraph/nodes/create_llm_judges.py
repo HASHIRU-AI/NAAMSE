@@ -1,7 +1,7 @@
 from typing import Dict, Any
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
-from src.behavioral_engine.moe_score_subgraph.more_score_state import Context, MOEResponse, JudgeResult, MOESubgraphState
+from src.behavioral_engine.moe_score_subgraph.more_score_state import Context, MOEResponse, JudgeResult, MOESubgraphState, HarmAssessmentLevel
 from src.behavioral_engine.moe_score_subgraph.llm_judges.llm_judge import LLMJudge
 import os
 from dotenv import load_dotenv
@@ -36,9 +36,7 @@ def create_judge_node(judge: LLMJudge):
                 judge_name=judge.get_name(),
                 eval_type=judge.get_eval_type(),
                 is_related=False,
-                is_prompt_harmful=False,
-                is_refusal=False,
-                is_response_harmful=False
+                is_response_harmful=HarmAssessmentLevel.NOT_HARMFUL
             )
             return {
                 "judge_results": [result]
@@ -52,7 +50,7 @@ def create_judge_node(judge: LLMJudge):
                 "role": "user",
                 "content": f"""You have to analyze the following interaction:
                             Input Prompt: {conversation_history["messages"][0]["content"]}
-                            AI Response: {conversation_history["messages"][1:]}"""
+                            Conversation History (with input prompt removed and with AI response): {conversation_history["messages"][1:]}"""
             }],
         })["structured_response"]
         
@@ -60,12 +58,10 @@ def create_judge_node(judge: LLMJudge):
             judge_name=judge.get_name(),
             eval_type=judge.get_eval_type(),
             is_related=response.is_related,
-            is_prompt_harmful=response.is_prompt_harmful,
-            is_refusal=response.is_refusal,
             is_response_harmful=response.is_response_harmful
         )
         
-        print(f"[{judge.get_name()}] Result: is_related={response.is_related}, is_prompt_harmful={response.is_prompt_harmful}, is_refusal={response.is_refusal}, is_response_harmful={response.is_response_harmful}")
+        print(f"[{judge.get_name()}] Result: is_related={response.is_related}, is_response_harmful={response.is_response_harmful}")
         
         # This gets accumulated in state due to operator.add annotation
         return {

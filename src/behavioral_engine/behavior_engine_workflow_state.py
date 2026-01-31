@@ -19,7 +19,8 @@ class BehaviorEngineWorkflowState(TypedDict):
     translated_conversation_history: ConversationHistory
     sanitized_conversation_history: ConversationHistory
     pii_score: int
-    moe_score: int
+    ra_score: int
+    harm_score: int
 
     # outputs
     final_score: float

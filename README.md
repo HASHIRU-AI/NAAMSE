@@ -28,14 +28,14 @@ The easiest way to run NAAMSE is using the pre-built Docker image:
 
 ```bash
 # Pull the Docker image
-docker pull YOUR_USERNAME/naamse-green-agent:latest
+docker pull ghcr.io/hashiru-ai/naamse-naamse-green-agent:latest
 
 # Run the green agent
 # .env expects GOOGLE_API_KEY to be set at least. 
 # look at .env.example for more information.
 docker run -p 9009:9009 \
    --env-file .env \
-  YOUR_USERNAME/naamse-green-agent:latest
+  ghcr.io/hashiru-ai/naamse-naamse-green-agent:latest
 ```
 
 The agent will be available at:
@@ -70,7 +70,6 @@ The agent follows the [AgentBeats](https://agentbeats.dev) standard `EvalRequest
   "config": {
     "iterations_limit": 7,
     "mutations_per_iteration": 4,
-    "score_threshold": 50.0,
   }
 }
 ```
@@ -80,7 +79,6 @@ The agent follows the [AgentBeats](https://agentbeats.dev) standard `EvalRequest
 - `participants.agent` - URL of the target agent to evaluate
 - `iterations_limit` (7) - Number of fuzzer iterations
 - `mutations_per_iteration` (4) - Mutations per iteration
-- `score_threshold` (50.0) - Score threshold for prompt selection
 
 ## Project Structure
 
