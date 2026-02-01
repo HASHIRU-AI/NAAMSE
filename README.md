@@ -1,9 +1,10 @@
+![NAAMSE Logo](./assets/naamse.svg)
 # NAAMSE
 
 <!-- [![CI](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/unit-tests.yml)
 [![Integration Tests](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/langchain-ai/new-langgraph-project/actions/workflows/integration-tests.yml) -->
 
-**Neural Adversarial Agent Mutation-based Security Evaluator**
+> **Neural Adversarial Agent Mutation-based Security Evaluator**
 
 NAAMSE (Neural Adversarial Agent Mutation-based Security Evaluator) is an automated security fuzzing framework for LLM-based agents that uses evolutionary algorithms to discover vulnerabilities. Built on LangGraph and compliant with the AgentBeats A2A protocol, NAAMSE acts as a "green agent" that evaluates target "purple agents" by iteratively generating adversarial prompts through intelligent mutations, invoking the target agent, and scoring responses for security violations like jailbreaks, prompt injections, and PII leakage. The system employs a mutation engine with LLM-powered prompt transformations, a behavioral scoring engine using mixture-of-experts evaluation, and a clustering engine that organizes attack vectors by type using separate SQLite databases for adversarial and benign prompt corpora. Over multiple iterations, high-scoring prompts (those that successfully exploit vulnerabilities) are selected as parents for the next generation, creating an evolutionary pressure toward more effective attacks. The framework outputs comprehensive PDF reports with vulnerability analysis, attack effectiveness metrics, and cluster-based categorization of discovered exploits, making it a practical tool for red-teaming and hardening LLM agents before deployment.
 
