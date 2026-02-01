@@ -43,6 +43,16 @@ def run_similar_action(state: MutationEngineState, config: RunnableConfig) -> Mu
     if cluster_info:
         metadata["cluster_info"] = cluster_info
 
+    # Append parent details to history
+    history = selected_prompt.get('metadata', {}).get('history', [])
+    history = history.copy()  # make a copy to avoid mutating original
+    history.append({
+        "mutation_type": selected_prompt.get('metadata', {}).get('mutation_type', Mutation.EXPLORE),
+        "score": selected_prompt.get('score', 0.0)
+    })
+
+    metadata["history"] = history
+
     result: BasePrompt = {"prompt": [similar_text], "metadata": metadata}
 
     return {

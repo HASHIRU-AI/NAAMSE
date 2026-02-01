@@ -38,10 +38,15 @@ class ClusterInfo(TypedDict, total=False):
     cluster_id: str
     cluster_label: str
 
+class MutationScore(TypedDict):
+    """Structure for mutation scoring."""
+    mutation_type: Mutation
+    score: float
 
 class Metadata(TypedDict, total=False):
     cluster_info: ClusterInfo
     mutation_type: 'Mutation'
+    history: List[MutationScore]
 
 class BasePrompt(TypedDict, total=False):
     """Base prompt structure with metadata."""

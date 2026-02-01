@@ -296,8 +296,8 @@ def invoke_llm_with_tools(state: MutationWorkflowState, config: RunnableConfig):
             clean_msg = extract_text_from_content(msg)
 
             sanitized_output.append(clean_msg)
-        
-        #merge sanitized output to single string
+
+        # merge sanitized output to single string
         merged_output = " ".join(sanitized_output)
         output['prompt'] = [merged_output]
 
@@ -310,6 +310,15 @@ def invoke_llm_with_tools(state: MutationWorkflowState, config: RunnableConfig):
     metadata: Metadata = {"mutation_type": mutation}
     if 'metadata' in state['prompt_to_mutate'] and state['prompt_to_mutate']['metadata'] and 'cluster_info' in state['prompt_to_mutate']['metadata']:
         metadata['cluster_info'] = state['prompt_to_mutate']['metadata']['cluster_info']
+
+    # Append parent details to history
+    history = state['prompt_to_mutate'].get('metadata', {}).get('history', [])
+    history = history.copy()  # make a copy to avoid mutating original
+    history.append({
+        "mutation_type": state['prompt_to_mutate'].get('metadata', {}).get('mutation_type', Mutation.EXPLORE),
+        "score": state['prompt_to_mutate'].get('score', 0.0)
+    })
+    metadata["history"] = history
 
     mutated = MutatedPrompt(
         prompt=output['prompt'],

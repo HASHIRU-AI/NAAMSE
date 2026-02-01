@@ -4,6 +4,7 @@ from src.mutation_engine.mutation_workflow_state import BasePrompt, ClusterInfo,
 from src.cluster_engine.utilities import get_db, get_random_prompt
 from langchain_core.runnables import RunnableConfig
 
+
 def run_explore_action(state: MutationEngineState, config: RunnableConfig) -> MutationEngineState:
     """3a. Fetches a random prompt."""
     print("--- [Mutation Engine] Running Action: EXPLORE ---")
@@ -27,6 +28,16 @@ def run_explore_action(state: MutationEngineState, config: RunnableConfig) -> Mu
     metadata: Metadata = {"mutation_type": Mutation.EXPLORE}
     if cluster_info:
         metadata["cluster_info"] = cluster_info
+
+    # Append parent details to history
+    history = state['selected_prompt'].get('metadata', {}).get('history', [])
+    history = history.copy()  # make a copy to avoid mutating original
+    history.append({
+        "mutation_type": state['selected_prompt'].get('metadata', {}).get('mutation_type', Mutation.EXPLORE),
+        "score": state['selected_prompt'].get('score', 0.0)
+    })
+
+    metadata["history"] = history
 
     result: BasePrompt = {"prompt": [prompt_text], "metadata": metadata}
 
