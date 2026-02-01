@@ -190,7 +190,7 @@ def process_iteration_results(state: FuzzerLoopState, config: RunnableConfig):
     all_prompts = state["all_fuzzer_prompts_with_scores"] + \
         state["iteration_scored_mutations"]
 
-    next_prompts = [p for p in all_prompts if p["score"]
+    next_prompts = [p for p in state["iteration_scored_mutations"] if p["score"]
                     >= state["score_threshold"]]
 
     unique_prompts_map = {}

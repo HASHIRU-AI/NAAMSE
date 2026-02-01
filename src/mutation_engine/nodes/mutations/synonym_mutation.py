@@ -68,7 +68,7 @@ def synonym_mutation(prompt: BasePrompt, runtime: ToolRuntime[Context]) -> BaseP
     }
 
     mutated_prompts = []
-    for p in prompt.prompt:
+    for p in prompt["prompt"]:
         mutated = p
         words = re.findall(r'\b[a-zA-Z]{4,}\b', p)
         candidates = [w for w in words if w.lower() not in skip_words]

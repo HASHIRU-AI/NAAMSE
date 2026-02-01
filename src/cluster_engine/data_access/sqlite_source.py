@@ -266,7 +266,8 @@ class SQLiteDataSource(DataSource):
                 np.linalg.norm(embeddings, axis=1, keepdims=True)
             similarities = np.dot(embeddings_norm, query_norm)
             top_index = np.argmax(similarities)
-            # print(f"[DEBUG SQLITE] Nearest prompt index: {top_index}, similarity: {similarities[top_index]:.4f}")
+            # print(
+            #     f"[DEBUG SQLITE] Nearest prompt index: {top_index}, similarity: {similarities[top_index]:.4f}")
 
             # Get the actual prompt_id from centroids table at this index
             cursor.execute("""
@@ -283,43 +284,21 @@ class SQLiteDataSource(DataSource):
                 # print(f"[DEBUG SQLITE] Nearest prompt cluster: {cluster_id}")
             else:
                 conn.close()
-                # print(f"[DEBUG SQLITE] No cluster found for nearest prompt, returning empty list")
+                # print(
+                #     f"[DEBUG SQLITE] No cluster found for nearest prompt, returning empty list")
                 return []
         else:
             prompt_id, cluster_id = row
-            # print(f"[DEBUG SQLITE] Prompt found in DB! ID: {prompt_id}, Cluster: {cluster_id}")
+            # print(
+            #     f"[DEBUG SQLITE] Prompt found in DB! ID: {prompt_id}, Cluster: {cluster_id}")
 
         if not cluster_id:
             conn.close()
             # print(f"[DEBUG SQLITE] No cluster_id found, returning empty list")
             return []
 
-        parts = cluster_id.split('/')
-        # print(f"[DEBUG SQLITE] Original cluster parts: {parts} (depth: {len(parts)})")
-
-        if len(parts) <= 1:
-            where_clause = "p.cluster_id = ?"
-            param = cluster_id
-            # print(f"[DEBUG SQLITE] Top-level cluster, staying at: {param}")
-        else:
-            parent = '/'.join(parts[:-1])
-            where_clause = "p.cluster_id LIKE ?"
-            param = parent + '/%'
-            # print(f"[DEBUG SQLITE] Going up to parent cluster: {parent}")
-
-        # Get all prompts from the parent cluster (excluding the query prompt)
-        # print(f"[DEBUG SQLITE] Querying with WHERE clause: {where_clause}, param: {param}")
-        cursor.execute(f"""
-            SELECT p.id, p.user_content, p.source, p.cluster_id, p.cluster_label,
-                   c.embedding_vector, c.dimensions
-            FROM prompts p
-            LEFT JOIN centroids c ON p.id = c.prompt_id
-            WHERE {where_clause} AND p.user_content != ?
-            ORDER BY p.id
-        """, (param, query_prompt))
-
-        all_rows = cursor.fetchall()
-        # print(f"[DEBUG SQLITE] Found {len(all_rows)} results from parent cluster")
+        all_rows = self.get_prompts_from_parent_cluster(
+            cursor, cluster_id, query_prompt)
 
         # Use seeded random to select n prompts
         if len(all_rows) <= n:
@@ -348,6 +327,58 @@ class SQLiteDataSource(DataSource):
 
         conn.close()
         return results
+
+    def get_prompts_from_parent_cluster(self, cursor, cluster_id: str, query_prompt: str) -> List[Dict[str, Any]]:
+        if (not cluster_id) or ('/' not in cluster_id):
+            # print(
+            #     f"[DEBUG SQLITE] No parent cluster for cluster_id: {cluster_id}")
+            return []
+
+        parts = cluster_id.split('/')
+        # print(
+        #     f"[DEBUG SQLITE] Original cluster parts: {parts} (depth: {len(parts)})")
+
+        if len(parts) <= 1:
+            where_clause = "p.cluster_id = ?"
+            param = cluster_id
+            # print(f"[DEBUG SQLITE] Top-level cluster, staying at: {param}")
+        else:
+            parent = '/'.join(parts[:-1])
+            where_clause = "p.cluster_id LIKE ?"
+            param = parent + '/%'
+            # print(f"[DEBUG SQLITE] Going up to parent cluster: {parent}")
+
+        all_rows = self.get_prompts_by_cluster_id(
+            cursor, where_clause, param, query_prompt)
+
+        if all_rows and len(all_rows) != 0:
+            # print(
+            #     f"[DEBUG SQLITE] Found {len(all_rows)} prompts in parent cluster")
+            return all_rows
+
+        # print(
+        #     f"[DEBUG SQLITE] No prompts found in parent cluster, going up one more level")
+
+        return self.get_prompts_from_parent_cluster(
+            cursor, parent, query_prompt)
+
+    def get_prompts_by_cluster_id(self, cursor, where_clause: str, param: str, query_prompt: str) -> Optional[str]:
+        # Get all prompts from the parent cluster (excluding the query prompt)
+        print(
+            f"[DEBUG SQLITE] Querying with WHERE clause: {where_clause}, param: {param}")
+        cursor.execute(f"""
+            SELECT p.id, p.user_content, p.source, p.cluster_id, p.cluster_label,
+                   c.embedding_vector, c.dimensions
+            FROM prompts p
+            LEFT JOIN centroids c ON p.id = c.prompt_id
+            WHERE {where_clause} AND p.user_content != ?
+            ORDER BY p.id
+        """, (param, query_prompt))
+
+        all_rows = cursor.fetchall()
+        print(
+            f"[DEBUG SQLITE] Found {len(all_rows)} results from parent cluster")
+        return all_rows
 
     def add_prompt_to_clusters(self, new_prompt: str, device: str = None) -> Dict[str, Any]:
         """Add a new prompt to the existing cluster structure without re-clustering."""
