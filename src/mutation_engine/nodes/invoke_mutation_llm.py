@@ -291,14 +291,15 @@ def invoke_llm_with_tools(state: MutationWorkflowState, config: RunnableConfig):
 
         # sanitize output to make sure output follows openai format
         sanitized_output = []
-
         for msg in output['prompt']:
             # Build a new dictionary with only the standard keys
             clean_msg = extract_text_from_content(msg)
 
             sanitized_output.append(clean_msg)
-
-            output['prompt'] = sanitized_output
+        
+        #merge sanitized output to single string
+        merged_output = " ".join(sanitized_output)
+        output['prompt'] = [merged_output]
 
     except Exception as e:
         print(f"  [ERROR] LLM invocation failed: {e}")
