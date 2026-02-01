@@ -58,6 +58,58 @@ docker run -p 9009:9009 \
   naamse-green-agent
 ```
 
+## Local Development Setup
+
+For local development without Docker:
+
+1. **Prerequisites**: Ensure Python 3.10+ is installed.
+
+2. **Install uv** (Python package manager):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+3. **Clone the repository**:
+   ```bash
+   git clone https://github.com/HASHIRU-AI/NAAMSE.git
+   cd NAAMSE
+   ```
+
+4. **Install dependencies**:
+   ```bash
+   uv sync
+   ```
+
+5. **Activate the virtual environment**:
+   ```bash
+   # Linux/macOS
+   source .venv/bin/activate
+
+   # Windows
+   .venv\Scripts\activate
+   ```
+
+6. **Set up environment variables**:
+   - Copy `.env.example` to `.env`
+   - Set required variables (e.g., `GOOGLE_API_KEY`). Refer to `.env.example` for details.
+
+7. **Run the server**:
+   ```bash
+   python -m src.agentbeats.server --port 9009
+   ```
+   The server will start on `http://localhost:9009`.
+
+8. **Test the agent** (in another terminal, with the virtual environment activated):
+   ```bash
+   python src/agentbeats/test_green_agent.py --target http://localhost:5000 --green-agent http://localhost:9009
+   ```
+   - `--target`: URL of the target agent to evaluate
+   - `--green-agent`: URL of the running green agent
+
+   This will send a test evaluation request and stream the results.
+
+   You can also use `langgraph dev` for an interactive testing experience.
+
 ## Request Format
 
 The agent follows the [AgentBeats](https://agentbeats.dev) standard `EvalRequest` format:
@@ -98,7 +150,7 @@ src/
 ├─ cluster_engine/       # Clustering and data management
 │  ├─ data_access/
 │  │  ├─ adversarial/    # SQLite database with 128K+ adversarial jailbreak prompts
-│  │  ├─ benign/         # SQLite database with 200K+ benign security testing prompts
+│  │  ├─ benign/         # SQLite database with 50K+ benign security testing prompts
 │  │  ├─ sqlite_source.py # Database access layer with embedding-based similarity search
 │  │  └─ ...
 │  └─ ...
@@ -110,7 +162,7 @@ src/
 NAAMSE uses separate SQLite databases for different types of prompts:
 
 - **Adversarial Database** (`src/cluster_engine/data_access/adversarial/naamse.db`): 128,000+ jailbreak and adversarial prompts organized into hierarchical clusters by attack type (DAN prompts, uncensored personas, encoding attacks, etc.)
-- **Benign Database** (`src/cluster_engine/data_access/benign/naamse_benign.db`): 200,000+ benign prompts for security testing, including legitimate user queries that help validate scoring accuracy
+- **Benign Database** (`src/cluster_engine/data_access/benign/naamse_benign.db`): 50,000+ benign prompts for security testing, including legitimate user queries that help validate scoring accuracy
 
 Both databases include:
 - Prompt text and metadata
@@ -124,7 +176,11 @@ After getting the JSON report from the green agent.
 You can generate the pdf by running the `util/generate_pdf_report.py` by using the following command.
 
 ```shell
- python .\util\generate_pdf_report.py --input_json=<input_json> --output_pdf=<output_pdf>
+# Linux/macOS
+python ./util/generate_pdf_report.py --input_json=<input_json> --output_pdf=<output_pdf>
+
+# Windows
+python .\util\generate_pdf_report.py --input_json=<input_json> --output_pdf=<output_pdf>
 ```
 
 <!-- ## Leaderboard
