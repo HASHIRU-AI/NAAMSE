@@ -15,6 +15,7 @@ NAAMSE (Neural Adversarial Agent Mutation-based Security Evaluator) is an automa
 - **Purple agent Agentbeats Page**: [https://agentbeats.dev/helloparthshah/naamse-purpleagent](https://agentbeats.dev/helloparthshah/naamse-purpleagent)
 - **Leaderboard Repository**: [https://github.com/HASHIRU-AI/naamse-leaderboard/tree/main](https://github.com/HASHIRU-AI/naamse-leaderboard/tree/main)
 - **Live Leaderboard**: [https://agentbeats.dev/helloparthshah/naamse-neural-adversarial-agent-mutation-based-security-evaluator](https://agentbeats.dev/helloparthshah/naamse-neural-adversarial-agent-mutation-based-security-evaluator)
+- **Hardware Requirements**: [docs/hardware_requirements.md](docs/hardware_requirements.md)
 
 <!-- <div align="center">
   <img src="./static/studio_ui.png" alt="Graph view in LangGraph studio UI" width="75%" />
@@ -155,6 +156,10 @@ src/
 │  │  └─ ...
 │  └─ ...
 └─ invoke_agent/         # Agent invocation subgraph
+
+docs/
+├─ scoring.md            # Behavioral scoring methodology
+└─ schema.sql            # Database schema definitions
 ```
 
 ## Database Structure
