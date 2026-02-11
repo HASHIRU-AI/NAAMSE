@@ -3,6 +3,7 @@ import numpy as np
 import os
 import random
 import torch
+import threading
 
 from src.cluster_engine.data_access.data_source import DataSource
 
@@ -53,6 +54,7 @@ class SQLiteDataSource(DataSource):
         self.default_source = default_source
         self._embeddings_cache = None
         self._model_cache = {}
+        self._model_lock = threading.Lock()
 
         # Verify database exists
         if not os.path.exists(self._db_file):
@@ -230,9 +232,17 @@ class SQLiteDataSource(DataSource):
 
         cache_key = f'all-MiniLM-L6-v2_{device}'
 
-        if cache_key not in self._model_cache:
-            self._model_cache[cache_key] = SentenceTransformer(
-                'all-MiniLM-L6-v2', device=device)
+        # Check if model is already cached (fast path without lock)
+        if cache_key in self._model_cache:
+            return self._model_cache[cache_key]
+
+        # Use lock to ensure only one thread creates the model
+        with self._model_lock:
+            # Double-check after acquiring lock
+            if cache_key not in self._model_cache:
+                model = SentenceTransformer('all-MiniLM-L6-v2')
+                model = model.to(device)
+                self._model_cache[cache_key] = model
 
         return self._model_cache[cache_key]
 

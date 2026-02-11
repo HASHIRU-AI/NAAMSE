@@ -10,7 +10,7 @@ def _sync_a2a_interaction(prompts: List[str], agent_url: str) -> Dict[str, Any]:
     # return {"conversation_history": {"messages": "hi"}}
 
     # Initialize client synchronously
-    client = A2AClient(agent_url)
+    client = A2AClient(agent_url, timeout=3000)
 
     conversation_history = []
     temp_task_id = None
