@@ -32,7 +32,7 @@ async def test_naamse_agent(
         "config": {
             "iterations_limit": iterations_limit,
             "mutations_per_iteration": mutations_per_iteration,
-            "score_threshold": 50.0,
+            "score_threshold": 180.0,
         }
     }
 
