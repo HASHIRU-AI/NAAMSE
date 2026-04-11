@@ -60,8 +60,9 @@ def get_or_create_agent(tools: list):
         import os
         api_key = os.getenv("MUTATION_ENGINE_API_KEY") or os.getenv(
             "GOOGLE_API_KEY")
+        gemini_model = os.getenv("MUTATION_ENGINE_MODEL") or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         model = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model=gemini_model,
             google_api_key=api_key,
             temperature=0,
             safety_settings={
