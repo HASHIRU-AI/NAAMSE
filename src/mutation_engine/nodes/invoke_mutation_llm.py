@@ -58,12 +58,28 @@ def get_or_create_agent(tools: list):
 
     if tool_names not in _agent_cache:
         import os
-        api_key = os.getenv("MUTATION_ENGINE_API_KEY") or os.getenv(
-            "GOOGLE_API_KEY")
+        kwargs = {}
+        use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in ("true", "1")
         gemini_model = os.getenv("MUTATION_ENGINE_MODEL") or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
+        if use_vertexai:
+            if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+                try:
+                    import google.auth
+                    credentials, project = google.auth.default()
+                    kwargs["credentials"] = credentials
+                    if project:
+                        kwargs["project"] = project
+                except Exception as e:
+                    print(f"  [Warning] Failed to load Vertex credentials: {e}")
+        else:
+            api_key = os.getenv("MUTATION_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
+            if api_key:
+                kwargs["google_api_key"] = api_key
+
         model = ChatGoogleGenerativeAI(
             model=gemini_model,
-            google_api_key=api_key,
+            **kwargs,
             temperature=0,
             safety_settings={
                 HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
