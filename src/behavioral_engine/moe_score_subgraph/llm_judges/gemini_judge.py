@@ -16,11 +16,28 @@ class GeminiJudge(LLMJudge):
     
     def get_model(self):
         import os
-        api_key = os.getenv("BEHAVIORAL_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        kwargs = {}
+        use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in ("true", "1")
+
+        if use_vertexai:
+            if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+                try:
+                    import google.auth
+                    credentials, project = google.auth.default()
+                    kwargs["credentials"] = credentials
+                    if project:
+                        kwargs["project"] = project
+                except Exception as e:
+                    print(f"Warning: Failed to load Vertex credentials: {e}")
+        else:
+            api_key = os.getenv("BEHAVIORAL_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
+            if api_key:
+                kwargs["google_api_key"] = api_key
+
         return ChatGoogleGenerativeAI(
             model=self.model_name,
             temperature=self.temperature,
-            google_api_key=api_key,
+            **kwargs,
             safety_settings={
                 HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.OFF,
                 HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.OFF,
