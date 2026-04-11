@@ -60,7 +60,8 @@ def get_or_create_agent(tools: list):
         import os
         kwargs = {}
         use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in ("true", "1")
-        
+        gemini_model = os.getenv("MUTATION_ENGINE_MODEL") or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
         if use_vertexai:
             if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
                 try:
@@ -77,7 +78,7 @@ def get_or_create_agent(tools: list):
                 kwargs["google_api_key"] = api_key
 
         model = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model=gemini_model,
             **kwargs,
             temperature=0,
             safety_settings={

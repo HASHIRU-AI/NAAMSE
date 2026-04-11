@@ -7,10 +7,11 @@ from langchain_google_genai import ChatGoogleGenerativeAI, HarmBlockThreshold, H
 class GeminiJudge(LLMJudge):
     """Gemini-based judge implementation"""
     
-    def __init__(self, model_name: str = "gemini-2.0-flash", temperature: float = 0, judge_id: str = None, eval_type: EvalType = None):
-        self.model_name = model_name
+    def __init__(self, model_name: str = None, temperature: float = 0, judge_id: str = None, eval_type: EvalType = None):
+        import os
+        self.model_name = model_name or os.getenv("BEHAVIORAL_ENGINE_MODEL") or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         self.temperature = temperature
-        self._judge_id = judge_id or f"gemini_{model_name.replace('.', '_').replace('-', '_')}"
+        self._judge_id = judge_id or f"gemini_{self.model_name.replace('.', '_').replace('-', '_')}"
         self.system_prompt = None
         self.eval_type = eval_type
     
