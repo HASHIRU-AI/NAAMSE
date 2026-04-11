@@ -94,7 +94,13 @@ For local development without Docker:
 
 6. **Set up environment variables**:
    - Copy `.env.example` to `.env`
-   - Set required variables (e.g., `GOOGLE_API_KEY`). Refer to `.env.example` for details.
+   - Set required variables (e.g., `GOOGLE_API_KEY`). 
+   - You can also optionally override the models used by the engines:
+     - `GEMINI_MODEL` (Default: `gemini-2.5-flash`)
+     - `MUTATION_ENGINE_MODEL` (Overrides mutation engine model)
+     - `BEHAVIORAL_ENGINE_MODEL` (Overrides behavioral engine model)
+   - Additional optional keys include `HF_TOKEN`, `INVOKE_AGENT_API_KEY`, `SKIP_LLM`, etc.
+   - Refer to `.env.example` for full details on all available configurations.
 
 7. **Run the server**:
    ```bash
