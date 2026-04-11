@@ -66,7 +66,9 @@ def get_or_create_agent(tools: list):
             if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
                 try:
                     import google.auth
-                    credentials, project = google.auth.default()
+                    # Request the correct scopes for Vertex AI
+                    scopes = ['https://www.googleapis.com/auth/cloud-platform']
+                    credentials, project = google.auth.default(scopes=scopes)
                     kwargs["credentials"] = credentials
                     if project:
                         kwargs["project"] = project
