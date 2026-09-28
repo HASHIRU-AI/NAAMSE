@@ -7,6 +7,8 @@ Example:
 
 With no ablation flags this is the unmodified NAAMSE baseline. Each run writes
 outputs/<arm>_seed<seed>_<timestamp>/{config.json, prompts.jsonl, final_state.json}.
+A run is skipped when a completed run (one with final_state.json) with the same
+ablation and run settings already exists; pass --force to rerun it anyway.
 """
 import argparse
 import asyncio
@@ -16,7 +18,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from src.experiments.ablation_config import AblationConfig, add_ablation_args, ablation_from_args
 
@@ -52,6 +54,9 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--max-concurrency", type=int, default=4, help="Parallel workers per iteration")
     run.add_argument("--output-dir", default="outputs", help="Parent directory for run output")
     run.add_argument("--dry-run", action="store_true", help="Print the resolved config and exit")
+    run.add_argument("--force", action="store_true", help="Rerun even if a completed run exists")
+    run.add_argument("--status", action="store_true",
+                     help="Print DONE or PENDING for this config and exit without running")
     add_ablation_args(parser)
     return parser
 
@@ -61,6 +66,21 @@ def make_run_dir(parent: str, ablation: AblationConfig, seed: int) -> Path:
     run_dir = Path(parent) / f"{ablation.arm_name}_seed{seed}_{stamp}"
     run_dir.mkdir(parents=True, exist_ok=False)
     return run_dir
+
+
+def find_completed_run(parent: str, config: Dict[str, Any]) -> Optional[Path]:
+    """Return an existing run dir with matching settings and a final_state.json, if any."""
+    seed = config["run"]["seed"]
+    for run_dir in sorted(Path(parent).glob(f"{config['arm']}_seed{seed}_*")):
+        if not (run_dir / "final_state.json").exists():
+            continue
+        try:
+            saved = json.loads((run_dir / "config.json").read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        if saved.get("ablation") == config["ablation"] and saved.get("run") == config["run"]:
+            return run_dir
+    return None
 
 
 def resolved_config(args: argparse.Namespace, ablation: AblationConfig) -> Dict[str, Any]:
@@ -86,6 +106,7 @@ def prompt_record(prompt: Dict[str, Any]) -> Dict[str, Any]:
         "judge_score": metadata.get("judge_score"),
         "judge_results": metadata.get("judge_results"),
         "mutation_type": metadata.get("mutation_type"),
+        "cluster_info": metadata.get("cluster_info"),
         "selector": metadata.get("selector"),
         "history": metadata.get("history"),
         "conversation": prompt.get("conversation_history"),
@@ -148,6 +169,15 @@ def main(argv: List[str] = None) -> int:
 
     if args.dry_run:
         print(json.dumps(config, indent=2))
+        return 0
+
+    completed = find_completed_run(args.output_dir, config)
+    if args.status:
+        print(f"{'DONE' if completed else 'PENDING':<8}{config['arm']} seed={args.seed}"
+              + (f"  -> {completed}" if completed else ""))
+        return 0
+    if completed and not args.force:
+        print(f"Skipping: completed run already exists -> {completed}")
         return 0
 
     run_dir = make_run_dir(args.output_dir, ablation, args.seed)

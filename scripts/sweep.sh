@@ -4,7 +4,10 @@
 # Usage: scripts/sweep.sh <target-url> [seeds...]
 #   e.g. scripts/sweep.sh http://localhost:5000 1 2 3 4 5
 # Env overrides: ITERATIONS (default 7), MUTATIONS (default 4),
-#                OUTPUT_DIR (default outputs), DRY_RUN=1 to only print configs.
+#                OUTPUT_DIR (default outputs), DRY_RUN=1 to only print configs,
+#                STATUS=1 to list which runs are done/pending without running,
+#                FORCE=1 to rerun runs that already completed.
+# Completed runs (matching config + final_state.json) are skipped automatically.
 set -euo pipefail
 
 TARGET="${1:?usage: scripts/sweep.sh <target-url> [seeds...]}"
@@ -16,6 +19,8 @@ MUTATIONS="${MUTATIONS:-4}"
 OUTPUT_DIR="${OUTPUT_DIR:-outputs}"
 EXTRA=()
 [ "${DRY_RUN:-0}" = "1" ] && EXTRA+=(--dry-run)
+[ "${STATUS:-0}" = "1" ] && EXTRA+=(--status)
+[ "${FORCE:-0}" = "1" ] && EXTRA+=(--force)
 
 # One line per arm: the ablation flags that differ from the baseline.
 ARMS=(
@@ -31,7 +36,7 @@ ARMS=(
 
 for seed in "${SEEDS[@]}"; do
   for arm in "${ARMS[@]}"; do
-    echo "=== seed=${seed} arm: ${arm}"
+    [ "${STATUS:-0}" = "1" ] || echo "=== seed=${seed} arm: ${arm}"
     # shellcheck disable=SC2086  # arm is intentionally word-split into flags
     uv run python -m src.experiments.run_ablation \
       --target "${TARGET}" --iterations "${ITERATIONS}" --mutations "${MUTATIONS}" \
