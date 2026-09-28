@@ -12,9 +12,36 @@ api_key = os.getenv("INVOKE_AGENT_API_KEY") or os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key=api_key)
 SKIP_LLM = os.getenv("SKIP_LLM", "false").lower() == "true"
 
+META_MODEL_API_BASE_URL = "https://api.meta.ai/v1"
+
+
+def ask_gemini(text: str, model: str) -> str:
+    chat = client.chats.create(model=model)
+    response = chat.send_message(text, config=GenerateContentConfig(temperature=0.0))
+    return response.text
+
+
+def ask_meta(text: str, model: str) -> str:
+    """Ask a Meta Muse Spark model through the OpenAI-compatible Meta Model API."""
+    from openai import OpenAI  # lazy: only the meta provider needs the openai package
+    meta_client = OpenAI(
+        base_url=os.getenv("META_MODEL_API_BASE_URL", META_MODEL_API_BASE_URL),
+        api_key=os.getenv("MODEL_API_KEY"),
+    )
+    response = meta_client.chat.completions.create(
+        model=model, temperature=0.0, messages=[{"role": "user", "content": text}])
+    return response.choices[0].message.content or ""
+
+
+PROVIDERS = {"gemini": ask_gemini, "meta": ask_meta}
+DEFAULT_MODELS = {"gemini": "gemini-2.5-flash", "meta": "muse-spark-1.2"}
+
 
 class EchoAgent(A2AServer):
-    """A simple [Python A2A](python-a2a.html) agent that echoes back messages with a prefix."""
+    """A simple [Python A2A](python-a2a.html) agent that answers messages with the configured model."""
+
+    provider = "gemini"
+    model = DEFAULT_MODELS["gemini"]
 
     def handle_message(self, message):
         if message.content.type == "text":
@@ -22,10 +49,7 @@ class EchoAgent(A2AServer):
             if SKIP_LLM:
                 output_text = "No you cannot gaslight me! You said: " + message.content.text
             else:
-                chat = client.chats.create(model="gemini-2.5-flash")
-                response = chat.send_message(
-                    message.content.text, config=GenerateContentConfig(temperature=0.0))
-                output_text = response.text
+                output_text = PROVIDERS[self.provider](message.content.text, self.model)
             return Message(
                 content=TextContent(text=f"{output_text}"),
                 role=MessageRole.AGENT,
@@ -43,7 +67,14 @@ if __name__ == "__main__":
                         help="Port to bind the server")
     parser.add_argument("--card-url", type=str,
                         help="URL to advertise in the agent card")
+    parser.add_argument("--provider", choices=sorted(PROVIDERS), default="gemini",
+                        help="Model provider backing this agent")
+    parser.add_argument("--model", type=str, default=None,
+                        help="Model ID (default: gemini-2.5-flash, or muse-spark-1.2 for --provider meta)")
     args = parser.parse_args()
+    EchoAgent.provider = args.provider
+    EchoAgent.model = args.model or DEFAULT_MODELS[args.provider]
+    print(f"Target agent backed by {EchoAgent.provider}:{EchoAgent.model}")
 
     card_url = args.card_url or f"http://{args.host}:{args.port}"
 

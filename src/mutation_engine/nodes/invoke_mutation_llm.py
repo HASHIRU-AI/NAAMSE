@@ -57,46 +57,7 @@ def get_or_create_agent(tools: list):
         sorted([tool.name if hasattr(tool, 'name') else str(tool) for tool in tools]))
 
     if tool_names not in _agent_cache:
-        import os
-        kwargs = {}
-        use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in ("true", "1")
-        gemini_model = os.getenv("MUTATION_ENGINE_MODEL") or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-
-        if use_vertexai:
-            if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
-                try:
-                    import google.auth
-                    # Request the correct scopes for Vertex AI
-                    scopes = ['https://www.googleapis.com/auth/cloud-platform']
-                    credentials, project = google.auth.default(scopes=scopes)
-                    kwargs["credentials"] = credentials
-                    if project:
-                        kwargs["project"] = project
-                except Exception as e:
-                    print(f"  [Warning] Failed to load Vertex credentials: {e}")
-        else:
-            api_key = os.getenv("MUTATION_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
-            if api_key:
-                kwargs["google_api_key"] = api_key
-
-        model = ChatGoogleGenerativeAI(
-            model=gemini_model,
-            **kwargs,
-            temperature=0,
-            safety_settings={
-                HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_DEROGATORY: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_TOXICITY: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_VIOLENCE: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_SEXUAL: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_MEDICAL: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_DANGEROUS: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY: HarmBlockThreshold.BLOCK_NONE,
-            })
+        model = _build_mutation_model()
 
         # If we have tools, don't use ToolStrategy for structured output
         # Let the agent call tools naturally and extract result from final message
@@ -122,6 +83,60 @@ def get_or_create_agent(tools: list):
         print(f"  [DEBUG] Using cached agent for tools: {tool_names}")
 
     return _agent_cache[tool_names]
+
+
+def _build_mutation_model():
+    """Chat model for the mutation agent; MUTATION_ENGINE_PROVIDER selects gemini (default) or meta."""
+    provider = os.getenv("MUTATION_ENGINE_PROVIDER", "gemini").lower()
+    if provider == "meta":
+        from src.behavioral_engine.moe_score_subgraph.llm_judges.meta_judge import MetaJudge
+        # Separate variable: MUTATION_ENGINE_MODEL is commonly set to a Gemini model in .env
+        meta_model = os.getenv("MUTATION_ENGINE_META_MODEL", "muse-spark-1.2")
+        print(f"  [Mutation Subgraph] Using Meta mutation model: {meta_model}")
+        return MetaJudge(model_name=meta_model).get_model()
+    if provider != "gemini":
+        raise ValueError(f"MUTATION_ENGINE_PROVIDER must be 'gemini' or 'meta', got {provider!r}")
+
+    kwargs = {}
+    use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() in ("true", "1")
+    gemini_model = os.getenv("MUTATION_ENGINE_MODEL") or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
+    if use_vertexai:
+        if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+            try:
+                import google.auth
+                # Request the correct scopes for Vertex AI
+                scopes = ['https://www.googleapis.com/auth/cloud-platform']
+                credentials, project = google.auth.default(scopes=scopes)
+                kwargs["credentials"] = credentials
+                if project:
+                    kwargs["project"] = project
+            except Exception as e:
+                print(f"  [Warning] Failed to load Vertex credentials: {e}")
+    else:
+        api_key = os.getenv("MUTATION_ENGINE_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if api_key:
+            kwargs["google_api_key"] = api_key
+
+    model = ChatGoogleGenerativeAI(
+        model=gemini_model,
+        **kwargs,
+        temperature=0,
+        safety_settings={
+            HarmCategory.HARM_CATEGORY_UNSPECIFIED: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DEROGATORY: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_TOXICITY: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_VIOLENCE: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUAL: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_MEDICAL: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+            HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY: HarmBlockThreshold.BLOCK_NONE,
+        })
+    return model
 
 
 def invoke_llm(prompt: BasePrompt, mutation: Mutation, task_seed: int, database: DataSource) -> BasePrompt:

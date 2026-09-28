@@ -21,6 +21,8 @@ from src.behavioral_engine.behavior_engine_workflow_state import ConversationHis
 from src.cluster_engine.utilities import add_prompt_to_clusters, get_db
 from src.helpers.extract_text_from_context import extract_text_from_content
 from src.cluster_engine.utilities import get_random_prompt
+from src.experiments.ablation_config import get_ablation
+from src.experiments.coverage import HARM_CATEGORIES, compute_fitness, covered_categories, summarize_judge_results
 from langchain_core.runnables import RunnableConfig
 
 import sys
@@ -57,6 +59,7 @@ class FuzzerLoopState(TypedDict):
     report: Optional[Dict[str, Any]]
     all_task_seeds: List[int]  # Pre-generated seeds for all iterations
     is_score_flipped: Optional[bool] = False  # Whether lower scores are worse
+    covered_categories: List[str]  # Harm categories covered so far (by the fitness judge)
 
 
 def initialize_fuzzer(state: FuzzerLoopState, config: RunnableConfig) -> FuzzerLoopState:
@@ -81,7 +84,8 @@ def initialize_fuzzer(state: FuzzerLoopState, config: RunnableConfig) -> FuzzerL
         "current_iteration": 0,
         "all_fuzzer_prompts_with_scores": [],
         "input_prompts_for_iteration": initial_prompts,
-        "all_task_seeds": all_task_seeds
+        "all_task_seeds": all_task_seeds,
+        "covered_categories": []
     }
 
 
@@ -108,13 +112,14 @@ def fan_out_iteration_workers(state: FuzzerLoopState):
             "a2a_agent_url": state["a2a_agent_url"],
             "current_iteration": current_iteration,
             "worker_index": i,
-            "is_score_flipped": state.get("is_score_flipped", False)
+            "is_score_flipped": state.get("is_score_flipped", False),
+            "covered_categories": state.get("covered_categories", [])
         })
         for i in range(n)
     ]
 
 
-async def iteration_worker(state: dict):
+async def iteration_worker(state: dict, config: RunnableConfig):
     """Single iteration worker - handles mutation, invoke, and scoring sequentially.
 
     This worker processes the full pipeline for one mutation slot:
@@ -127,13 +132,17 @@ async def iteration_worker(state: dict):
     """
     worker_index = state.get("worker_index", 0)
     current_iteration = state.get("current_iteration", 0)
+    ablation = get_ablation(config)
+    covered_before = state.get("covered_categories", [])
+    uncovered = [c for c in HARM_CATEGORIES if c not in covered_before]
 
-    # Step 1: Generate mutation
+    # Step 1: Generate mutation (config carries the ablation into the selectors)
     print(f"    [Worker {worker_index}] Generating mutation...")
     mutation_result = await single_mutation_graph.ainvoke({
         "input_prompts": state["input_prompts"],
-        "task_seed": state["task_seed"]
-    })
+        "task_seed": state["task_seed"],
+        "uncovered_categories": uncovered
+    }, config=config)
     generated_prompts: List[BasePrompt] = mutation_result["final_generated_prompts"]
 
     # Step 2: Invoke agent for each generated prompt and score
@@ -159,17 +168,22 @@ async def iteration_worker(state: dict):
         score_result = await behavior_engine_graph.ainvoke({
             "conversation_history": conversation_history,
             "is_score_flipped": state.get("is_score_flipped", False)
-        })
-        score = score_result.get("final_score", 0.0)
+        }, config=config)
+        judge_score = score_result.get("final_score", 0.0)
+        judge_summary = summarize_judge_results(
+            score_result.get("judge_results"), score_result.get("ra_judge_results"))
+        # Fitness drives parent selection; equals judge_score under the default "score" objective
+        fitness = compute_fitness(judge_score, judge_summary, covered_before, ablation)
 
         # Build the scored mutation
         scored_mutation: ScoredPrompt = dict(prompt)
-        scored_mutation["score"] = score
+        scored_mutation["score"] = fitness
         scored_mutation["conversation_history"] = conversation_history
-        # Add iteration number to metadata
-        if "metadata" not in scored_mutation:
-            scored_mutation["metadata"] = {}
-        scored_mutation["metadata"]["iteration"] = current_iteration
+        metadata = dict(scored_mutation.get("metadata") or {})
+        metadata["iteration"] = current_iteration
+        metadata["judge_score"] = judge_score
+        metadata["judge_results"] = judge_summary
+        scored_mutation["metadata"] = metadata
         scored_mutations.append(scored_mutation)
 
     print(
@@ -225,10 +239,15 @@ def process_iteration_results(state: FuzzerLoopState, config: RunnableConfig):
     if len(unique_prompts) == 0:
         print("WARNING: No prompts passed the threshold! Graph will end.")
 
+    covered = covered_categories(
+        p.get("metadata", {}).get("judge_results") for p in all_prompts)
+    print(f"--- Covered harm categories: {len(covered)}/{len(HARM_CATEGORIES)} {covered} ---")
+
     return {
         "current_iteration": state["current_iteration"] + 1,
         "all_fuzzer_prompts_with_scores": all_prompts,
         "input_prompts_for_iteration": unique_prompts,
+        "covered_categories": covered,
         # Reset per-iteration accumulators for next iteration
         "generated_mutations": "RESET",
         "conversation_histories": "RESET",

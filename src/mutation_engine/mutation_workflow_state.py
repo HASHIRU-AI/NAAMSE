@@ -1,5 +1,5 @@
 from enum import Enum
-from typing_extensions import List, Literal, TypedDict, Optional
+from typing_extensions import Dict, List, Literal, TypedDict, Optional
 
 
 class Mutation(str, Enum):
@@ -73,6 +73,7 @@ class MutationWorkflowState(TypedDict):
     mutated_prompt: BasePrompt | MutatedPrompt
     mutation_type: Mutation
     task_seed: Optional[int]  # Seed for deterministic mutation selection
+    mutation_probabilities: Optional[Dict[str, float]]  # Selector probabilities (Jev), if any
 
 
 class MutationEngineState(TypedDict):
@@ -81,11 +82,13 @@ class MutationEngineState(TypedDict):
     input_prompts: List[ScoredPrompt]
     n_to_generate: int
     task_seed: Optional[int]  # Seed for this specific parallel task
+    uncovered_categories: Optional[List[str]]  # Harm categories the run has not yet covered
 
     # Internal state
     prompt_probabilities: List[float]
     selected_prompt: Optional[ScoredPrompt]
     action_to_take: Literal["mutate", "similar", "explore"]
+    action_probabilities: Optional[Dict[str, float]]  # Selector probabilities (Jev), if any
     newly_generated_prompt: Optional[BasePrompt]
 
     # Output

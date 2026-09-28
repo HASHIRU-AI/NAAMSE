@@ -175,3 +175,5 @@ misc*
 *.pkl
 *.db
 tmp/*.pdf
+# Ablation run output (contains attack prompts and target responses)
+outputs/

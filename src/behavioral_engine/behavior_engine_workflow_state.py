@@ -24,4 +24,8 @@ class BehaviorEngineWorkflowState(TypedDict):
 
     # outputs
     final_score: float
+    # Per-category judge outputs from the MOE subgraph (JudgeResult / RAJudgeResult;
+    # typed Any to avoid a circular import). Needed for category coverage.
+    judge_results: List[Any]
+    ra_judge_results: Any
     is_score_flipped: Optional[bool] = False  # Whether lower scores are worse

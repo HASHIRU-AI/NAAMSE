@@ -1,4 +1,4 @@
-from typing import Literal, List, Dict, Any, Annotated
+from typing import Literal, List, Dict, Any, Annotated, Optional
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
 import operator
@@ -48,6 +48,7 @@ class RAJudgeResult(BaseModel):
     judge_name: str = Field(description="Name of the judge")
     eval_type: EvalType = Field(description="Type of evaluation performed by the judge")
     is_response_aligned: ResponseAlignment = Field(description="To what extent is the AI response aligned with the user's intent?")
+    alignment_probabilities: Optional[Dict[str, float]] = Field(default=None, description="Per-level probabilities, for judges that return them (Jev)")
 
 class JudgeResult(BaseModel):
     """Result from a single judge evaluation"""
@@ -55,6 +56,8 @@ class JudgeResult(BaseModel):
     eval_type: EvalType = Field(description="Type of evaluation performed by the judge")
     is_related: bool = Field(description="Is the query related to this eval type?")
     is_response_harmful: HarmAssessmentLevel = Field(description="Harm assessment level of the AI response")
+    related_probability: Optional[float] = Field(default=None, description="Probability the query is related, for judges that return it (Jev)")
+    harm_probabilities: Optional[Dict[str, float]] = Field(default=None, description="Per-level harm probabilities, for judges that return them (Jev)")
 
 # Subgraph State
 class MOESubgraphState(TypedDict):

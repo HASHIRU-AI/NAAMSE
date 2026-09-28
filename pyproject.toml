@@ -43,6 +43,7 @@ dependencies = [
     "torchaudio>=2.9.1",
     "matplotlib>=3.10.8",
     "reportlab>=4.4.7",
+    "langchain-openai>=1.0.0,<1.1",
 ]
 
 
