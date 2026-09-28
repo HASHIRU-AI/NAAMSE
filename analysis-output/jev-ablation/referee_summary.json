@@ -1,0 +1,68 @@
+{
+  "judge_calls": 458,
+  "ungated_equivalent": 980,
+  "agreement": {
+    "n": 140,
+    "alignment_exact_agreement": 0.7714285714285715,
+    "kappa_unweighted": 0.6428001913570404,
+    "kappa_quadratic": 0.7557251908396947,
+    "refusal_agreement": 0.8571428571428571,
+    "jev_refusal_rate": 0.4928571428571429,
+    "meta_refusal_rate": 0.6214285714285714,
+    "score_spearman": 0.7818561405100952,
+    "successes_jev": 4,
+    "successes_meta": 7,
+    "successes_both": 3,
+    "confusion_jev_rows_meta_cols": {
+      "full_refusal": {
+        "full_refusal": 5,
+        "weak_refusal": 4,
+        "weak_acceptance": 0,
+        "full_acceptance": 0
+      },
+      "weak_refusal": {
+        "full_refusal": 0,
+        "weak_refusal": 59,
+        "weak_acceptance": 0,
+        "full_acceptance": 1
+      },
+      "weak_acceptance": {
+        "full_refusal": 0,
+        "weak_refusal": 11,
+        "weak_acceptance": 10,
+        "full_acceptance": 2
+      },
+      "full_acceptance": {
+        "full_refusal": 1,
+        "weak_refusal": 7,
+        "weak_acceptance": 6,
+        "full_acceptance": 34
+      }
+    }
+  },
+  "calibration_all": {
+    "refusal": {
+      "n": 140,
+      "brier": 0.12621714285714286,
+      "ece": 0.15385714285714283,
+      "mean_p": 0.474,
+      "meta_rate": 0.6214285714285714
+    }
+  },
+  "calibration_ungated": {
+    "refusal": {
+      "n": 53,
+      "brier": 0.01559245283018868,
+      "ece": 0.03773584905660377,
+      "mean_p": 0.03773584905660377,
+      "meta_rate": 0.0
+    },
+    "relatedness": {
+      "n": 318,
+      "brier": 0.059041194968553444,
+      "ece": 0.03084905660377358,
+      "mean_p": 0.09569182389937106,
+      "meta_rate": 0.12578616352201258
+    }
+  }
+}

@@ -1,0 +1,257 @@
+{
+  "n_parents": {
+    "original": 66,
+    "names_only": 66,
+    "anonymized": 66,
+    "swapped": 66,
+    "evidence": 66
+  },
+  "conditions": {
+    "original": {
+      "top3": {
+        "persona_roleplay_mutation": 0.242,
+        "adversarial_prefix_mutation": 0.223,
+        "semantic_steganography_mutation": 0.155
+      },
+      "p_steg_plus_synonym": 0.175,
+      "effective_n_operators": 9.27,
+      "distinct_argmax": 7,
+      "argmax_counts": {
+        "persona_roleplay_mutation": 26,
+        "adversarial_prefix_mutation": 21,
+        "semantic_steganography_mutation": 8,
+        "contextual_framing_mutation": 5,
+        "code_exec": 3
+      },
+      "mean_js_to_condition_mean": 0.127,
+      "spearman_prob_vs_observed_mean_score": -0.114
+    },
+    "names_only": {
+      "top3": {
+        "deep_inception_mutation": 0.191,
+        "persona_roleplay_mutation": 0.183,
+        "contextual_framing_mutation": 0.119
+      },
+      "p_steg_plus_synonym": 0.1,
+      "effective_n_operators": 12.29,
+      "distinct_argmax": 8,
+      "argmax_counts": {
+        "deep_inception_mutation": 22,
+        "persona_roleplay_mutation": 15,
+        "contextual_framing_mutation": 8,
+        "semantic_steganography_mutation": 6,
+        "code_exec": 5
+      },
+      "mean_js_to_condition_mean": 0.16,
+      "spearman_prob_vs_observed_mean_score": -0.277
+    },
+    "anonymized": {
+      "top3": {
+        "adversarial_prefix_mutation": 0.221,
+        "persona_roleplay_mutation": 0.22,
+        "semantic_steganography_mutation": 0.162
+      },
+      "p_steg_plus_synonym": 0.189,
+      "effective_n_operators": 9.73,
+      "distinct_argmax": 7,
+      "argmax_counts": {
+        "adversarial_prefix_mutation": 30,
+        "persona_roleplay_mutation": 16,
+        "semantic_steganography_mutation": 12,
+        "many_shot_jailbreaking": 5,
+        "artprompt": 1
+      },
+      "mean_js_to_condition_mean": 0.094,
+      "spearman_prob_vs_observed_mean_score": -0.08
+    },
+    "swapped": {
+      "top3": {
+        "contextual_framing_mutation": 0.227,
+        "code_exec": 0.212,
+        "mathematical_attack": 0.176
+      },
+      "p_steg_plus_synonym": 0.017,
+      "effective_n_operators": 10.02,
+      "distinct_argmax": 7,
+      "argmax_counts": {
+        "contextual_framing_mutation": 25,
+        "code_exec": 21,
+        "mathematical_attack": 14,
+        "semantic_steganography_mutation": 2,
+        "sata_assistive_task_mutation": 2
+      },
+      "mean_js_to_condition_mean": 0.11,
+      "spearman_prob_vs_observed_mean_score": 0.065
+    },
+    "evidence": {
+      "top3": {
+        "many_shot_jailbreaking": 0.601,
+        "payload_splitting": 0.187,
+        "mathematical_attack": 0.088
+      },
+      "p_steg_plus_synonym": 0.024,
+      "effective_n_operators": 4.0,
+      "distinct_argmax": 2,
+      "argmax_counts": {
+        "many_shot_jailbreaking": 58,
+        "payload_splitting": 8
+      },
+      "mean_js_to_condition_mean": 0.069,
+      "spearman_prob_vs_observed_mean_score": 0.479
+    }
+  },
+  "swapped_follows": {
+    "corr_with_original_by_name": 0.194,
+    "corr_with_original_by_description": 0.832,
+    "mass_on_key_semantic_steganography": 0.017,
+    "mass_on_key_carrying_steganography_description": 0.227
+  },
+  "anonymized_corr_with_original": 0.906,
+  "repeat_max_abs_prob_diff": {
+    "n": 20,
+    "median": 0.020000000000000018,
+    "max": 0.05
+  },
+  "mean_probs": {
+    "original": {
+      "adversarial_poetry_mutation": 0.0012,
+      "adversarial_prefix_mutation": 0.2225,
+      "artprompt": 0.0086,
+      "cipher_mutation": 0.0055,
+      "code_exec": 0.0342,
+      "contextual_framing_mutation": 0.1095,
+      "darkcite": 0.0103,
+      "deep_inception_mutation": 0.0079,
+      "dual_response_divider_mutation": 0.0382,
+      "echo": 0.0231,
+      "emoji": 0.0,
+      "game_theory_attack": 0.0012,
+      "language_games_mutation": 0.0124,
+      "language_translation_mutation": 0.0015,
+      "many_shot_jailbreaking": 0.0603,
+      "mathematical_attack": 0.0,
+      "memory_prepend": 0.0036,
+      "multilingual_mix_mutation": 0.0017,
+      "narrative_displacement": 0.0226,
+      "payload_splitting": 0.005,
+      "persona_roleplay_mutation": 0.2424,
+      "sata_assistive_task_mutation": 0.0108,
+      "semantic_steganography_mutation": 0.1553,
+      "synonym_mutation": 0.0197,
+      "task_concurrency_attack": 0.0005,
+      "unicode_mutation": 0.002
+    },
+    "names_only": {
+      "adversarial_poetry_mutation": 0.0124,
+      "adversarial_prefix_mutation": 0.0902,
+      "artprompt": 0.0009,
+      "cipher_mutation": 0.032,
+      "code_exec": 0.0463,
+      "contextual_framing_mutation": 0.1187,
+      "darkcite": 0.0074,
+      "deep_inception_mutation": 0.1912,
+      "dual_response_divider_mutation": 0.0108,
+      "echo": 0.0067,
+      "emoji": 0.0002,
+      "game_theory_attack": 0.0003,
+      "language_games_mutation": 0.0353,
+      "language_translation_mutation": 0.0033,
+      "many_shot_jailbreaking": 0.0353,
+      "mathematical_attack": 0.0002,
+      "memory_prepend": 0.0197,
+      "multilingual_mix_mutation": 0.0114,
+      "narrative_displacement": 0.0543,
+      "payload_splitting": 0.0164,
+      "persona_roleplay_mutation": 0.183,
+      "sata_assistive_task_mutation": 0.0129,
+      "semantic_steganography_mutation": 0.0936,
+      "synonym_mutation": 0.0064,
+      "task_concurrency_attack": 0.002,
+      "unicode_mutation": 0.0094
+    },
+    "anonymized": {
+      "adversarial_poetry_mutation": 0.0011,
+      "adversarial_prefix_mutation": 0.2208,
+      "artprompt": 0.0095,
+      "cipher_mutation": 0.0112,
+      "code_exec": 0.039,
+      "contextual_framing_mutation": 0.0323,
+      "darkcite": 0.0139,
+      "deep_inception_mutation": 0.0003,
+      "dual_response_divider_mutation": 0.0159,
+      "echo": 0.0282,
+      "emoji": 0.0,
+      "game_theory_attack": 0.002,
+      "language_games_mutation": 0.0103,
+      "language_translation_mutation": 0.0067,
+      "many_shot_jailbreaking": 0.1318,
+      "mathematical_attack": 0.0006,
+      "memory_prepend": 0.0086,
+      "multilingual_mix_mutation": 0.0008,
+      "narrative_displacement": 0.0316,
+      "payload_splitting": 0.0041,
+      "persona_roleplay_mutation": 0.2201,
+      "sata_assistive_task_mutation": 0.0083,
+      "semantic_steganography_mutation": 0.162,
+      "synonym_mutation": 0.0267,
+      "task_concurrency_attack": 0.0021,
+      "unicode_mutation": 0.012
+    },
+    "swapped": {
+      "adversarial_poetry_mutation": 0.0023,
+      "adversarial_prefix_mutation": 0.0076,
+      "artprompt": 0.0062,
+      "cipher_mutation": 0.008,
+      "code_exec": 0.2123,
+      "contextual_framing_mutation": 0.2269,
+      "darkcite": 0.0052,
+      "deep_inception_mutation": 0.0065,
+      "dual_response_divider_mutation": 0.0012,
+      "echo": 0.0173,
+      "emoji": 0.0036,
+      "game_theory_attack": 0.0215,
+      "language_games_mutation": 0.039,
+      "language_translation_mutation": 0.0222,
+      "many_shot_jailbreaking": 0.071,
+      "mathematical_attack": 0.176,
+      "memory_prepend": 0.0005,
+      "multilingual_mix_mutation": 0.0156,
+      "narrative_displacement": 0.0067,
+      "payload_splitting": 0.0059,
+      "persona_roleplay_mutation": 0.0121,
+      "sata_assistive_task_mutation": 0.0937,
+      "semantic_steganography_mutation": 0.0165,
+      "synonym_mutation": 0.0003,
+      "task_concurrency_attack": 0.0041,
+      "unicode_mutation": 0.0178
+    },
+    "evidence": {
+      "adversarial_poetry_mutation": 0.0003,
+      "adversarial_prefix_mutation": 0.0064,
+      "artprompt": 0.0038,
+      "cipher_mutation": 0.0039,
+      "code_exec": 0.0206,
+      "contextual_framing_mutation": 0.0097,
+      "darkcite": 0.0006,
+      "deep_inception_mutation": 0.0006,
+      "dual_response_divider_mutation": 0.0255,
+      "echo": 0.0078,
+      "emoji": 0.0,
+      "game_theory_attack": 0.0005,
+      "language_games_mutation": 0.0047,
+      "language_translation_mutation": 0.0,
+      "many_shot_jailbreaking": 0.6013,
+      "mathematical_attack": 0.0884,
+      "memory_prepend": 0.0017,
+      "multilingual_mix_mutation": 0.0,
+      "narrative_displacement": 0.0012,
+      "payload_splitting": 0.1873,
+      "persona_roleplay_mutation": 0.0108,
+      "sata_assistive_task_mutation": 0.0003,
+      "semantic_steganography_mutation": 0.017,
+      "synonym_mutation": 0.0067,
+      "task_concurrency_attack": 0.0,
+      "unicode_mutation": 0.0009
+    }
+  }
+}

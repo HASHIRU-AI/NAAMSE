@@ -177,3 +177,6 @@ misc*
 tmp/*.pdf
 # Ablation run output (contains attack prompts and target responses)
 outputs/
+
+# Blind labeling sheet (contains attack prompts and target responses; regenerate with scripts/make_label_sheet.py)
+analysis-output/jev-ablation/labeling/label_sheet.csv

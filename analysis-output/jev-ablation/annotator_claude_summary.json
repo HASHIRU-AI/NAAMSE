@@ -1,0 +1,137 @@
+{
+  "annotator": "claude",
+  "n_items": 103,
+  "label_confidence": {
+    "high": 75,
+    "medium": 26,
+    "low": 2
+  },
+  "vs_meta": {
+    "n": 103,
+    "exact": 0.8446601941747572,
+    "kappa": 0.7424597593373965,
+    "kappa_quadratic": 0.8173863311409779,
+    "refusal_agreement": 0.912621359223301,
+    "judge_refusal_rate": 0.33980582524271846,
+    "label_refusal_rate": 0.27184466019417475,
+    "harm_agreement": 0.9611650485436893,
+    "harm_judge_yes": 4,
+    "harm_label_yes": 0,
+    "harm_both": 0,
+    "judge_more_compliant": 5,
+    "judge_less_compliant": 11,
+    "confusion_judge_rows": {
+      "full_refusal": {
+        "full_refusal": 1,
+        "weak_refusal": 0,
+        "weak_acceptance": 0,
+        "full_acceptance": 0
+      },
+      "weak_refusal": {
+        "full_refusal": 0,
+        "weak_refusal": 26,
+        "weak_acceptance": 3,
+        "full_acceptance": 5
+      },
+      "weak_acceptance": {
+        "full_refusal": 0,
+        "weak_refusal": 1,
+        "weak_acceptance": 11,
+        "full_acceptance": 3
+      },
+      "full_acceptance": {
+        "full_refusal": 0,
+        "weak_refusal": 0,
+        "weak_acceptance": 4,
+        "full_acceptance": 49
+      }
+    }
+  },
+  "vs_jev": {
+    "n": 22,
+    "exact": 0.8181818181818182,
+    "kappa": 0.48235294117647054,
+    "kappa_quadratic": 0.37735849056603776,
+    "refusal_agreement": 0.8636363636363636,
+    "judge_refusal_rate": 0.09090909090909091,
+    "label_refusal_rate": 0.13636363636363635,
+    "harm_agreement": 0.9545454545454546,
+    "harm_judge_yes": 1,
+    "harm_label_yes": 0,
+    "harm_both": 0,
+    "judge_more_compliant": 3,
+    "judge_less_compliant": 1,
+    "confusion_judge_rows": {
+      "full_refusal": {
+        "full_refusal": 0,
+        "weak_refusal": 0,
+        "weak_acceptance": 0,
+        "full_acceptance": 0
+      },
+      "weak_refusal": {
+        "full_refusal": 0,
+        "weak_refusal": 1,
+        "weak_acceptance": 0,
+        "full_acceptance": 1
+      },
+      "weak_acceptance": {
+        "full_refusal": 0,
+        "weak_refusal": 1,
+        "weak_acceptance": 1,
+        "full_acceptance": 0
+      },
+      "full_acceptance": {
+        "full_refusal": 1,
+        "weak_refusal": 0,
+        "weak_acceptance": 1,
+        "full_acceptance": 16
+      }
+    }
+  },
+  "successes": {
+    "n": 13,
+    "label_harmful": 0,
+    "by_judge": {
+      "jev": {
+        "size": 4,
+        "sum": 0
+      },
+      "meta": {
+        "size": 9,
+        "sum": 0
+      }
+    }
+  },
+  "refusal_gate": {
+    "n_judge_refusals": 30,
+    "label_harmful": 0,
+    "label_refusal": 25,
+    "label_refused_but_harmful_all_items": 0
+  },
+  "by_stratum": {
+    "near_miss": {
+      "n": 45,
+      "label_harmful": 0,
+      "label_refusal": 0.022,
+      "meta_refusal": 0.111
+    },
+    "refusal": {
+      "n": 30,
+      "label_harmful": 0,
+      "label_refusal": 0.833,
+      "meta_refusal": 0.967
+    },
+    "success": {
+      "n": 13,
+      "label_harmful": 0,
+      "label_refusal": 0.0,
+      "meta_refusal": 0.0
+    },
+    "weak_acceptance": {
+      "n": 15,
+      "label_harmful": 0,
+      "label_refusal": 0.133,
+      "meta_refusal": 0.067
+    }
+  }
+}
