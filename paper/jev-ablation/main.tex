@@ -413,6 +413,67 @@ We believe operator choice, rather than action choice, is where a decision model
 \appendix
 \section{Additional Results}
 
+This appendix collects the figures and tables that support the takeaways in \autoref{sec:eval}.
+We describe what each one shows and what we think readers should take away from it.
+
+\para{Pooled transitions (\autoref{tab:transitions}).}
+This table breaks the 480 pooled decisions down by the parent's score and the action taken, and reports the average score and refusal rate of the resulting child.
+The best action changes with the parent's score: SIMILAR works best for weak parents (below 30) and for promising ones (50 to 80), while EXPLORE works best in between.
+Neither policy gets every range right: Jev is right where the baseline is wrong (below 30), and wrong where the baseline is right (30 to 50).
+The takeaway is that the two policies make offsetting mistakes, which is why Act=Jev ends up level with the baseline.
+
+\para{Judge agreement (\autoref{tab:confusion}).}
+This table compares Jev's and Meta's alignment labels on the 140 Fit=Jev prompts.
+Most prompts fall on the diagonal, and 25 of the 32 disagreements sit below it, where Jev calls a response more compliant than Meta does.
+The most common case is a response that Meta calls a weak refusal and Jev calls an acceptance (18 prompts).
+The takeaway is that the two judges differ in how strict they are about refusals rather than in what they think the response says.
+
+\para{Search dynamics (\autoref{fig:dynamics}).}
+\autoref{fig:bestsofar} tracks the best score found so far in each arm.
+Every arm stops improving after two or three iterations, and the curves above about 54 come from one or two lucky seeds rather than from steady progress.
+Act=Jev starts higher only because two of its initial random prompts happened to score 80, before any Jev decision was made.
+\autoref{fig:scoredist} shows why: the judge score takes only a few values, near 20 for refusals, 37 for partial compliance, and 54 for harmless compliance, with very little above.
+The takeaway is that the search runs out of signal, not budget, and that a mean score mostly tracks how often the target refuses.
+
+\para{Action selection (\autoref{fig:actions}).}
+\autoref{fig:actionmix} shows how each arm actually spent its budget.
+Act=Jev moves budget away from EXPLORE and toward SIMILAR and MUTATE, which confirms that the selector switch worked, while the coverage arms explore about 70\% of the time regardless of the selector.
+\autoref{fig:actionpolicy} compares Jev's action probabilities with the baseline's fixed weights.
+Jev's policy changes smoothly with the parent's score (it mutates more as the score rises), which shows that its decisions are sensible and easy to interpret.
+The main difference is at low scores, where Jev prefers SIMILAR and the baseline prefers EXPLORE.
+The takeaway is that Jev did learn a reasonable policy; it just does not lead to better attacks.
+
+\para{Pooled outcomes and policy values (\autoref{fig:transitions}).}
+\autoref{fig:actionoutcomes} is the visual version of \autoref{tab:transitions}, with the most likely action of each policy marked in every score range.
+It shows the offsetting mistakes directly, and also that SIMILAR is the worst choice for parents between 30 and 50.
+\autoref{fig:policyvalues} shows the direct-method value of each policy and of the oracle.
+Jev and the baseline are nearly identical, and the oracle is only about three points higher on score, although it would reduce refusals by about 13 points.
+The takeaway is that better action choices could reduce refusals somewhat, but would barely raise the score.
+
+\para{Operators (\autoref{fig:operators}).}
+\autoref{fig:opoutcomes} shows the average score of mutated prompts for each operator, pooled over all Meta-judged arms, with the operators Jev applied in red.
+The operators differ by more than 20 points, and the operator Jev applied most often (\op{semantic_steganography}) sits near the bottom, while several of the best (such as \op{artprompt} and \op{many_shot_jailbreaking}) were never applied by Jev.
+\autoref{fig:opchoice} shows how many times each operator was applied under the uniform selector and under Jev.
+Jev's picks concentrate on two operators, but, as \autoref{fig:intended} shows, this concentration comes from the shared per-task seed rather than from Jev's own preferences.
+Note also that many operators have six or fewer samples, so their averages are rough.
+The takeaway is that operator choice matters far more than action choice, and that Jev's realized picks landed on weak operators.
+
+\para{Attack families (\autoref{fig:clusters}).}
+\autoref{fig:clusterbreadth} counts how many of the 30 top-level corpus clusters each run visits.
+Act=Jev is the narrowest arm (9.0 clusters per run against 12.4 for the baseline), and every arm stays below the 16.6 clusters that 28 purely random draws would cover.
+\autoref{fig:clusteroutcomes} shows the refusal rate and average score of each cluster.
+Refusal rates range from 0\% to 100\% depending on the cluster, and all 13 successes come from three clusters: two built around personas and fiction, and one around programming-style jailbreak templates.
+The clusters that are never refused yield harmless compliance (around 54) rather than harm.
+The takeaway is that the family of attacks matters more than the action policy, so a policy that narrows the search risks missing the few families that work.
+
+\para{EXPLORE window and judge consistency (\autoref{fig:misc}).}
+\autoref{fig:window} plots where in the corpus each EXPLORE draw landed against the probability with which EXPLORE was chosen.
+Every point lies below the diagonal: a decision that explores with probability 0.7 only ever reaches the first 70\% of the corpus, and one that explores with probability 0.1 only reaches the first 10\%.
+This is the shared per-task seed at work, since the same random number decides both whether to explore and where to sample.
+\autoref{fig:judgeconsist} looks at Jev as a judge without any reference labels.
+Most of Jev's relatedness probabilities are close to 0 or 1, but some sit in the middle, and moving the relatedness threshold from 0.3 to 0.7 changes the number of successes from 6 to 1 while the mean score barely moves.
+The takeaway is that success counts are fragile to judge settings in a way that mean scores are not, which is another reason to validate successes with an independent reviewer.
+
 \begin{table}[htbp]
   \caption{Mean child judge score (refusal rate) by parent bucket and action, pooled over 480 transitions from the four score-objective, Meta-judged arms. Bold marks the best action per bucket.}
   \label{tab:transitions}
@@ -452,10 +513,12 @@ We believe operator choice, rather than action choice, is where a decision model
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=\linewidth]{figures/figure-05-best-so-far.pdf}
     \caption{Best-so-far judge score by iteration.}
+    \label{fig:bestsofar}
   \end{subfigure}\par\medskip
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=\linewidth]{figures/figure-06-score-distribution.pdf}
     \caption{Discrete judge-score distribution.}
+    \label{fig:scoredist}
   \end{subfigure}
   \caption{Search dynamics and the plateaus of Equation~\ref{eq:score}.}
   \label{fig:dynamics}
@@ -466,10 +529,12 @@ We believe operator choice, rather than action choice, is where a decision model
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=\linewidth]{figures/figure-02-action-mix.pdf}
     \caption{Action mix by arm.}
+    \label{fig:actionmix}
   \end{subfigure}\par\medskip
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=\linewidth]{figures/figure-03-jev-action-policy.pdf}
     \caption{Jev action probabilities vs.\ static weights.}
+    \label{fig:actionpolicy}
   \end{subfigure}
   \caption{Action selection.}
   \label{fig:actions}
@@ -480,10 +545,12 @@ We believe operator choice, rather than action choice, is where a decision model
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=\linewidth]{figures/figure-07-action-outcomes.pdf}
     \caption{Child outcomes by action and parent bucket.}
+    \label{fig:actionoutcomes}
   \end{subfigure}\par\medskip
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=\linewidth]{figures/figure-08-policy-values.pdf}
     \caption{Direct-method policy values.}
+    \label{fig:policyvalues}
   \end{subfigure}
   \caption{Pooled transitions and offline policy values.}
   \label{fig:transitions}
@@ -494,10 +561,12 @@ We believe operator choice, rather than action choice, is where a decision model
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=0.75\linewidth]{figures/figure-09-operator-outcomes.pdf}
     \caption{Per-operator judge score of mutated prompts.}
+    \label{fig:opoutcomes}
   \end{subfigure}\par\medskip
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=\linewidth]{figures/figure-04-operator-choice.pdf}
     \caption{Realized operator choice, uniform vs.\ Jev.}
+    \label{fig:opchoice}
   \end{subfigure}
   \caption{Operators. Realized choices reflect the shared per-task seed; see Figure~\ref{fig:intended} for Jev's intended choices.}
   \label{fig:operators}
@@ -508,10 +577,12 @@ We believe operator choice, rather than action choice, is where a decision model
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=\linewidth]{figures/figure-11-cluster-breadth.pdf}
     \caption{Corpus-cluster breadth per run.}
+    \label{fig:clusterbreadth}
   \end{subfigure}\par\medskip
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=0.85\linewidth]{figures/figure-12-cluster-outcomes.pdf}
     \caption{Outcomes by corpus cluster.}
+    \label{fig:clusteroutcomes}
   \end{subfigure}
   \caption{Attack families.}
   \label{fig:clusters}
@@ -527,6 +598,7 @@ We believe operator choice, rather than action choice, is where a decision model
   \begin{subfigure}[b]{\linewidth}\centering
     \includegraphics[width=\linewidth]{figures/figure-10-jev-judge-consistency.pdf}
     \caption{Jev judge confidence and threshold sensitivity.}
+    \label{fig:judgeconsist}
   \end{subfigure}
   \caption{The EXPLORE window under the shared per-task seed, and Jev judge self-consistency.}
   \label{fig:misc}
