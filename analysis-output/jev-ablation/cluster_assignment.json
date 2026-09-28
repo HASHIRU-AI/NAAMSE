@@ -1,0 +1,9 @@
+{
+  "n_exact": 958,
+  "n_knn": 162,
+  "knn_loo_accuracy": 0.8352941176470589,
+  "knn_loo_n": 255,
+  "n_top_level_clusters": 30,
+  "random_28_draws_mean": 16.5562,
+  "random_28_draws_std": 1.7279009115108424
+}

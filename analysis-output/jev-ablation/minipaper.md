@@ -1,7 +1,7 @@
 # Probabilities Without Payoff: Replacing Hand-Built Decisions in Evolutionary Agent Fuzzing with a Calibrated Decision Model
 
-*Draft mini-paper, 2026-09-27. All numbers are computed by `scripts/analyze_ablation.py`
-and `scripts/analyze_pooled.py` from the 40 runs in `outputs/`. Figures are in `figures/`.*
+*Draft mini-paper, 2026-09-27. All numbers are computed by `scripts/analyze_ablation.py`,
+`scripts/analyze_pooled.py`, and `scripts/analyze_clusters.py` from the 40 runs in `outputs/`. Figures are in `figures/`.*
 
 ## Abstract
 
@@ -18,9 +18,12 @@ Pooling 480 individual decisions across arms bounds the effect of Jev's action p
 +0.1 [−0.7, +1.0] score points relative to the static thresholds. Even an in-sample oracle
 policy gains only +2.9 points. Jev's operator selection collapses onto 2 of 26 operators,
 and its most frequent choice (`semantic_steganography`, refused 90% of the time) ranks 19th
-of 25. Therefore, under a small budget against a refusal-heavy target, decision calibration
-is not the bottleneck: operator choice is where the leverage lies, and zero-shot selection
-from descriptions misses it. Analysis code and derived per-prompt tables are released with
+of 25. The one measurable effect of Jev's action policy is a cost: it narrows the search
+to fewer attack families (9.0 versus 12.4 corpus clusters per run), while all 13 successes
+come from 3 of the 26 clusters visited. Therefore, under a small budget against a
+refusal-heavy target, decision calibration is not the bottleneck: what the fuzzer attacks
+with (operator and attack family) carries the leverage, and zero-shot selection from
+descriptions misses it. Analysis code and derived per-prompt tables are released with
 NAAMSE.
 
 ## 1 Introduction
@@ -51,9 +54,11 @@ contributions:
 - **A controlled ablation of fuzzer control:** eight arms isolating Jev as action selector,
   operator selector, and fitness judge, each under a score and a coverage objective
   (40 runs, 1,120 attack prompts, identical budgets).
-- **A bounded null result for learned action selection:** pooling decisions across arms
-  bounds Jev's policy to within one score point of the static thresholds, and an oracle
-  bound shows that action selection itself has less than three points of headroom.
+- **A bounded null result for learned action selection, with a hidden cost:** pooling
+  decisions across arms bounds Jev's policy to within one score point of the static
+  thresholds, an oracle bound shows that action selection itself has less than three points
+  of headroom, and corpus-cluster analysis shows that Jev's policy narrows attack diversity
+  by roughly a quarter.
 - **A failure mode for zero-shot operator selection:** Jev concentrates 33 of 35 picks on
   two operators, one of which is among the weakest in the pool, while operator means span
   more than 20 points.
@@ -204,7 +209,36 @@ operators and operator means span more than 20 points, an order of magnitude mor
 action-selection headroom in Section 5.1. The failure is not that operator choice is
 irrelevant: it is that description-only, zero-shot selection chose badly.
 
-### 5.3 The coverage objective degenerates into random exploration
+### 5.3 Attack families: what the score metric hides
+
+The runner does not log the corpus cluster of each prompt, so we recover it offline. 958 of
+1,120 prompts match a corpus prompt verbatim; the remaining 162 (mostly MUTATE outputs)
+receive the majority top-level cluster of their ten nearest corpus prompts under the
+engine's embedding model (83.5% leave-one-out accuracy). These metrics were defined after
+the primary analysis, so we report them as exploratory.
+
+**Jev's action policy narrows the search.** Act=Jev visits 9.0 ± 2.7 of the 30 top-level
+clusters per run versus 12.4 ± 2.3 for the baseline, and its cluster entropy is lower by
+0.64 [0.23, 1.07] bits (raw p = 0.040, δ = −0.80; Figure 11). Restricted to exactly matched
+prompts (no kNN labels), the gap is 3.8 [2.0, 5.8] clusters (raw p = 0.024, δ = −0.92), and
+the same direction holds under the coverage objective (entropy −0.25 [−0.41, −0.09]). None
+of these contrasts survives Holm correction, but every interval excludes zero and the
+effect sizes are the largest in the study. The mechanism is the SIMILAR preference from
+Section 5.1: across all 40 runs, cluster breadth falls with the SIMILAR share
+(Spearman ρ = −0.81) while mean score rises with it (ρ = +0.61). Jev trades breadth for
+depth, and the depth does not convert into successes.
+
+**The attack family dominates the outcome.** Refusal rates by cluster span 0% ("Extensive
+Jailbreak Template Collection," which elicits only benign compliance) to 100% ("Substance
+Synthesis via Character Personas," among others; Figure 12). All 13 successes fall in three
+clusters, viz. "Demon & Amoral Entity Personas" (7), "Fictional Storytelling Roleplay" (4),
+and "Structured Programming-Style Jailbreak Frameworks" (2), and 12 of the 13 carry exact
+cluster labels. Every arm also stays below the breadth of pure random sampling (28 uniform
+corpus draws cover 16.6 ± 1.7 clusters). Taken together, which family of attacks the search
+samples matters more to the outcome than how the selector allocates actions, and a selector
+that narrows the family distribution risks missing the few families that work.
+
+### 5.4 The coverage objective degenerates into random exploration
 
 The coverage fitness assigns credit only for categories not yet covered, and a category
 is covered only by a high_risk or harmful verdict. At a 1.2% success rate this almost never
@@ -215,7 +249,7 @@ therefore random search in practice, and their contrasts do not test RQ1 or RQ3.
 coverage objective needs partial credit (for example, for low_risk or related responses) or
 a fallback to the score objective until the first category is covered.
 
-### 5.4 RQ2: What can be said about Jev as a judge without a referee
+### 5.5 RQ2: What can be said about Jev as a judge without a referee
 
 The Fit=Jev arm is scored by Jev, while all other arms are scored by Meta, so its higher
 mean score (34.9) and lower refusal rate (0.49 versus 0.69) cannot be attributed to the
@@ -244,7 +278,7 @@ and almost nothing above), and the quality of the operators applied. A fitness s
 cannot distinguish among the 98.8% of prompts that fail gives any selector, calibrated or
 not, little to exploit.
 
-Two design lessons follow. First, a decision model placed at a low-leverage decision point
+Three design lessons follow. First, a decision model placed at a low-leverage decision point
 cannot produce a large effect, so candidate decision points should be ranked by
 oracle headroom before a model is deployed at them (Section 5.1 provides such an estimate
 at no additional cost). Second, zero-shot selection over natural-language descriptions
@@ -253,6 +287,10 @@ operators: `semantic_steganography` "hides intent by swapping flagged words for 
 alternatives," and `synonym` "substitutes key words with WordNet alternatives." Against a
 refusal-heavy target, a description that promises filter evasion is an attractive answer to
 the question Jev is asked, yet the first of these operators is refused 90% of the time.
+Third, score alone is an incomplete objective for an attack-generation system. Jev's action
+policy looked neutral on score and still reduced attack-family diversity by roughly a
+quarter; given that successes concentrate in 3 of 26 families, diversity (corpus-cluster
+coverage) belongs in the evaluation of any selector, and the runner now logs it.
 
 ## 7 Limitations
 
@@ -265,6 +303,10 @@ the question Jev is asked, yet the first of these operators is refused 90% of th
 - **Observational pooling.** Transition and operator estimates pool decisions made by
   different selectors. Within-bucket differences in parent quality, and the operator mix
   within MUTATE, can confound them. The oracle bound is fitted in-sample and is optimistic.
+- **Post-hoc cluster analysis.** Corpus-cluster metrics were defined after the primary
+  analysis and 14% of prompts carry kNN-assigned clusters (about one in six of them wrong).
+  One successful prompt was written back into the corpus during the sweep (1 of 129k
+  prompts); it is excluded from the analysis.
 - **Coverage-arm parents.** Coverage runs record parent fitness (0) rather than parent
   judge score, so they are excluded from the transition analysis.
 - **Single target.** Results are specific to one refusal-heavy target. A more compliant
@@ -290,6 +332,8 @@ Replacing NAAMSE's hand-built decisions with Jev did not improve attack outcomes
 Muse Spark. Pooled evidence bounds the benefit of learned action selection to about one
 score point, shows that action selection has little headroom to begin with, and exposes a
 collapse in zero-shot operator selection onto an operator that is refused 90% of the time.
+The only measurable effect of Jev's action policy is a narrower search over attack
+families, in a setting where 3 of 26 families produce every success.
 Operator choice, not action choice, is where a decision model could matter, and it will
 need parent-conditioned context (and a fitness signal with more resolution) to do so.
 
@@ -327,3 +371,5 @@ arXiv:1706.04599, 2017.
 - Figure 9: `figures/figure-09-operator-outcomes.pdf`. Per-operator outcomes.
 - Figure 10: `figures/figure-10-jev-judge-consistency.pdf`. Jev judge confidence and
   threshold sensitivity.
+- Figure 11: `figures/figure-11-cluster-breadth.pdf`. Corpus-cluster breadth per run.
+- Figure 12: `figures/figure-12-cluster-outcomes.pdf`. Outcomes by corpus cluster.

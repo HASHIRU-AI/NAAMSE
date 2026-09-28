@@ -203,3 +203,79 @@ backed out of each stored score):
 
 This measures internal consistency and confidence only. Calibration or accuracy needs labels
 from another judge on the same conversations, which isn't available without new API calls.
+
+---
+
+# Corpus-cluster coverage (`scripts/analyze_clusters.py`, exploratory)
+
+Tables: `prompt_clusters.csv`, `cluster_run_metrics.csv`, `cluster_contrasts.csv`,
+`cluster_outcomes.csv`, `cluster_assignment.json`.
+
+## Cluster assignment
+- **Exact:** 958 of 1,120 prompts (85.5%) match a corpus prompt verbatim (`naamse.db`,
+  129,453 prompts, 30 top-level clusters) and get its cluster.
+- **kNN:** the other 162 (mostly MUTATE outputs) get the majority top-level cluster of their
+  k = 10 nearest corpus prompts (cosine similarity, all-MiniLM-L6-v2, the engine's model).
+- **kNN accuracy:** leave-one-out on the 255 unique exactly matched prompts gives 83.5%.
+- **Excluded:** the one prompt the sweep wrote back into the corpus (`NAAMSE_mutation`).
+- **Metrics:** distinct top-level clusters per run; Shannon entropy (bits) of the cluster
+  distribution per run; distinct clusters among exactly matched prompts only
+  (`n_clusters_exact`, which needs no kNN).
+- **Reference:** 28 uniform corpus draws cover 16.6 ± 1.7 distinct top-level clusters
+  (5,000 simulations).
+
+## Descriptive (per run, mean ± SD over 5 seeds)
+
+| Arm | Distinct clusters | Entropy (bits) | Distinct (exact only) |
+|---|---|---|---|
+| Baseline | 12.4 ± 2.3 | 3.22 ± 0.40 | 11.6 ± 2.1 |
+| Act=uniform | 11.2 ± 1.6 | 3.08 ± 0.31 | 9.8 ± 0.8 |
+| Act=Jev | **9.0 ± 2.7** | **2.57 ± 0.36** | **7.8 ± 1.3** |
+| Mut=Jev | 11.6 ± 3.1 | 3.11 ± 0.54 | 11.2 ± 2.8 |
+| Fit=Jev* | 11.0 ± 2.0 | 2.92 ± 0.52 | 10.0 ± 1.7 |
+| Cov baseline | 13.4 ± 1.1 | 3.50 ± 0.18 | 13.2 ± 1.3 |
+| Cov + Act=Jev | 12.0 ± 0.7 | 3.25 ± 0.08 | 11.8 ± 0.8 |
+| Cov + Mut=Jev | 13.4 ± 1.7 | 3.49 ± 0.23 | 13.2 ± 1.3 |
+
+## Contrasts (same tests as the primary analysis; Holm across 7 contrasts per metric)
+
+| Contrast | Metric | Diff [95% CI] | p (perm) | p (Holm) | Cliff's δ |
+|---|---|---|---|---|---|
+| Act=Jev − Baseline | distinct | −3.4 [−6.2, −0.6] | 0.095 | 0.67 | −0.60 |
+| Act=Jev − Baseline | entropy | −0.64 [−1.07, −0.23] | 0.040 | 0.24 | −0.80 |
+| Act=Jev − Baseline | distinct (exact) | −3.8 [−5.8, −2.0] | 0.024 | 0.17 | −0.92 |
+| Act=Jev − Act=uniform | entropy | −0.50 [−0.87, −0.13] | 0.056 | 0.28 | −0.72 |
+| Act=Jev − Act=uniform | distinct (exact) | −2.0 [−3.2, −0.8] | 0.048 | 0.29 | −0.76 |
+| Cov+Act=Jev − Cov baseline | entropy | −0.25 [−0.41, −0.09] | 0.024 | 0.17 | −0.88 |
+| Mut=Jev − Baseline | distinct | −0.8 [−3.8, +2.2] | 0.74 | 1.00 | −0.20 |
+| Cov baseline − Baseline | distinct | +1.0 [−1.2, +2.8] | 0.51 | 1.00 | +0.40 |
+
+**Run-level Spearman correlations (all 40 runs, descriptive; pooled across arms):**
+- distinct clusters vs. SIMILAR share: ρ = −0.81
+- distinct clusters vs. EXPLORE share: ρ = +0.73
+- SIMILAR share vs. mean score: ρ = +0.61
+- distinct clusters vs. mean score: ρ = −0.43
+
+## Outcomes by cluster (Meta-judged arms, pooled)
+
+| Cluster (label) | n | Refusal | Mean score | ≥80 |
+|---|---|---|---|---|
+| cluster_17 (Extensive Jailbreak Template Collection) | 13 | 0.00 | 53.8 | 0 |
+| cluster_23 (Hypersexualized Single-Topic Personas) | 21 | 0.10 | 51.0 | 0 |
+| cluster_25 (Demon & Amoral Entity Personas) | 47 | 0.51 | 37.8 | 4 |
+| cluster_5 (Multi-Language Manipulation) | 116 | 0.49 | 35.2 | 0 |
+| cluster_3 (Fictional Storytelling Roleplay) | 32 | 0.59 | 34.4 | 4 |
+| cluster_11 (Programming-Style Jailbreak Frameworks) | 90 | 0.70 | 27.5 | 1 |
+| cluster_12 (Criminal Advisory Characters) | 58 | 0.95 | 21.5 | 0 |
+| cluster_8 (Substance Synthesis via Personas) | 17 | 1.00 | 16.2 | 0 |
+
+The full 26-row table is in `cluster_outcomes.csv`.
+- Counting the Fit=Jev arm too, all 13 successes fall in cluster_25 (7), cluster_3 (4) and
+  cluster_11 (2). 12 of the 13 have exact cluster labels.
+- Distinct clusters reached by action (pooled, Meta-judged arms): EXPLORE 25 (543 prompts),
+  SIMILAR 20 (273), MUTATE 20 (164).
+
+**Limits:**
+- Post-hoc metric, so raw p-values are descriptive.
+- kNN labels on 14% of prompts (about 83% accurate).
+- Cluster outcomes aren't adjusted for arm or parent.

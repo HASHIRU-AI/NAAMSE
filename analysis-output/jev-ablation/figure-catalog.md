@@ -109,3 +109,26 @@ from `outputs/*/prompts.jsonl`.
 - **Key observation:** P(related) is mostly decisive but has a real middle mass. The success
   count ranges from 6 to 1 across thresholds 0.3–0.7, while the mean score is stable.
 - **Caveats:** internal consistency only; says nothing about accuracy.
+
+## Figure 11: `figure-11-cluster-breadth`
+- **Purpose:** RQ1 side effect. Does the action policy change how widely the search
+  explores the attack corpus?
+- **Plotted:** distinct top-level corpus clusters per run (dots = seeds, ◆ = mean with 95%
+  seed-bootstrap CI). The green band is the 16.6 ± 1.7 clusters covered by 28 uniform corpus
+  draws.
+- **Key observation:** Act=Jev is the narrowest arm (9.0 vs. 12.4 for the baseline). Every
+  arm is below the random-sampling reference, and the coverage arms come closest.
+- **Interpretation checklist:** (1) Shows a cost of Jev's SIMILAR preference that the score
+  metric hides. (2) Notice the consistent downward shift for both Act=Jev arms. (3)
+  Suggests an action selector should be judged on diversity as well as score.
+- **Caveats:** exploratory; 14% of labels come from kNN (≈83% accurate); the exact-only
+  version (in the stats appendix) shows the same effect.
+
+## Figure 12: `figure-12-cluster-outcomes`
+- **Purpose:** which attack families work against this target.
+- **Plotted:** refusal rate and mean judge score per top-level corpus cluster (n ≥ 5),
+  pooled over Meta-judged arms, with success counts.
+- **Key observation:** refusal ranges from 0% to 100% by cluster. All successes come from
+  persona/fiction clusters 25 and 3 and programming-style cluster 11.
+- **Caveats:** not adjusted for arm or parent. The zero-refusal clusters (17, 23) yield
+  benign compliance (≈54), not harm.

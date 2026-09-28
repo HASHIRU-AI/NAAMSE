@@ -110,6 +110,44 @@ and resample whole runs to get the uncertainty right.
      1–2 runs throughout.
    - Without Meta labels on the same prompts, none of this says whether Jev is *accurate*.
 
+## Corpus-cluster coverage (exploratory; `scripts/analyze_clusters.py`)
+
+The runner didn't log which corpus cluster each prompt came from, so clusters were recovered
+offline:
+- **958 of 1,120 prompts** match a corpus prompt verbatim and get their exact cluster.
+- **The other 162** get the majority top-level cluster of their 10 nearest corpus prompts,
+  using MiniLM embeddings. Leave-one-out accuracy on exactly matched prompts is 83.5%.
+- **Planned vs. post hoc:** these metrics were added after seeing the outcome results.
+
+10. **Jev's action policy trades cluster breadth for depth, and the depth doesn't pay.**
+    - *Breadth:* Act=Jev visits 9.0 ± 2.7 of the 30 top-level clusters per run vs. 12.4 ± 2.3
+      for the baseline, and its cluster entropy is lower by 0.64 [0.23, 1.07] bits (raw
+      p = 0.040, δ = −0.80).
+    - *Exact-match prompts only:* −3.8 [−5.8, −2.0] clusters (raw p = 0.024, δ = −0.92).
+    - *Under the coverage objective:* the same direction (entropy −0.25 [−0.41, −0.09],
+      raw p = 0.024).
+    - *Holm correction:* nothing survives (smallest adjusted p = 0.17). But the direction
+      agrees across three metrics and both objectives, and every 95% CI excludes zero. These
+      are the largest effects in the study.
+    - *Mechanism:* across all 40 runs, breadth falls as the SIMILAR share rises (Spearman
+      ρ = −0.81), while the SIMILAR share rises with mean score (ρ = +0.61). Jev's preference
+      for SIMILAR buys a small, non-significant gain in mean score at a clear cost in attack
+      diversity.
+    - *Operator selection* (Mut=Jev) has no effect on breadth (−0.8 [−3.8, +2.2]), as
+      expected, since mutations keep the parent's cluster.
+
+11. **Which cluster an attack comes from matters more than any selector.**
+    - *Refusal varies enormously by cluster:* from 0% ("Extensive Jailbreak Template
+      Collection", n = 13, benign compliance at ≈54) to 100% (e.g. "Substance Synthesis via
+      Character Personas", "Toxic Content via Controversial Personas").
+    - *Successes are concentrated:* all 13 come from 3 of the 26 clusters visited, viz.
+      "Demon & Amoral Entity Personas" (7), "Fictional Storytelling Roleplay" (4) and
+      "Structured Programming-Style Jailbreak Frameworks" (2). 12 of the 13 have exact
+      cluster labels.
+    - *Search is narrow overall:* every arm visits fewer clusters than pure random sampling
+      would (28 uniform corpus draws cover 16.6 ± 1.7). The coverage-objective arms come
+      closest (13.4), in line with their near-random exploration.
+
 ## Main caveats
 1. **Low power.** n = 5 runs per arm. The exact permutation test's minimum two-sided p is
    2/252 ≈ 0.008, before Holm correction over 7 contrasts.
@@ -135,6 +173,15 @@ and resample whole runs to get the uncertainty right.
      so those arms are excluded from the transition analysis.
    - *Operator means ignore parent quality.* Act=Jev applied MUTATE to better parents.
 
+7. **Caveats specific to the cluster analysis:**
+   - *Exploratory:* the cluster metrics weren't planned; treat raw p-values as descriptive.
+   - *Approximate labels:* 14% of prompts carry a kNN-assigned cluster, about 1 in 6 of them
+     wrong.
+   - *Corpus write-back:* one success from the Act=Jev seed-4 run was written back into the
+     corpus during the sweep (`NAAMSE_mutation`). It is excluded here, and its effect on
+     later runs is negligible (1 of 129k prompts).
+   - *Logging fixed:* the runner now logs `cluster_info` for future runs.
+
 ## What changed in our understanding
 - The current setup has too few successes to answer RQ1 or RQ3 on outcome metrics. The
   limiting factor is the target's refusal rate, not the selector.
@@ -146,6 +193,10 @@ and resample whole runs to get the uncertainty right.
 - Pooling turns RQ1's null into a bounded result: Jev's action policy is within about ±1
   score point of static, and even a perfect action policy would gain under 3 points. RQ3 is
   where the leverage is: operators differ by more than 20 points.
+- The cluster analysis shows what the score metric hides: Jev's action policy measurably
+  narrows attack diversity. Meanwhile, the attack family (corpus cluster) determines
+  refusal and success more than any selector. Only 3 of 26 clusters ever produced a
+  success.
 
 ## Recommended next decisions
 (Items 1–4 cost API budget. With no budget, the pooled analyses above are the result, and the
