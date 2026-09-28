@@ -1,0 +1,8 @@
+rq,treatment,control,treat_success,ctrl_success,fisher_p
+RQ1,Act=Jev,Baseline,5/140,3/140,0.7225777858129088
+RQ1,Act=uniform,Baseline,0/140,3/140,0.24731182795698922
+RQ1,Act=Jev,Act=uniform,5/140,0/140,0.060271987371090664
+RQ1-cov,Cov + Act=Jev,Cov baseline,0/140,0/140,1.0
+RQ3,Mut=Jev,Baseline,0/140,3/140,0.24731182795698922
+RQ3-cov,Cov + Mut=Jev,Cov baseline,1/140,0/140,1.0
+Objective,Cov baseline,Baseline,0/140,3/140,0.24731182795698922

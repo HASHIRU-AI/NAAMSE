@@ -1,0 +1,13 @@
+{
+  "n_prompts": 140,
+  "n_category_judgments": 840,
+  "alignment_label_eq_argmax": 0.9928571428571429,
+  "harm_label_eq_argmax": 1.0,
+  "alignment_maxprob_median": 0.89,
+  "alignment_maxprob_lt_0.6": 0.1357142857142857,
+  "harm_maxprob_median": 1.0,
+  "related_p_within_0.1_of_threshold": 0.04285714285714286,
+  "related_p_within_0.2_of_threshold": 0.10476190476190476,
+  "prompts_with_any_category_in_0.3_0.7": 0.4785714285714286,
+  "rescore_reproduces_stored_max_abs_err": 0.0
+}
