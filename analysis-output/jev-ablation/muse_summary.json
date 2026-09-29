@@ -1,0 +1,33 @@
+{
+  "runs_per_arm": {
+    "Act=Jev": 5,
+    "Act=Muse": 5,
+    "Act=uniform": 5,
+    "Baseline": 5,
+    "Mut=Jev": 5,
+    "Mut=Muse": 5
+  },
+  "operator_distribution": {
+    "n_mutate": 22,
+    "distinct_operators": 5,
+    "effective_operators": 3.92,
+    "top": {
+      "many_shot_jailbreaking": 8,
+      "semantic_steganography_mutation": 8,
+      "darkcite": 3,
+      "echo": 2,
+      "synonym_mutation": 1
+    }
+  },
+  "jev_realized_distinct_operators": 2,
+  "parse_failures": {
+    "Act=Muse": {
+      "decisions": 140,
+      "named_no_option": 0
+    },
+    "Mut=Muse": {
+      "decisions": 22,
+      "named_no_option": 0
+    }
+  }
+}

@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 from src.experiments.ablation_config import AblationConfig
 from src.mutation_engine.selectors.jev_decisions import ask_jev_choice, describe_parent
+from src.mutation_engine.selectors.muse_decisions import ask_muse_choice
 
 ACTIONS = ["explore", "similar", "mutate"]
 
@@ -63,6 +64,16 @@ def jev(prompt, rng, ablation, uncovered):
         instructions += JEV_ACTION_COVERAGE_INSTRUCTIONS
     state = describe_parent(prompt, uncovered if ablation.objective != "score" else None)
     return ask_jev_choice("next_action", instructions, JEV_ACTION_CRITERIA, state, ablation.jev_temperature, rng)
+
+
+@register_action_selector("muse")
+def muse(prompt, rng, ablation, uncovered):
+    """Plain zero-shot LLM baseline: Muse Spark names one action from the same question Jev gets."""
+    instructions = JEV_ACTION_INSTRUCTIONS
+    if ablation.objective != "score":
+        instructions += JEV_ACTION_COVERAGE_INSTRUCTIONS
+    state = describe_parent(prompt, uncovered if ablation.objective != "score" else None)
+    return ask_muse_choice("next_action", instructions, JEV_ACTION_CRITERIA, state, rng)
 
 
 def select_action(prompt: Dict[str, Any], rng: random.Random, ablation: AblationConfig,

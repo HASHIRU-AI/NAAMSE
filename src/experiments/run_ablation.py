@@ -68,9 +68,23 @@ def make_run_dir(parent: str, ablation: AblationConfig, seed: int) -> Path:
     return run_dir
 
 
+# Run settings that define the experiment; runtime-only settings (target URL, concurrency)
+# are excluded so a run resumes even if it is restarted with different execution flags.
+_EXPERIMENT_KEYS = ("iterations", "mutations", "score_threshold", "seed", "corpus", "mutation_llm")
+
+
+def _experiment_settings(run: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: run.get(k) for k in _EXPERIMENT_KEYS}
+
+
 def find_completed_run(parent: str, config: Dict[str, Any]) -> Optional[Path]:
-    """Return an existing run dir with matching settings and a final_state.json, if any."""
+    """Return an existing run dir with matching settings and a final_state.json, if any.
+
+    Matches on the ablation and the experiment-defining run settings only, so a completed run
+    is reused (the cache hit) even when resumed with a different target URL or concurrency.
+    """
     seed = config["run"]["seed"]
+    want = _experiment_settings(config["run"])
     for run_dir in sorted(Path(parent).glob(f"{config['arm']}_seed{seed}_*")):
         if not (run_dir / "final_state.json").exists():
             continue
@@ -78,7 +92,7 @@ def find_completed_run(parent: str, config: Dict[str, Any]) -> Optional[Path]:
             saved = json.loads((run_dir / "config.json").read_text())
         except (OSError, json.JSONDecodeError):
             continue
-        if saved.get("ablation") == config["ablation"] and saved.get("run") == config["run"]:
+        if saved.get("ablation") == config["ablation"] and _experiment_settings(saved.get("run", {})) == want:
             return run_dir
     return None
 

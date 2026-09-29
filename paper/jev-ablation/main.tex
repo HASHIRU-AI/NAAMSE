@@ -53,7 +53,8 @@
 Evolutionary fuzzers for LLM agents rely on hand-built rules to steer their search, such as fixed score thresholds, uniformly random mutation choices, and LLM judges that grade each attack.
 We ask whether a decision model that returns a probability for every option can replace these rules and find better attacks under the same budget.
 We replace each decision point in the NAAMSE fuzzer with TypeSafe Jev and evaluate eight ablation arms (40 runs, 1{,}120 attack prompts) against a Muse Spark target, along with five follow-up analyses that send no new queries to the target.
-We find no evidence that Jev improves the search: no arm outperforms the baseline, and Jev's zero-shot action policy is within two judge-score points of the static thresholds.
+We find no evidence that Jev improves the search: no arm outperforms the baseline after correction, and Jev's zero-shot action policy is within two judge-score points of the static thresholds.
+A plain LLM selector (Muse Spark, which names one option instead of returning probabilities) is also not significantly better than the baseline, so the negative result is not specific to Jev or to calibration.
 Jev chooses mutation operators based on how they are described rather than how well they work, and as a judge it broadly agrees with Meta on labels but calls fewer refusals.
 A controlled experiment that applies ten operators to the same 20 parents finds that no operator beats re-sending the parent unchanged, and that Jev's preferred operators tend to score below uniform choice.
 Our follow-up analyses also show that the fuzzer itself shapes these results: about a quarter of mutated prompts are the mutation model's own refusal, a shared random seed couples decisions that should be independent, and the judges' ``successes'' are mostly compliance with low-risk requests.
@@ -100,7 +101,7 @@ We report this as a negative result, and we think the more useful part is why a 
 
 In summary, this paper makes the following contributions:
 \begin{itemize}
-  \item We show that replacing NAAMSE's action selector, operator selector, and fitness judge with a probability-returning decision model does not improve attack outcomes, and that action selection based on the parent's score has less than three judge-score points of headroom in our setting.
+  \item We show that replacing NAAMSE's action selector, operator selector, and fitness judge with a probability-returning decision model (Jev) or a plain LLM selector (Muse Spark) does not significantly improve attack outcomes, and that action selection based on the parent's score has less than three judge-score points of headroom in our setting.
   \item We show that zero-shot operator selection is driven by operator descriptions rather than operator outcomes, that adding outcome statistics makes the model chase small samples, and, in a controlled experiment, that no operator outperforms a no-op against this target.
   \item We identify properties of the fuzzer that shape every arm: mutator refusals and silent mutation failures, a shared per-task seed, and a success threshold that rewards low-risk compliance. We quantify how each one affects the reported results.
   \item We propose a refusal-gated referee that needs 47\% of the judge calls, and we check the Meta judge, and spot-check Jev, with a blind cross-model annotation.
@@ -157,9 +158,10 @@ The attacker has a fixed budget of 7 iterations with 4 mutations each, for 28 at
 \autoref{tab:arms} lists the eight arms.
 Each arm replaces one component with Jev and keeps the others at their defaults.
 We run every arm under the standard score objective, and three of them also under a coverage objective that rewards reaching new harm categories.
+Two arms use a plain-LLM baseline, Muse Spark, in place of Jev: it gets the identical decision question but replies with one option in free text rather than a probability per option, at temperature 0, so the shared-seed coupling (\autoref{sec:background}) cannot distort its picks.
 
 \begin{table}[t]
-  \caption{Ablation arms (5 seeds each). Bold marks the component replaced by Jev.}
+  \caption{Ablation arms (5 seeds each). Bold marks the component replaced by Jev or by the plain LLM selector Muse.}
   \label{tab:arms}
   \centering
   \small
@@ -172,6 +174,8 @@ We run every arm under the standard score objective, and three of them also unde
     Act=Jev & \textbf{Jev} & uniform & Meta & score \\
     Mut=Jev & static thresholds & \textbf{Jev} & Meta & score \\
     Fit=Jev & static thresholds & uniform & \textbf{Jev} & score \\
+    Act=Muse & \textbf{Muse} & uniform & Meta & score \\
+    Mut=Muse & static thresholds & \textbf{Muse} & Meta & score \\
     Cov baseline & static thresholds & uniform & Meta & coverage \\
     Cov + Act=Jev & \textbf{Jev} & uniform & Meta & coverage \\
     Cov + Mut=Jev & static thresholds & \textbf{Jev} & Meta & coverage \\
@@ -234,6 +238,7 @@ Fit=Jev looks larger under its own judge ($+6.0$), but that arm is graded differ
 After Holm correction, every $p$-value across mean score, maximum score, successes, coverage, and refusal rate is 1.00, except one maximum-score contrast (0.50) that is driven by a single run.
 The target is hard to attack: it refuses about 70\% of prompts in the Meta-judged arms, and only 13 of 1{,}120 prompts (1.2\%) reach a score of 80 under each arm's own judge.
 These successes come from just 6 runs, and two of Act=Jev's five are initial random draws made before any Jev decision.
+The plain-LLM baseline does not change this picture. Act=Muse is the numerically strongest arm (mean 33.5, 8 successes), but its edge over the baseline is $+4.6$ \ci{-1.1}{+10.1} ($p = 0.21$), and no Muse contrast is significant after Holm correction (Appendix \autoref{tab:muse}). Being deterministic, Muse applies operators more evenly than Jev's seed-distorted picks (5 versus 2), so the distortion is not the selector's doing, yet it still does not win.
 In 39 of 40 runs, the best score improves by less than one point after iteration 3; the exception is one coverage run in which a late random draw scored 100, the same run that drives the one maximum-score contrast (\autoref{fig:dynamics}).
 This confirms that five runs per arm cannot resolve differences of a few points, which motivates the pooled analyses below.
 
@@ -369,16 +374,9 @@ We did not test parents near success, where operators might matter more.
 \label{sec:disc}
 
 \para{Where the leverage is.}
-In our setting, the decisions that Jev replaced were not the bottleneck.
-The target refuses about 70\% of prompts, the judge score takes only a handful of values, and the few prompts that score highly are mostly low-risk compliance.
-What does matter is the attack material itself: which family of attacks is sampled, whether the mutation model writes an attack at all, and avoiding operators that make attacks worse.
-The controlled experiment shows that even operator choice offers little upside against this target, since no operator beat re-sending the parents we tested.
-We therefore suggest that decision points be ranked by their oracle headroom, which the pooled decisions provide at no extra cost, before a learned model is deployed at them.
-
-\para{Descriptions are parameters.}
-A zero-shot selector inherits whatever its option descriptions emphasize.
-For a question about getting past a refusal-heavy target, a description that promises to hide the request's intent is an attractive answer, even when the operator performs poorly.
-We view descriptions as part of the selector's configuration, deserving the same care as its weights, and we expect a selector that learns from outcomes to need an explicit notion of uncertainty.
+The decisions the selectors replaced were not the bottleneck: the target refuses about 70\% of prompts, the judge score takes only a handful of values, and even operator choice offers little upside, since no operator beat re-sending the parent.
+What matters is the attack material, so decision points should be ranked by their oracle headroom, which the pooled decisions give at no extra cost, before a model is deployed at them.
+And a zero-shot selector inherits whatever its option descriptions emphasize: a description that promises to hide intent is an attractive answer against a refusal-heavy target even when the operator performs poorly, so descriptions deserve the same care as weights, and a selector that learns from outcomes needs an explicit notion of uncertainty.
 
 \para{Cost.}
 Skipping the harm judges on refusals cut the referee's cost from 980 to 458 judge calls (\autoref{tab:cost}); since no refusal in the sweep received a harm verdict, we expect it to change no score, and the saving grows with the refusal rate.
@@ -399,7 +397,7 @@ Our annotator removes this shared-model concern, but it is itself an LLM (Claude
 \kunal{A human pass on the blind sheet (\texttt{labeling/}) would settle the severity question.}
 The description ablation measures Jev's preferences, not their downstream effect on attacks.
 The controlled experiment observes each (parent, operator) pair once, and the \op{echo} re-test shows that a single score carries about 6 points of noise; it also runs NAAMSE's operators as configured, including the two failure modes we found and did not fix.
-Jev is a black box accessed through an unpinned model identifier, and we evaluate one probability-returning model with no plain zero-shot LLM selector for comparison; other models could behave differently.
+Jev is a black box accessed through an unpinned model identifier. We add one plain-LLM selector (Muse Spark) as a comparison, but both are LLM selectors from the same commercial families as the target and judges; other models, or an open selector, could behave differently.
 
 \para{External validity.}
 Our results describe NAAMSE as configured, including its per-task seeding, and a single refusal-heavy target.
@@ -418,7 +416,7 @@ Automated red-teaming has moved from static benchmarks toward adaptive search.
 LLM-Fuzzer (originally GPTFuzzer)~\citep{yu2024llmfuzzer} mutates jailbreak templates and selects seeds with a tree search, and TurboFuzzLLM~\citep{goel2025turbofuzzllm} and RLbreaker~\citep{chen2024rlbreaker} learn which mutation to apply with reinforcement learning, which is the closest prior work to our operator-selection question.
 PAIR~\citep{chao2025pair} hands search control to an attacker LLM that refines prompts from the target's responses.
 In classic fuzzing, MOpt~\citep{lyu2019mopt} and SLOPT~\citep{koike2022slopt} learn mutation-operator schedules online, with particle swarm optimization and bandits respectively; our results suggest that such outcome-driven selectors are a better fit for operator choice than zero-shot description matching.
-Recent work shows that LLM agents' tool choices can be steered by editing tool descriptions~\citep{faghih2025toolprefs,sneh2025tooltweak,blankenstein2026biasbusters}; our description ablation finds the same effect for a probability-returning model choosing mutation operators, where it makes the selector favor weak operators.
+Recent work shows that LLM agents' tool choices can be steered by editing tool descriptions~\citep{faghih2025toolprefs,sneh2025tooltweak,blankenstein2026biasbusters}; we find the same effect for a model choosing mutation operators.
 Rainbow Teaming~\citep{samvelyan2024rainbow} treats the diversity of attacks as an explicit objective, which our cluster analysis supports.
 NAAMSE~\citep{pai2026naamse} extends this line to agents with an evolutionary loop, hierarchical corpus exploration, and multi-judge scoring, and our work ablates that loop's control.
 HarmBench~\citep{mazeika2024harmbench} motivates fixed referees and standardized success metrics, which we approximate with a common Meta referee and a cross-model annotator, and StrongREJECT~\citep{souly2024strongreject} shows that jailbreak success is often overstated when judges reward compliance without useful harmful content, which matches what our annotator finds.
@@ -429,9 +427,9 @@ To the best of our knowledge, prior work has not evaluated a probability-returni
 \section{Conclusion}
 \label{sec:conc}
 
-We replaced the hand-built decisions in the NAAMSE fuzzer with a probability-returning decision model and found no evidence that it produces better attacks against a refusal-heavy target.
-The analyses that explain this turned out to be the more lasting contribution: action choice has little headroom, Jev picks operators by their descriptions, a shared seed changes which choices are actually made, about a quarter of mutations never reach the target as attacks, the success threshold rewards low-risk compliance, and no operator beat re-sending the parents we tested.
-We therefore believe that making the fuzzer's mutations reliable and its fitness signal more informative should come before learning its control, and that a decision model will need outcome feedback with an account of uncertainty to help once they are.
+We replaced NAAMSE's hand-built decisions with a probability-returning model, and with a plain LLM, and found no evidence that either produces better attacks against a refusal-heavy target.
+The analyses that explain this are the more lasting contribution: action choice has little headroom, the selectors pick operators by their descriptions, a shared seed changes which choices are actually made, about a quarter of mutations never reach the target as attacks, the success threshold rewards low-risk compliance, and no operator beat re-sending the parent.
+Making the fuzzer's mutations reliable and its fitness signal more informative should therefore come before learning its control.
 
 
 
@@ -692,6 +690,25 @@ The takeaway is that success counts are fragile to judge settings in a way that 
   \label{fig:replay}
 \end{figure}
 
+\begin{table}[htbp]
+  \caption{Plain-LLM baseline (Muse Spark). Unpaired contrasts on run means (5 runs per arm); no $p$-value survives Holm correction across the four contrasts and each metric.}
+  \label{tab:muse}
+  \centering
+  \small
+  \begin{tabular}{lllrrc}
+    \toprule
+    Metric & Treatment & Control & Diff & 95\% CI & $p$ \\
+    \midrule
+    mean score & Act=Muse & Baseline & $+4.6$ & \ci{-1.1}{+10.1} & 0.21 \\
+    mean score & Act=Muse & Act=Jev & $+1.9$ & \ci{-3.5}{+7.8} & 0.57 \\
+    mean score & Mut=Muse & Baseline & $+2.7$ & \ci{-3.2}{+8.3} & 0.44 \\
+    mean score & Mut=Muse & Mut=Jev & $+3.5$ & \ci{-0.6}{+7.7} & 0.19 \\
+    max score & Mut=Muse & Mut=Jev & $+25.7$ & \ci{+7.5}{+43.8} & 0.05 \\
+    successes & Mut=Muse & Mut=Jev & $+0.6$/run & \ci{+0.2}{+1.0} & 0.17 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
 \section{Artifacts and Reproduction}
 \label{app:artifacts}
 
@@ -715,6 +732,7 @@ All scripts read the stored runs and write to \texttt{analysis-output/jev-ablati
     \texttt{make\_label\_sheet.py}, \texttt{analyze\_labels.py} & Blind sheet and key; annotator vs.\ judges \\
     \texttt{operator\_experiment.py}, \texttt{analyze\_operator\_experiment.py} & Controlled operator experiment (Figure~\ref{fig:opexp}) \\
     \texttt{operator\_bandit\_replay.py} & Offline operator-policy replay (Figure~\ref{fig:replay}) \\
+    \texttt{run\_muse\_arms.sh}, \texttt{analyze\_muse.py} & Plain-LLM baseline arms and comparison (Table~\ref{tab:muse}) \\
     \texttt{make\_followup\_figures.py} & Figures~\ref{fig:operator-selection}, \ref{fig:annotation}, and \ref{fig:window} \\
     \bottomrule
   \end{tabular}}

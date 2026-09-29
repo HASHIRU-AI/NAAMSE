@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from src.experiments.ablation_config import AblationConfig
 from src.mutation_engine.mutation_workflow_state import Mutation
 from src.mutation_engine.selectors.jev_decisions import ask_jev_choice, describe_parent
+from src.mutation_engine.selectors.muse_decisions import ask_muse_choice
 from src.mutation_engine.selectors.mutation_descriptions import MUTATION_DESCRIPTIONS, MUTATION_OPERATORS
 
 # Returns (mutation value, probabilities or None)
@@ -40,6 +41,13 @@ JEV_MUTATION_CRITERIA = {m.value: MUTATION_DESCRIPTIONS[m] for m in MUTATION_OPE
 def jev(prompt, rng, ablation):
     return ask_jev_choice("mutation", JEV_MUTATION_INSTRUCTIONS, JEV_MUTATION_CRITERIA,
                           describe_parent(prompt), ablation.jev_temperature, rng)
+
+
+@register_mutation_selector("muse")
+def muse(prompt, rng, ablation):
+    """Plain zero-shot LLM baseline: Muse Spark names one operator from the same question Jev gets."""
+    return ask_muse_choice("mutation", JEV_MUTATION_INSTRUCTIONS, JEV_MUTATION_CRITERIA,
+                           describe_parent(prompt), rng)
 
 
 def select_mutation(prompt: Dict[str, Any], rng: random.Random,

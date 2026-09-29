@@ -9,8 +9,8 @@ from typing import Any, Dict, Optional
 
 from langchain_core.runnables import RunnableConfig
 
-ACTION_SELECTORS = ("static_thresholds", "uniform", "jev")
-MUTATION_SELECTORS = ("uniform", "jev")
+ACTION_SELECTORS = ("static_thresholds", "uniform", "jev", "muse")
+MUTATION_SELECTORS = ("uniform", "jev", "muse")
 JUDGES = ("gemini", "meta", "jev")
 REFEREES = ("meta", "gemini", "none")
 OBJECTIVES = ("score", "coverage", "combined")
