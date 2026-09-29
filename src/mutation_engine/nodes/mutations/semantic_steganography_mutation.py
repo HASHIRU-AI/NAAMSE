@@ -189,7 +189,7 @@ def decompose_prompt(prompt: str, rng: random.Random) -> dict:
 
 def apply_sequential_reveal(prompt: str, rng: random.Random) -> str:
     """Hide intent through sequential revelation."""
-    components = decompose_prompt(prompt)
+    components = decompose_prompt(prompt, rng=rng)
     template = DECOMPOSITION_TEMPLATES["sequential_reveal"]
     
     # Add cognitive load insertion

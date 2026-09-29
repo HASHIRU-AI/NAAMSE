@@ -42,12 +42,42 @@ def static_p_explore(score: float) -> float:
     return 0.7 if score < 50 else 0.1 if score < 100 else 0.4
 
 
-def operator_tables(runs: Path) -> pd.DataFrame:
-    """Per operator: realized Jev picks vs. expected picks under Jev's own probabilities."""
+def static_weights(score: float) -> List[float]:
+    """(EXPLORE, SIMILAR, MUTATE) weights, exactly as in action_selectors.static_thresholds."""
+    if score < 50:
+        return [0.7, 0.2, 0.1]
+    if score < 80:
+        return [0.1, 0.7, 0.2]
+    if score < 100:
+        return [0.1, 0.2, 0.7]
+    return [0.4, 0.4, 0.2]
+
+
+def _sample_choice(probs: Dict[str, float], rng) -> str:
+    """Same rule as jev_decisions.sample_choice at temperature 1 (options sorted by name)."""
+    options = sorted(probs)
+    weights = [max(probs[k], 0.0) for k in options]
+    return rng.choices(options, weights=weights, k=1)[0]
+
+
+def operator_tables(runs: Path, n_sim: int = 2000, seed: int = 0) -> pd.DataFrame:
+    """Per operator: realized Jev picks, Jev's intended share, and two simulations of the draw.
+
+    simulated_coupled: the operator is drawn from Jev's logged probabilities with a fresh
+    random.Random(task_seed) *conditioned on the same seed having chosen MUTATE* under the
+    static action weights, as the configured fuzzer does. simulated_independent: the same draw
+    with an unrelated generator.
+    """
+    import random
+    import sys as _sys
     realized, intended, n = collections.Counter(), collections.Counter(), 0
+    coupled, independent = collections.Counter(), collections.Counter()
+    rng = random.Random(seed)
+    actions = ["explore", "similar", "mutate"]
     for run_dir in runs.glob("act-*_mut-jev_*_seed*"):
         for line in (run_dir / "prompts.jsonl").read_text().splitlines():
-            sel = json.loads(line).get("selector") or {}
+            r = json.loads(line)
+            sel = r.get("selector") or {}
             p = sel.get("mutation_probabilities")
             if not p:
                 continue
@@ -56,11 +86,23 @@ def operator_tables(runs: Path) -> pd.DataFrame:
             total = sum(max(v, 0.0) for v in p.values())
             for k, v in p.items():
                 intended[k] += max(v, 0.0) / total
+            parent = r["history"][-1]["score"]
+            weights = static_weights(parent)
+            k = 0
+            while k < n_sim:
+                task_seed = rng.randrange(_sys.maxsize)
+                if random.Random(task_seed).choices(actions, weights=weights, k=1)[0] != "mutate":
+                    continue
+                k += 1
+                coupled[_sample_choice(p, random.Random(task_seed))] += 1 / n_sim
+                independent[_sample_choice(p, rng)] += 1 / n_sim
     ops = sorted(set(realized) | set(intended))
     df = pd.DataFrame({"operator": ops, "realized": [realized[o] for o in ops],
                        "intended": [intended[o] for o in ops]})
     df["realized_share"] = df.realized / n
     df["intended_share"] = df.intended / n
+    df["simulated_coupled_share"] = [coupled[o] / n for o in ops]
+    df["simulated_independent_share"] = [independent[o] / n for o in ops]
     return df.sort_values("intended", ascending=False)
 
 

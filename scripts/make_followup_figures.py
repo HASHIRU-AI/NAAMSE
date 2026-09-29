@@ -32,18 +32,20 @@ def fig_operator_intended(out: Path, figs: Path) -> None:
     ops = pd.read_csv(out / "seed_coupling_operators.csv")
     ops = ops[(ops.intended_share >= 0.01) | (ops.realized > 0)].sort_values("intended_share")
     y = np.arange(len(ops))
-    fig, ax = plt.subplots(figsize=(7, 0.32 * len(ops) + 1.3))
-    ax.barh(y + 0.2, ops.intended_share, 0.38, color=BLUE, label="Intended (mean Jev probability)")
-    ax.barh(y - 0.2, ops.realized_share, 0.38, color=ORANGE, label="Realized share of 35 picks")
-    for yi, a, b in zip(y, ops.intended_share, ops.realized_share):
-        ax.text(a + 0.005, yi + 0.2, f"{a:.2f}", va="center", fontsize=6.5)
-        if b > 0:
-            ax.text(b + 0.005, yi - 0.2, f"{b:.2f}", va="center", fontsize=6.5)
+    fig, ax = plt.subplots(figsize=(7, 0.42 * len(ops) + 1.4))
+    bars = [("intended_share", BLUE, "Intended (mean Jev probability)", 0.27),
+            ("simulated_coupled_share", "#7f7f7f", "Simulated under the shared per-task seed", 0.0),
+            ("realized_share", ORANGE, "Realized share of 35 picks", -0.27)]
+    for col, color, label, off in bars:
+        ax.barh(y + off, ops[col], 0.26, color=color, label=label)
+        for yi, v in zip(y, ops[col]):
+            if v >= 0.005:
+                ax.text(v + 0.005, yi + off, f"{v:.2f}", va="center", fontsize=6)
     ax.set_yticks(y, [SHORT(o) for o in ops.operator], fontsize=7.5)
     ax.set_xlabel("Share of MUTATE decisions (Mut=Jev arms)", fontsize=8)
     ax.spines[["top", "right"]].set_visible(False)
     ax.legend(fontsize=7, frameon=False, loc="lower right")
-    ax.set_title("Jev operator selection: intended vs. realized under the shared per-task seed", fontsize=9)
+    ax.set_title("Jev operator selection: intended, simulated with the shared seed, and realized", fontsize=9)
     _save(fig, figs, "figure-13-operator-intended-vs-realized")
 
 

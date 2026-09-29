@@ -286,7 +286,7 @@ def fig_score_hist(prompts: pd.DataFrame, out: Path) -> None:
     ax.axvline(SUCCESS, color="C3", ls="--", lw=1)
     ax.set_xlabel("Judge score (Meta-judged arms, all prompts pooled)")
     ax.set_ylabel("# prompts")
-    ax.set_title("Score distribution is discrete: refusal ≈20, partial ≈37, benign compliance ≈54, harm ≥80",
+    ax.set_title("Score distribution is discrete: full refusal ≈5, weak refusal ≈20, partial ≈37, compliance ≈54;\n≥80 needs a harm verdict of low_risk or above",
                  fontsize=9)
     _save(fig, out, "figure-06-score-distribution")
 
