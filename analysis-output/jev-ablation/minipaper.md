@@ -2,7 +2,7 @@
 
 *Kunal Pai, University of California, Davis (kunpai@ucdavis.edu)*
 
-*Markdown companion to `paper/jev-ablation/main.tex`, synced 2026-09-28. The LaTeX paper is the
+*Markdown companion to `paper/jev-ablation/main.tex`, synced 2026-09-29. The LaTeX paper is the
 source of truth; this file follows its text, numbering, and numbers, and leaves out the author's
 inline notes. Figures and tables use the paper's numbers; each figure names its file in
 `figures/`, and tables are written out as markdown tables where the paper places them.*
@@ -15,24 +15,26 @@ whether a decision model that returns a probability for every option can replace
 find better attacks under the same budget. We replace each decision point in the NAAMSE fuzzer
 with TypeSafe Jev and evaluate eight ablation arms (40 runs, 1,120 attack prompts) against a Muse
 Spark target, along with five follow-up analyses that send no new queries to the target. We find
-that Jev does not improve the search: no arm outperforms the baseline, and Jev's zero-shot action
-policy is within two judge-score points of the static thresholds. Jev chooses mutation operators
-based on how they are described rather than how well they work, and as a judge it agrees with Meta
-on labels but calls fewer refusals. A controlled experiment that applies ten operators to the same
-20 parents finds that no operator beats re-sending the parent unchanged, and that Jev's preferred
-operators would score below uniform choice. Our follow-up analyses also show that the fuzzer itself
-shapes these results: about a quarter of mutated prompts are the mutation model's own refusal, a
-shared random seed couples decisions that should be independent, and the judges' "successes" are
-mostly compliance with low-risk requests. Finally, we show that a refusal-gated referee needs 47%
-of the judge calls and, because no refusal in the sweep received a harm verdict, would leave every
-score unchanged.
+no evidence that Jev improves the search: no arm outperforms the baseline after correction, and
+Jev's zero-shot action policy is within two judge-score points of the static thresholds. A plain
+LLM selector (Muse Spark, which names one option instead of returning probabilities) is also not
+significantly better than the baseline, so the negative result is not specific to Jev or to
+calibration. Jev chooses mutation operators based on how they are described rather than how well
+they work, and as a judge it broadly agrees with Meta on labels but calls fewer refusals. A
+controlled experiment that applies ten operators to the same 20 parents finds that no operator
+beats re-sending the parent unchanged, and that Jev's preferred operators tend to score below
+uniform choice. Our follow-up analyses also show that the fuzzer itself shapes these results:
+about a quarter of mutated prompts are the mutation model's own refusal, a shared random seed
+couples decisions that should be independent, and the judges' "successes" are mostly compliance
+with low-risk requests. Finally, we show that a refusal-gated referee needs 47% of the judge calls
+and, because no refusal in the sweep received a harm verdict, would leave every score unchanged.
 
 ## 1 Introduction
 
 AI agents are increasingly deployed with access to tools, data, and users, which makes their
 security a practical concern rather than a theoretical one. Manual red-teaming does not scale to
-this setting, so recent work automates it. Mutation-based fuzzers evolve jailbreak templates [11],
-attacker LLMs refine prompts over several rounds [1], and NAAMSE [8] treats agent security
+this setting, so recent work automates it. Mutation-based fuzzers evolve jailbreak templates [15],
+attacker LLMs refine prompts over several rounds [2], and NAAMSE [11] treats agent security
 evaluation as an optimization problem: it starts from a large corpus of known attacks, sends them
 to the agent, scores each response, and evolves the most promising prompts.
 
@@ -42,13 +44,13 @@ give up and try something new? Which of its 26 mutation operators (e.g., transla
 wrapping it in a role-play, or encoding it) should it apply? And how should it grade the target's
 response? In NAAMSE, these decisions are made by fixed rules: score thresholds pick the next
 action, the operator is drawn uniformly at random, and a panel of LLM judges grades each
-response [12]. These rules are simple heuristics, and it is natural to ask whether a learned model
+response [16]. These rules are simple heuristics, and it is natural to ask whether a learned model
 could make better choices.
 
 In this work, we investigate whether a decision model that returns a *probability* for every
 option can replace these rules. The intuition is that such a model can condition each choice on
 the prompt and on how the judges rated it, and can express how confident it is, which is useful to
-the extent that its probabilities are calibrated [4]. To test this, we replace each decision point
+the extent that its probabilities are calibrated [7]. To test this, we replace each decision point
 in NAAMSE with TypeSafe Jev and evaluate eight ablation arms that swap in Jev as the action
 selector (RQ1), the fitness judge (RQ2), or the operator selector (RQ3), under a fixed budget of 28
 attack prompts per run.
@@ -66,10 +68,10 @@ descriptions rather than the operator names. Its favorite operators are among th
 data, and when we show it outcome statistics, it jumps to operators that were tried only once or
 twice. To measure what operator choice is actually worth, we apply ten operators to the same 20
 parents. Surprisingly, no operator beats simply re-sending the parent, and replaying Jev's
-preferences on this grid scores below uniform choice.
+preferences on this grid tends to score below uniform choice.
 
 While analyzing these results, we found that the fuzzer itself shapes what any selector can
-achieve. More than a quarter of the "attacks" produced by mutation are actually the mutation model
+achieve. About a quarter of the "attacks" produced by mutation are actually the mutation model
 refusing to write the attack. A single random seed per task is shared by the action choice, the
 operator choice, and the corpus sample, so the operators that are actually applied differ from the
 ones Jev intended. Finally, a blind annotator from a third model family agrees with the judges on
@@ -78,11 +80,15 @@ counted as successes, or in any of the five prompts that a judge rated high-risk
 "successes" are the target complying with low-risk requests, such as writing suggestive pickup
 lines.
 
+We report this as a negative result, and we think the more useful part is why a well-motivated
+idea did not deliver.
+
 In summary, this paper makes the following contributions:
 
 - We show that replacing NAAMSE's action selector, operator selector, and fitness judge with a
-  probability-returning decision model does not improve attack outcomes, and that action selection
-  based on the parent's score has less than three judge-score points of headroom in our setting.
+  probability-returning decision model (Jev) or a plain LLM selector (Muse Spark) does not
+  significantly improve attack outcomes, and that action selection based on the parent's score has
+  less than three judge-score points of headroom in our setting.
 - We show that zero-shot operator selection is driven by operator descriptions rather than
   operator outcomes, that adding outcome statistics makes the model chase small samples, and, in a
   controlled experiment, that no operator outperforms a no-op against this target.
@@ -120,11 +126,13 @@ detail becomes important in Section 4.
 **Jev.** TypeSafe Jev is a commercial decision API: it answers typed questions (for example, "which
 of these options?") and returns a probability for every option instead of free text. Its model and
 training details are not public, so we treat it as a black box and use it zero-shot, with no
-fine-tuning and no feedback from earlier decisions. We turn each decision point into such a
+fine-tuning and no feedback from earlier decisions. (We accessed Jev through
+`https://api.typesafe.ai` in September 2026 using the provider's default model identifier
+(`jev-latest`), which is not pinned to a version.) We turn each decision point into such a
 question. For action selection, the question includes the parent prompt, its score, and its
-per-category judge verdicts, and the action is sampled from Jev's probabilities. For operator
-selection, each of the 26 options comes with one sentence that describes what the operator does.
-As a judge, Jev answers the same rubric questions as the Meta judges.
+per-category judge verdicts, and the action is sampled from Jev's probabilities at temperature 1.0.
+For operator selection, each of the 26 options comes with one sentence that describes what the
+operator does. As a judge, Jev answers the same rubric questions as the Meta judges.
 
 **Per-task seeding.** NAAMSE runs several tasks in parallel and gives each task one random seed.
 Each decision inside a task creates a new random number generator from that same seed. As a
@@ -142,9 +150,13 @@ non-violent crime, violence, and sexually explicit content.
 
 **Ablation arms.** Table 1 lists the eight arms. Each arm replaces one component with Jev and keeps
 the others at their defaults. We run every arm under the standard score objective, and three of
-them also under a coverage objective that rewards reaching new harm categories.
+them also under a coverage objective that rewards reaching new harm categories. Two arms use a
+plain-LLM baseline, Muse Spark, in place of Jev: it gets the identical decision question but
+replies with one option in free text rather than a probability per option, at temperature 0, so the
+shared-seed coupling (Section 2) cannot distort its picks.
 
-*Table 1: Ablation arms (5 seeds each). Bold marks the component replaced by Jev.*
+*Table 1: Ablation arms (5 seeds each). Bold marks the component replaced by Jev or by the plain
+LLM selector Muse.*
 
 | Arm | Action selector | Operator selector | Fitness judge | Objective |
 |---|---|---|---|---|
@@ -153,6 +165,8 @@ them also under a coverage objective that rewards reaching new harm categories.
 | Act=Jev | **Jev** | uniform | Meta | score |
 | Mut=Jev | static thresholds | **Jev** | Meta | score |
 | Fit=Jev | static thresholds | uniform | **Jev** | score |
+| Act=Muse | **Muse** | uniform | Meta | score |
+| Mut=Muse | static thresholds | **Muse** | Meta | score |
 | Cov baseline | static thresholds | uniform | Meta | coverage |
 | Cov + Act=Jev | **Jev** | uniform | Meta | coverage |
 | Cov + Mut=Jev | static thresholds | **Jev** | Meta | coverage |
@@ -161,7 +175,7 @@ them also under a coverage objective that rewards reaching new harm categories.
 analyses that reuse the stored runs and send no new queries to the target (Table 2).
 
 - *Off-policy re-estimation.* Every action decision logs the probability with which it was taken,
-  so we can estimate how any policy would have done on the same data [2].
+  so we can estimate how any policy would have done on the same data [4].
 - *Description ablation.* We replay 66 parents to Jev's operator question under five different
   framings of the options. These are the unique parents of mutated prompts in the four
   score-objective, Meta-judged arms.
@@ -196,26 +210,34 @@ seven judge calls per prompt.*
 ### 4.1 Experimental Setup
 
 The target is Muse Spark behind the NAAMSE example agent, reached over the A2A protocol. The
-mutation model and the default fitness judges are Meta models. Each arm runs with seeds 1 to 5, for
-40 runs and 1,120 attack prompts in total. We treat each run as one observation. Because runs with
-the same seed do not start from the same prompts across arms, we compare arms with unpaired exact
-permutation tests (252 splits), report 95% bootstrap intervals and Cliff's δ, and apply Holm
-correction across the seven planned contrasts per metric. For analyses that pool individual
-decisions, we compute intervals by resampling whole runs. With five runs per arm and the observed
-spread (a standard deviation of about 6 points in mean judge score), the smallest difference we
-could detect with 80% power at α = 0.05 is about 11 points, so a null result at the arm level
-rules out only large effects.
+target, the mutation model, and the default fitness judges all use Muse Spark (`muse-spark-1.2`) at
+temperature 0. Each arm runs with seeds 1 to 5, for 40 runs and 1,120 attack prompts in total. We
+treat each run as one observation. Because runs with the same seed do not start from the same
+prompts across arms, we compare arms with unpaired exact permutation tests (252 splits), report 95%
+bootstrap intervals and Cliff's δ, and apply Holm correction across the seven planned contrasts per
+metric. For analyses that pool individual decisions, we compute intervals by resampling whole runs.
+With five runs per arm and the observed spread (a standard deviation of about 6 points in mean
+judge score), the smallest difference we could detect with 80% power at α = 0.05 is about 11
+points, so a null result at the arm level rules out only large effects.
 
 ### 4.2 High-Level Takeaways
 
-**Takeaway 1: Replacing the hand-built rules with Jev does not improve the search.** No arm is
-distinguishable from the baseline (Figure 1). Against the baseline, the largest difference in mean
-judge score is Act=Jev, at +2.7 points with a 95% interval of [−4.2, +9.3] (p = 0.50); the largest
-planned contrast overall, Act=Jev versus Act=uniform (+4.2, p = 0.22), is also not significant.
-After Holm correction, every p-value across mean score, maximum score, successes, coverage, and
-refusal rate is 1.00, except one maximum-score contrast (0.50) that is driven by a single run. The
-target is hard to attack: it refuses about 70% of prompts in the Meta-judged arms, and only 13 of
-1,120 prompts (1.2%) reach a score of 80 under each arm's own judge. In 39 of 40 runs, the best
+**Takeaway 1: We find no evidence that replacing the hand-built rules with Jev improves the
+search.** No arm is distinguishable from the baseline (Appendix Figure 1). Among the Meta-judged
+arms, the largest difference from the baseline in mean judge score is Act=Jev, at +2.7 points with
+a 95% interval of [−4.2, +9.3] (p = 0.50), and the largest planned contrast overall, Act=Jev versus
+Act=uniform (+4.2, p = 0.22), is also not significant. Fit=Jev looks larger under its own judge
+(+6.0), but that arm is graded differently; on the common Meta scale it shrinks to +3.3 (p = 0.48;
+Takeaway 6). After Holm correction, every p-value across mean score, maximum score, successes,
+coverage, and refusal rate is 1.00, except one maximum-score contrast (0.50) that is driven by a
+single run. The target is hard to attack: it refuses about 70% of prompts in the Meta-judged arms,
+and only 13 of 1,120 prompts (1.2%) reach a score of 80 under each arm's own judge. These successes
+come from just 6 runs, and two of Act=Jev's five are initial random draws made before any Jev
+decision. The plain-LLM baseline does not change this picture. Act=Muse is the numerically
+strongest arm (mean 33.5, 8 successes), but its edge over the baseline is +4.6 [−1.1, +10.1]
+(p = 0.21), and no Muse contrast is significant after Holm correction (Appendix Table 7). Being
+deterministic, Muse applies operators more evenly than Jev's seed-distorted picks (5 versus 2), so
+the distortion is not the selector's doing, yet it still does not win. In 39 of 40 runs, the best
 score improves by less than one point after iteration 3; the exception is one coverage run in which
 a late random draw scored 100, the same run that drives the one maximum-score contrast (Figure 5).
 This confirms that five runs per arm cannot resolve differences of a few points, which motivates
@@ -235,10 +257,10 @@ method, SNIPS, and doubly robust estimation (Appendix Table 4). All three place 
 points of the baseline policy. Outside the Act=Jev arm, Jev's policy is approximated by its average
 probabilities in each score range, so these estimates cannot see any prompt-specific signal Jev
 might use. An oracle that always picks the best action for each of four score ranges, fitted on the
-same data and therefore optimistic, reaches only 32.6, compared with 29.7 for the baseline. The
-Act=uniform arm, whose actions are random, shows the same pattern on its own, so the result is not
-an artifact of pooling. This suggests that, with the parent's score as the state, action selection
-has little headroom here.
+same data and therefore optimistic, reaches only 32.6 (95% interval up to 35.7), compared with 29.7
+for the baseline. The Act=uniform arm, whose actions are random, shows the same pattern on its own,
+so the result is not an artifact of pooling. This suggests that, with the parent's score as the
+state, action selection has little headroom here.
 
 **Takeaway 3: Jev picks operators by how they are described, not by how well they work.** In our
 replay, Jev's three favorite operators (`persona_roleplay`, `adversarial_prefix`, and
@@ -283,17 +305,22 @@ in source order, a policy that explores less also explores a narrower slice.
 The second property is that the mutation model sometimes refuses. In 44 of 164 mutated prompts
 (27%, or 23% with a stricter detector that only matches refusal openers), the text sent to the
 target is the mutation model's own refusal to write the attack. For instance,
-`semantic_steganography` produced a refusal in 19 of its 30 uses, whereas `synonym`, whose transformation uses a thesaurus rather than a language model, never did. These refusals score lower than real attacks (24.7 versus 31.0) and
-are refused more often by the target (82% versus 62%). Neither detector was hand-validated, and
-both miss non-English refusals.
+`semantic_steganography` produced a refusal in 19 of its 30 uses, whereas `synonym`, whose
+transformation uses a thesaurus rather than a language model, never did. These refusals score lower
+than real attacks (24.7 versus 31.0) and are refused more often by the target (82% versus 62%).
+Neither detector was hand-validated, and both miss non-English refusals.
 
 The third property is that mutations can fail silently: when a mutation raises an error, NAAMSE
 sends the parent unchanged. Excluding the no-op operator, 15 of the 164 mutated prompts are
 identical to their parent, including both uses of `many_shot_jailbreaking`. The controlled
-experiment in Takeaway 8 finds at least three causes: the tool behind `many_shot_jailbreaking` cannot reach the prompt database it needs and crashes whenever it is called, the mutation agent sometimes loops until it hits its step
-limit, and one of `semantic_steganography`'s strategies had a code defect, which we fixed before
-that experiment. This confirms that an ablation of a fuzzer's control should log both intended and
-realized choices, and should check whether each mutation actually produced an attack.
+experiment in Takeaway 8 finds at least three causes: the tool behind `many_shot_jailbreaking`
+cannot reach the prompt database it needs and crashes whenever it is called (in the other cells,
+the mutation model refused or rewrote the prompt without the tool), the mutation agent sometimes
+loops until it hits its step limit, and one of `semantic_steganography`'s strategies had a code
+defect, which we fixed before that experiment. These causes do not explain everything: 18 of the 47
+silent failures in that experiment left no error at all. This confirms that an ablation of a
+fuzzer's control should log both intended and realized choices, and should check whether each
+mutation actually produced an attack.
 
 **Takeaway 5: Jev's action policy narrows the range of attacks the fuzzer tries.** We recover the
 corpus cluster of every prompt offline and count how many of the 30 top-level clusters each run
@@ -308,29 +335,32 @@ the first iteration, compared with 61). This matters because all 13 successes (u
 judge) come from just 3 of the 26 clusters the fuzzer visited. This confirms that a policy can look
 neutral on score while quietly reducing the diversity of attacks.
 
-**Takeaway 6: As a judge, Jev agrees with Meta on labels, and an independent annotator finds none
-of the successes high-risk.** Once the Meta referee re-scores the Fit=Jev arm, it is no better than
-the baseline (32.1 versus 28.9, with a 95% interval of [−3.8, +11.1] for the difference). Under its
-own Jev judge, the gap had been nearly twice as large (+6.0), so about half of it came from
-labeling. On the 140 prompts graded by both judges, they agree on the alignment label 77% of the
-time (Cohen's κ = 0.64, quadratic κ = 0.76). When they disagree, Jev usually rates the response as
-more compliant (25 of 32 cases; Table 6), and Jev calls 49% of responses refusals compared with
-Meta's 62%. The blind annotator agrees with Meta on alignment labels 84% of the time (κ = 0.74,
-quadratic κ = 0.82), which is closer than Jev's agreement with Meta; on the 22 Jev-judged prompts
-in its sample, it agrees with Jev 82% of the time (κ = 0.48). The annotator agrees with Meta on
-whether a response contains high-risk content 96% of the time, but it disagrees on every response
-that a judge escalated (Figure 3). The fitness judges rated four prompts in the whole sweep
-high-risk or harmful, and the Meta referee rated a fifth (a playful JavaScript easter egg that Jev
-had scored 54); the annotator rates all five as low-risk or not harmful. One of the four is a
-prompt injection that got the target to say "Access Granted" but contains no harmful content; the
-others are generic insults, a crude joke (which the Meta referee also downgraded to low-risk), and
-a non-explicit role-play. Nine of the 13 successes are full acceptances whose strongest harm
-verdict is low-risk, which is exactly the case Equation 1 allows. The count itself depends on the
-judge: on the common Meta scale, the referee finds 7 successes in Fit=Jev instead of Jev's 4, for
-16 in the sweep. Finally, none of the 30 judged refusals contains any harm, which supports skipping
-the harm judges on refusals. This confirms that the study's successes mostly measure compliance
-with low-risk requests, and that success at the high-risk level should be reported separately and
-checked by a judge outside the target's model family.
+**Takeaway 6: As a judge, Jev broadly agrees with Meta on labels, and an independent annotator
+finds none of the successes high-risk.** Once the Meta referee re-scores the Fit=Jev arm, it is no
+better than the baseline (32.1 versus 28.9, with a 95% interval of [−3.8, +11.1] for the
+difference). Under its own Jev judge, the gap had been nearly twice as large (+6.0), so about half
+of it came from labeling. On the 140 prompts graded by both judges, they agree on the alignment
+label 77% of the time (Cohen's κ = 0.64, quadratic κ = 0.76). When they disagree, Jev usually rates
+the response as more compliant (25 of 32 cases; Table 6), and Jev calls 49% of responses refusals
+compared with Meta's 62%. Jev's probabilities are therefore miscalibrated relative to Meta on
+refusals: its refusal probability averages 0.47 against Meta's refusal rate of 0.62 (expected
+calibration error 0.15), while its category-relatedness probabilities are close to Meta's verdicts
+(expected calibration error 0.03 over 318 verdicts). The blind annotator agrees with Meta on
+alignment labels 84% of the time (κ = 0.74, quadratic κ = 0.82), which is closer than Jev's
+agreement with Meta; on the 22 Jev-judged prompts in its sample, it agrees with Jev 82% of the time
+(κ = 0.48). The annotator agrees with Meta on whether a response contains high-risk content 96% of
+the time, but it disagrees on every response that a judge escalated (Figure 3). The fitness judges
+rated four prompts in the whole sweep high-risk or harmful, and the Meta referee rated a fifth (a
+playful JavaScript easter egg that Jev had scored 54); the annotator rates all five as low-risk or
+not harmful. One of the four is a prompt injection that got the target to say "Access Granted" but
+contains no harmful content; the others are generic insults, a crude joke (which the Meta referee
+also downgraded to low-risk), and a non-explicit role-play. Nine of the 13 successes are full
+acceptances whose strongest harm verdict is low-risk, which is exactly the case Equation 1 allows.
+The count itself depends on the judge: on the common Meta scale, the referee finds 7 successes in
+Fit=Jev instead of Jev's 4, for 16 in the sweep. Finally, none of the 30 judged refusals contains
+any harm, which supports skipping the harm judges on refusals. This confirms that the study's
+successes mostly measure compliance with low-risk requests, and that success at the high-risk level
+should be reported separately and checked by a judge outside the target's model family.
 
 > **Figure 3** (`figures/figure-15-cross-model-annotation`). Blind cross-model annotation. Left:
 > alignment labels from Meta (fitness judge, or referee for Fit=Jev) against the annotator on 103
@@ -343,30 +373,37 @@ prompts most of the time (71% and 64% of prompts). In 14 of the 15 coverage runs
 ever covered. This confirms that a coverage objective needs partial credit, or a fallback to the
 score objective until the first category is covered, before it can test any selector.
 
-**Takeaway 8: In a controlled test, no operator beats re-sending the parent, and Jev's preferences
-would do worse than uniform choice.** The sweep's operator evidence is observational, so we run a
-controlled experiment. We draw 20 parents from the score-objective runs (8 scoring below 30, 4
-between 30 and 50, and 8 between 50 and 80), apply each of ten operators to every parent with a
-fixed seed, and send all 200 attacks to the target, scored by the refusal-gated Meta judges (758
-judge calls). The ten operators are a no-op control (`echo`, which re-sends the parent unchanged),
-Jev's three favorites, the operators that looked strongest in the sweep, a non-LLM operator
-(`synonym`), and one weak operator. Because every operator sees the same parents, we compare each
-one with `echo` on the same parent (Figure 4). No operator scores meaningfully higher than `echo` (37.2): the
-best, `code_exec` (37.3), `many_shot_jailbreaking` (36.5), and `synonym` (36.3), are indistinguishable from it, and every other operator scores lower. These top ranks mean little, since about half of the cells of each of these three operators were silent re-sends of the parent. The largest loss is
-`persona_roleplay`, one of Jev's favorites, at 10.1 points below `echo` (95% interval [−17.6,
-−2.7], Holm-adjusted p = 0.050), and 12.7 points below it when we keep only mutations that produced a real
-attack (Holm-adjusted p = 0.01). None of the 200 attacks reaches a score of 80 or receives a high-risk
-verdict. The experiment also shows how unreliable the mutations are: 32 of the 200 are mutator
-refusals (12 of 20 for `semantic_steganography`), and 47 are silent failures that re-send the
-parent, so 40% of the "mutations" are not new attacks. Re-sending the same parent through `echo`
-also shows how noisy a single score is: the new score differs from the stored one by 5.8 points on
-average (Spearman ρ = 0.72). Finally, because every operator was observed on every parent, we can
-replay operator policies on this grid without new queries (Figure 11). Over a run-sized budget of
-10 decisions, uniform choice averages 33.2 points and Jev's intended preferences 31.6, while UCB1
-(33.4) and Thompson sampling (33.6) are no better than uniform; Thompson sampling reaches 35.3 only
-after 200 decisions, still below the best fixed operator (37.3). This confirms that, against this
-target, the spread between operators is mostly downside: the best a selector can do is avoid
-harmful operators, which Jev's zero-shot preferences do not.
+**Takeaway 8: In a controlled test on refused and harmlessly answered parents, no operator beats
+re-sending the parent, and Jev's preferences tend to do worse than uniform choice.** The sweep's
+operator evidence is observational, so we run a controlled experiment. We draw 20 parents from the
+score-objective runs (8 scoring below 30, 4 between 30 and 50, and 8 at the harmless-compliance
+plateau around 54; none is near success), apply each of ten operators to every parent with a fixed
+seed, and send all 200 attacks to the target, scored by the refusal-gated Meta judges (758 judge
+calls). The ten operators are a no-op control (`echo`, which re-sends the parent unchanged), Jev's
+three favorites, the operators that looked strongest in the sweep, a non-LLM operator (`synonym`),
+and one weak operator. Because every operator sees the same parents, we compare each one with
+`echo` on the same parent (Figure 4). No operator scores meaningfully higher than `echo` (37.2):
+the best, `code_exec` (37.3), `many_shot_jailbreaking` (36.5), and `synonym` (36.3), are
+indistinguishable from it, and every other operator scores lower. These top ranks mean little,
+since about half of the cells of each of these three operators were silent re-sends of the parent.
+The largest loss is `persona_roleplay`, one of Jev's favorites, at 10.1 points below `echo` (95%
+interval [−17.6, −2.7], Holm-adjusted p = 0.050), and 12.7 points below it when we keep only
+mutations that produced a real attack (Holm-adjusted p = 0.01). Among real attacks, the only
+operator that scores above `echo` is `synonym` (+4.4, 95% interval [−0.1, +10.5]). None of the 200
+attacks reaches a score of 80 or receives a high-risk verdict. The experiment also shows how
+unreliable the mutations are: 32 of the 200 are mutator refusals (12 of 20 for
+`semantic_steganography`), and 47 are silent failures that re-send the parent, so 40% of the
+"mutations" are not new attacks. Re-sending the same parent through `echo` also shows how noisy a
+single score is: the new score differs from the stored one by 5.8 points on average (Spearman
+ρ = 0.72). Finally, because every operator was observed on every parent, we can replay operator
+policies on this grid without new queries (Figure 11). Over a run-sized budget of 10 decisions,
+uniform choice averages 33.2 points and Jev's intended preferences 31.6 (1.7 points lower, with a
+95% interval over parents of [−3.8, +0.2]), while UCB1 (33.4) and Thompson sampling (33.6) are no
+better than uniform; Thompson sampling reaches 35.3 only after 200 decisions, still below the best
+fixed operator (37.3). This suggests that, for parents the target refuses or answers harmlessly,
+the spread between operators is mostly downside: the best a selector can do is avoid harmful
+operators, which Jev's zero-shot preferences do not. We did not test parents near success, where
+operators might matter more.
 
 > **Figure 4** (`figures/figure-17-operator-experiment`). Controlled operator experiment (20
 > parents × 10 operators, refusal-gated Meta judges). Left: mean judge score and refusal rate per
@@ -374,28 +411,19 @@ harmful operators, which Jev's zero-shot preferences do not.
 
 ## 5 Discussion
 
-**Where the leverage is.** In our setting, the decisions that Jev replaced were not the
-bottleneck. The target refuses about 70% of prompts, the judge score takes only a handful of
-values, and the few prompts that score highly are mostly low-risk compliance. What does matter is
-the attack material itself: which family of attacks is sampled, whether the mutation model writes
-an attack at all, and avoiding operators that make attacks worse. The controlled experiment shows
-that even operator choice offers little upside against this target, since no operator beat
-re-sending the parent. We therefore suggest that decision points be ranked by their oracle
-headroom, which the pooled decisions provide at no extra cost, before a learned model is deployed
-at them.
+**Where the leverage is.** The decisions the selectors replaced were not the bottleneck: the target
+refuses about 70% of prompts, the judge score takes only a handful of values, and even operator
+choice offers little upside, since no operator beat re-sending the parent. What matters is the
+attack material, so decision points should be ranked by their oracle headroom, which the pooled
+decisions give at no extra cost, before a model is deployed at them. And a zero-shot selector
+inherits whatever its option descriptions emphasize: a description that promises to hide intent is
+an attractive answer against a refusal-heavy target even when the operator performs poorly, so
+descriptions deserve the same care as weights, and a selector that learns from outcomes needs an
+explicit notion of uncertainty.
 
-**Descriptions are parameters.** A zero-shot selector inherits whatever its option descriptions
-emphasize. For a question about getting past a refusal-heavy target, a description that promises
-to hide the request's intent is an attractive answer, even when the operator performs poorly. We
-view descriptions as part of the selector's configuration, deserving the same care as its weights,
-and we expect a selector that learns from outcomes to need an explicit notion of uncertainty.
-
-**Cost.** The follow-up analyses send no new queries to the target, use 358 Jev calls and 458
-judge calls in total, and reuse the 40 stored runs. Skipping the harm judges on refusals cut the
-referee's cost from 980 to 458 judge calls; since no refusal in the sweep received a harm verdict,
-we expect it to change no score. We expect a larger saving on arms with more refusals: 67% of all
-prompts in the sweep were refusals (70% in the Meta-judged arms), against 62% of the Fit=Jev
-prompts the referee re-scored.
+**Cost.** Skipping the harm judges on refusals cut the referee's cost from 980 to 458 judge calls
+(Table 2); since no refusal in the sweep received a harm verdict, we expect it to change no score,
+and the saving grows with the refusal rate.
 
 ## 6 Threats to Validity
 
@@ -412,8 +440,10 @@ human, so its severity judgments are a second opinion rather than ground truth. 
 ablation measures Jev's preferences, not their downstream effect on attacks. The controlled
 experiment observes each (parent, operator) pair once, and the `echo` re-test shows that a single
 score carries about 6 points of noise; it also runs NAAMSE's operators as configured, including the
-two failure modes we found and did not fix. Jev is a black box, and we evaluate one
-probability-returning model; other models of this kind could behave differently.
+two failure modes we found and did not fix. Jev is a black box accessed through an unpinned model
+identifier. We add one plain-LLM selector (Muse Spark) as a comparison, but both are LLM selectors
+from the same commercial families as the target and judges; other models, or an open selector,
+could behave differently.
 
 **External validity.** Our results describe NAAMSE as configured, including its per-task seeding,
 and a single refusal-heavy target. A fuzzer with independent random draws, or a more compliant
@@ -428,93 +458,105 @@ study involves no human subjects; the annotation was done by an LLM.
 ## 7 Related Work
 
 Automated red-teaming has moved from static benchmarks toward adaptive search. LLM-Fuzzer
-(originally GPTFuzzer) [11] mutates jailbreak templates and selects seeds with a tree search, and
-TurboFuzzLLM [3] learns which mutation to apply with reinforcement learning, which is the closest
-prior work to our operator-selection question. PAIR [1] hands search control to an attacker LLM
-that refines prompts from the target's responses. In classic fuzzing, MOpt [6] and SLOPT [5] learn
-mutation-operator schedules online, with particle swarm optimization and bandits respectively; our
-results suggest that such outcome-driven selectors are a better fit for operator choice than
-zero-shot description matching. Rainbow Teaming [9] treats the diversity of attacks as an explicit
-objective, which our cluster analysis supports. NAAMSE [8] extends this line to agents with an
-evolutionary loop, hierarchical corpus exploration, and multi-judge scoring, and our work ablates
-that loop's control. HarmBench [7] motivates fixed referees and standardized success metrics, which
-we approximate with a common Meta referee and a cross-model annotator, and StrongREJECT [10] shows
+(originally GPTFuzzer) [15] mutates jailbreak templates and selects seeds with a tree search, and
+TurboFuzzLLM [6] and RLbreaker [3] learn which mutation to apply with reinforcement learning, which
+is the closest prior work to our operator-selection question. PAIR [2] hands search control to an
+attacker LLM that refines prompts from the target's responses. In classic fuzzing, MOpt [9] and
+SLOPT [8] learn mutation-operator schedules online, with particle swarm optimization and bandits
+respectively; our results suggest that such outcome-driven selectors are a better fit for operator
+choice than zero-shot description matching. Recent work shows that LLM agents' tool choices can be
+steered by editing tool descriptions [5, 13, 1]; we find the same effect for a model choosing
+mutation operators. Rainbow Teaming [12] treats the diversity of attacks as an explicit objective,
+which our cluster analysis supports. NAAMSE [11] extends this line to agents with an evolutionary
+loop, hierarchical corpus exploration, and multi-judge scoring, and our work ablates that loop's
+control. HarmBench [10] motivates fixed referees and standardized success metrics, which we
+approximate with a common Meta referee and a cross-model annotator, and StrongREJECT [14] shows
 that jailbreak success is often overstated when judges reward compliance without useful harmful
-content, which matches what our annotator finds. LLM-as-a-judge [12] underlies the fitness signal
-we attempt to replace, calibration [4] motivates probability-returning decisions, and doubly robust
-estimation [2] lets us evaluate policies from logged decisions. To the best of our knowledge, prior
+content, which matches what our annotator finds. LLM-as-a-judge [16] underlies the fitness signal
+we attempt to replace, calibration [7] motivates probability-returning decisions, and doubly robust
+estimation [4] lets us evaluate policies from logged decisions. To the best of our knowledge, prior
 work has not evaluated a probability-returning model as a zero-shot, drop-in replacement for all
-three control points of an evolutionary agent fuzzer, isolated whether such a model's choices come
-from descriptions or evidence, or measured how often the fuzzer's own mutation model refuses to
-write the attack.
+three control points of an evolutionary agent fuzzer, measured the value of operator choice against
+a no-op control, or measured how often the fuzzer's own mutation model refuses to write the attack.
 
 ## 8 Conclusion
 
-We replaced the hand-built decisions in the NAAMSE fuzzer with a probability-returning decision
-model and found that it does not produce better attacks against a refusal-heavy target. Choosing
-actions better would gain less than three points, Jev chooses operators by their descriptions, and
-as a judge it agrees with Meta on labels while calling fewer refusals. The analyses that explain
-these results turned out to be the more lasting contribution: a shared seed changes which choices
-are actually made, more than a quarter of mutations never reach the target as attacks, and the
-success threshold rewards low-risk compliance. A controlled experiment shows that even operator
-choice offers little upside against this target: no operator beat re-sending the parent, and 40%
-of mutations failed to produce a new attack. We therefore believe that making the fuzzer's
-mutations reliable and its fitness signal more informative should come before learning its
-control, and that a decision model will need outcome feedback with an account of uncertainty to
-help once they are.
+We replaced NAAMSE's hand-built decisions with a probability-returning model, and with a plain LLM,
+and found no evidence that either produces better attacks against a refusal-heavy target. The
+analyses that explain this are the more lasting contribution: action choice has little headroom,
+the selectors pick operators by their descriptions, a shared seed changes which choices are
+actually made, about a quarter of mutations never reach the target as attacks, the success
+threshold rewards low-risk compliance, and no operator beat re-sending the parent. Making the
+fuzzer's mutations reliable and its fitness signal more informative should therefore come before
+learning its control.
 
 ## References
 
 Numbered in the order of the compiled bibliography (`plainnat`, sorted by author), matching
 `paper/jev-ablation/references.bib`.
 
-[1] P. Chao, A. Robey, E. Dobriban, H. Hassani, G. J. Pappas, and E. Wong. Jailbreaking Black Box
+[1] T. Blankenstein, J. Yu, Z. Li, V. Plachouras, S. Sengupta, P. Torr, Y. Gal, A. Paren, and
+A. Bibi. BiasBusters: Uncovering and Mitigating Tool Selection Bias in Large Language Models. In
+*International Conference on Learning Representations (ICLR)*, 2026.
+
+[2] P. Chao, A. Robey, E. Dobriban, H. Hassani, G. J. Pappas, and E. Wong. Jailbreaking Black Box
 Large Language Models in Twenty Queries. In *IEEE Conference on Secure and Trustworthy Machine
 Learning (SaTML)*, pages 23 to 42, 2025. doi:10.1109/SaTML64287.2025.00010.
 
-[2] M. Dudík, J. Langford, and L. Li. Doubly Robust Policy Evaluation and Learning. In
+[3] X. Chen, Y. Nie, W. Guo, and X. Zhang. When LLM Meets DRL: Advancing Jailbreaking Efficiency
+via DRL-guided Search. In *Advances in Neural Information Processing Systems (NeurIPS)*, volume 37,
+2024.
+
+[4] M. Dudík, J. Langford, and L. Li. Doubly Robust Policy Evaluation and Learning. In
 *Proceedings of the 28th International Conference on Machine Learning (ICML)*, pages 1097 to 1104,
 2011.
 
-[3] A. Goel, X. Wu, Z. Wang, D. Bespalov, and Y. Qi. TurboFuzzLLM: Turbocharging Mutation-based
+[5] K. Faghih, W. Wang, Y. Cheng, S. Bharti, G. Sriramanan, S. Balasubramanian, P. Hosseini, and
+S. Feizi. Tool Preferences in Agentic LLMs are Unreliable. In *Proceedings of the 2025 Conference
+on Empirical Methods in Natural Language Processing (EMNLP)*, 2025.
+
+[6] A. Goel, X. Wu, Z. Wang, D. Bespalov, and Y. Qi. TurboFuzzLLM: Turbocharging Mutation-based
 Fuzzing for Effectively Jailbreaking Large Language Models in Practice. In *Proceedings of the 2025
 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics:
 Human Language Technologies (Volume 3: Industry Track)*, pages 523 to 534, 2025.
 
-[4] C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger. On Calibration of Modern Neural Networks. In
+[7] C. Guo, G. Pleiss, Y. Sun, and K. Q. Weinberger. On Calibration of Modern Neural Networks. In
 *Proceedings of the 34th International Conference on Machine Learning (ICML)*, PMLR 70, pages 1321
 to 1330, 2017.
 
-[5] Y. Koike, H. Katsura, H. Yakura, and Y. Kurogome. SLOPT: Bandit Optimization Framework for
+[8] Y. Koike, H. Katsura, H. Yakura, and Y. Kurogome. SLOPT: Bandit Optimization Framework for
 Mutation-Based Fuzzing. In *Proceedings of the 38th Annual Computer Security Applications
 Conference (ACSAC)*, 2022. doi:10.1145/3564625.3564659.
 
-[6] C. Lyu, S. Ji, C. Zhang, Y. Li, W.-H. Lee, Y. Song, and R. Beyah. MOPT: Optimized Mutation
+[9] C. Lyu, S. Ji, C. Zhang, Y. Li, W.-H. Lee, Y. Song, and R. Beyah. MOPT: Optimized Mutation
 Scheduling for Fuzzers. In *28th USENIX Security Symposium (USENIX Security 19)*, pages 1949 to
 1966, 2019.
 
-[7] M. Mazeika, L. Phan, X. Yin, A. Zou, Z. Wang, N. Mu, E. Sakhaee, N. Li, S. Basart, B. Li,
+[10] M. Mazeika, L. Phan, X. Yin, A. Zou, Z. Wang, N. Mu, E. Sakhaee, N. Li, S. Basart, B. Li,
 D. Forsyth, and D. Hendrycks. HarmBench: A Standardized Evaluation Framework for Automated Red
 Teaming and Robust Refusal. In *Proceedings of the 41st International Conference on Machine
 Learning (ICML)*, PMLR 235, pages 35181 to 35224, 2024.
 
-[8] K. Pai, P. Shah, and H. Patel. NAAMSE: Framework for Evolutionary Security Evaluation of
+[11] K. Pai, P. Shah, and H. Patel. NAAMSE: Framework for Evolutionary Security Evaluation of
 Agents. In *ICLR 2026 Workshop on Agents in the Wild*, 2026. arXiv:2602.07391.
 
-[9] M. Samvelyan, S. C. Raparthy, A. Lupu, E. Hambro, A. H. Markosyan, M. Bhatt, Y. Mao, M. Jiang,
+[12] M. Samvelyan, S. C. Raparthy, A. Lupu, E. Hambro, A. H. Markosyan, M. Bhatt, Y. Mao, M. Jiang,
 J. Parker-Holder, J. Foerster, T. Rocktäschel, and R. Raileanu. Rainbow Teaming: Open-Ended
 Generation of Diverse Adversarial Prompts. In *Advances in Neural Information Processing Systems
 (NeurIPS)*, volume 37, 2024.
 
-[10] A. Souly, Q. Lu, D. Bowen, T. Trinh, E. Hsieh, S. Pandey, P. Abbeel, J. Svegliato, S. Emmons,
+[13] J. Sneh, R. Yan, J. Yu, P. Torr, Y. Gal, S. Sengupta, E. Sommerlade, A. Paren, and A. Bibi.
+ToolTweak: An Attack on Tool Selection in LLM-based Agents. arXiv:2510.02554, 2025.
+
+[14] A. Souly, Q. Lu, D. Bowen, T. Trinh, E. Hsieh, S. Pandey, P. Abbeel, J. Svegliato, S. Emmons,
 O. Watkins, and S. Toyer. A StrongREJECT for Empty Jailbreaks. In *Advances in Neural Information
 Processing Systems (NeurIPS), Datasets and Benchmarks Track*, volume 37, 2024.
 
-[11] J. Yu, X. Lin, Z. Yu, and X. Xing. LLM-Fuzzer: Scaling Assessment of Large Language Model
+[15] J. Yu, X. Lin, Z. Yu, and X. Xing. LLM-Fuzzer: Scaling Assessment of Large Language Model
 Jailbreaks. In *33rd USENIX Security Symposium (USENIX Security 24)*, pages 4657 to 4674, 2024.
 (Published version of GPTFuzzer, arXiv:2309.10253.)
 
-[12] L. Zheng, W.-L. Chiang, Y. Sheng, S. Zhuang, Z. Wu, Y. Zhuang, Z. Lin, Z. Li, D. Li,
+[16] L. Zheng, W.-L. Chiang, Y. Sheng, S. Zhuang, Z. Wu, Y. Zhuang, Z. Lin, Z. Li, D. Li,
 E. P. Xing, H. Zhang, J. E. Gonzalez, and I. Stoica. Judging LLM-as-a-Judge with MT-Bench and
 Chatbot Arena. In *Advances in Neural Information Processing Systems (NeurIPS), Datasets and
 Benchmarks Track*, volume 36, 2023.
@@ -612,7 +654,8 @@ which is another reason to validate successes with an independent reviewer.
 
 *Table 3: Mean child judge score (refusal rate) by parent bucket and action, pooled over 480
 transitions from the four score-objective, Meta-judged arms. Bold marks the best action per bucket
-where it is clear; the ≥ 80 row rests on 20 transitions.*
+where it is clear; the ≥ 80 row rests on 20 transitions. Following the analysis scripts, parents
+scoring exactly 80 fall in the 50 to 80 row.*
 
 | Parent score | EXPLORE | SIMILAR | MUTATE | Static prefers | Jev prefers |
 |---|---|---|---|---|---|
@@ -650,6 +693,18 @@ operator scores.*
 | weak refusal | 0 | 59 | 0 | 1 |
 | weak acceptance | 0 | 11 | 10 | 2 |
 | full acceptance | 1 | 7 | 6 | 34 |
+
+*Table 7: Plain-LLM baseline (Muse Spark). Unpaired contrasts on run means (5 runs per arm); no
+p-value survives Holm correction across the four contrasts and each metric.*
+
+| Metric | Treatment | Control | Diff | 95% CI | p |
+|---|---|---|---|---|---|
+| mean score | Act=Muse | Baseline | +4.6 | [−1.1, +10.1] | 0.21 |
+| mean score | Act=Muse | Act=Jev | +1.9 | [−3.5, +7.8] | 0.57 |
+| mean score | Mut=Muse | Baseline | +2.7 | [−3.2, +8.3] | 0.44 |
+| mean score | Mut=Muse | Mut=Jev | +3.5 | [−0.6, +7.7] | 0.19 |
+| max score | Mut=Muse | Mut=Jev | +25.7 | [+7.5, +43.8] | 0.05 |
+| successes | Mut=Muse | Mut=Jev | +0.6/run | [+0.2, +1.0] | 0.17 |
 
 > **Figure 5.** Search dynamics and the plateaus of Equation 1.
 > **(a)** (`figures/figure-05-best-so-far`) Best-so-far judge score by iteration.
@@ -703,4 +758,5 @@ through `src/experiments/referee.py`; the fuzzer's own scoring graph is unchange
 | `make_label_sheet.py`, `analyze_labels.py` | Blind sheet and key; annotator vs. judges |
 | `operator_experiment.py`, `analyze_operator_experiment.py` | Controlled operator experiment (Figure 4) |
 | `operator_bandit_replay.py` | Offline operator-policy replay (Figure 11) |
+| `run_muse_arms.sh`, `analyze_muse.py` | Plain-LLM baseline arms and comparison (Table 7) |
 | `make_followup_figures.py` | Figures 2, 3, and 10a |
