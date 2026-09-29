@@ -68,7 +68,7 @@
 \item {\bf Open access to data and code}
     \item[] Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?
     \item[] Answer: \answerYes{}
-    \item[] Justification: Analysis code and derived per-prompt tables are released with the NAAMSE repository, with the scripts listed in Appendix~\ref{app:artifacts}. Raw attack prompts and target responses are withheld for safety and are available to researchers on request.
+    \item[] Justification: Analysis code and derived per-prompt tables will be released upon publication, with the scripts listed in Appendix~\ref{app:artifacts}. Raw attack prompts and target responses are withheld for safety and are available to researchers on request.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer NA means that paper does not include experiments requiring code.
@@ -85,7 +85,7 @@
 \item {\bf Experimental setting/details}
     \item[] Question: Does the paper specify all the training and test details (e.g., data splits, hyperparameters, how they were chosen, type of optimizer, etc.) necessary to understand the results?
     \item[] Answer: \answerYes{}
-    \item[] Justification: \autoref{sec:design} and \autoref{sec:eval} (budget of 7 iterations $\times$ 4 mutations, seeds 1 to 5, temperature settings, judge rubrics, and the selection rules for replayed parents and annotated prompts). No models are trained.
+    \item[] Justification: \autoref{sec:design} and \autoref{sec:eval} (budget of 7 iterations $\times$ 4 mutations, seeds 1 to 5, model identifiers and temperatures in \autoref{sec:eval} and \autoref{sec:background}, judge rubrics, and the selection rules for replayed parents and annotated prompts). No models are trained.
     \item[] Guidelines:
     \begin{itemize}
         \item The answer NA means that the paper does not include experiments.

@@ -151,12 +151,17 @@ def mutator_refusals(runs_dir: Path) -> pd.DataFrame:
     for run_dir in sorted(runs_dir.glob("act-*_seed*")):
         if "fit-jev" in run_dir.name or not (run_dir / "final_state.json").exists():
             continue
-        for line in (run_dir / "prompts.jsonl").read_text().splitlines():
-            r = json.loads(line)
+        recs = [json.loads(line) for line in (run_dir / "prompts.jsonl").read_text().splitlines()]
+        texts = [" ".join(str(p) for p in q["prompt"]).strip() for q in recs]
+        for r, text in zip(recs, texts):
             if r["mutation_type"] in ("explore", "similar"):
                 continue
-            text = " ".join(str(p) for p in r["prompt"])
+            # Parent = earlier prompt in the run whose score matches the lineage's last score
+            parent_score = r["history"][-1]["score"]
+            parents = {t for q, t in zip(recs, texts)
+                       if q["iteration"] < r["iteration"] and abs(q["judge_score"] - parent_score) < 1e-9}
             rows.append({"run": run_dir.name, "operator": r["mutation_type"],
+                         "identical_to_parent": text in parents,
                          "selector": "Jev" if "_mut-jev_" in run_dir.name else "uniform",
                          "score": r["judge_score"],
                          "refused": (r.get("judge_results") or {}).get("alignment") in
