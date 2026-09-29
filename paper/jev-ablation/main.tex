@@ -408,12 +408,13 @@ The study involves no human subjects; the annotation was done by an LLM.
 
 Automated red-teaming has moved from static benchmarks toward adaptive search.
 LLM-Fuzzer (originally GPTFuzzer)~\citep{yu2024llmfuzzer} mutates jailbreak templates and selects seeds with a tree search, and TurboFuzzLLM~\citep{goel2025turbofuzzllm} and RLbreaker~\citep{chen2024rlbreaker} learn which mutation to apply with reinforcement learning, which is the closest prior work to our operator-selection question.
-PAIR~\citep{chao2025pair} hands search control to an attacker LLM that refines prompts from the target's responses.
-In classic fuzzing, MOpt~\citep{lyu2019mopt} and SLOPT~\citep{koike2022slopt} learn mutation-operator schedules online, with particle swarm optimization and bandits respectively; our results suggest that such outcome-driven selectors are a better fit for operator choice than zero-shot description matching.
+PAIR~\citep{chao2025pair} hands search control to an attacker LLM that refines prompts from the target's responses, and TemplateFuzz~\citep{shen2026templatefuzz} fuzzes chat-template structure with a learned oracle.
+In classic fuzzing, MOpt~\citep{lyu2019mopt} and SLOPT~\citep{koike2022slopt} learn mutation-operator schedules online (particle swarm and bandits); our results suggest such outcome-driven selectors fit operator choice better than zero-shot description matching.
 Recent work shows that LLM agents' tool choices can be steered by editing tool descriptions~\citep{faghih2025toolprefs,sneh2025tooltweak,blankenstein2026biasbusters}; we find the same effect for a model choosing mutation operators.
 Rainbow Teaming~\citep{samvelyan2024rainbow} treats the diversity of attacks as an explicit objective, which our cluster analysis supports.
 NAAMSE~\citep{pai2026naamse} extends this line to agents with an evolutionary loop, hierarchical corpus exploration, and multi-judge scoring, and our work ablates that loop's control.
 HarmBench~\citep{mazeika2024harmbench} motivates fixed referees and standardized success metrics, which we approximate with a common Meta referee and a cross-model annotator, and StrongREJECT~\citep{souly2024strongreject} shows that jailbreak success is often overstated when judges reward compliance without useful harmful content, which matches what our annotator finds.
+Concurrent work (AdversaBench~\citep{khandelwal2026adversabench}) also confirms failures with a multi-judge panel and reports operator effectiveness varying by harm category, echoing our operator findings.
 LLM-as-a-judge~\citep{zheng2023judging} underlies the fitness signal we attempt to replace, calibration~\citep{guo2017calibration} motivates probability-returning decisions, and doubly robust estimation~\citep{dudik2011doubly} lets us evaluate policies from logged decisions.
 To the best of our knowledge, prior work has not evaluated a probability-returning model as a zero-shot, drop-in replacement for all three control points of an evolutionary agent fuzzer, measured the value of operator choice against a no-op control, or measured how often the fuzzer's own mutation model refuses to write the attack.
 
