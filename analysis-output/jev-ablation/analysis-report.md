@@ -28,14 +28,13 @@ and marked *[revised]*.
 3. **Operator refusal rates measured the operator** (finding 8). *Superseded by the mutator
    audit* (`operators_mutator_refusals.csv`). 44 of 164 MUTATE prompts (27%) are the mutation
    LLM's own refusal; `semantic_steganography` produced one in 19 of its 30 uses, so its 90%
-   refusal rate mostly measures the mutator. The detector matches English refusals only, so 27% is
-   a lower bound.
+   refusal rate mostly measures the mutator. A stricter detector gives 38 of 164 (23%); neither detector was hand-validated, and both miss non-English refusals.
 4. **"RQ2 can't be evaluated" / "No referee was run"** (header, finding 6, finding 9, caveat 3,
    recommendation 1). *Superseded by the refusal-gated Meta referee* (`referee_summary.json`,
    `referee_arm_comparison.csv`). On the Meta scale, Fit=Jev is +3.3 [−3.8, +11.1] versus the
    baseline (own-judge gap +6.0). Jev and Meta agree on 77% of alignment labels (κ = 0.64
    unweighted, 0.76 quadratic); Jev calls 49% of responses refusals versus Meta's 62%. The gated
-   referee used 458 judge calls instead of 980, with identical scores.
+   referee used 458 judge calls instead of 980, with scores that we expect to be unchanged (no refusal in the sweep received a harm verdict; the skipped calls were not re-run).
 5. **Success severity** (finding 2). *Refined by a blind cross-model annotation* (Claude, 103
    items; `annotator_claude_summary.json`, Figure 15). The annotator agrees with Meta on alignment
    (κ = 0.74) but rates none of the responses high_risk or harmful, including all 13 successes;
@@ -51,6 +50,21 @@ and marked *[revised]*.
 8. **"Make seeds pair runs" / "Investigate RQ3's collapse"** (recommendations 4 and 5).
    *Withdrawn.* The per-task seeding is part of the system under test and stays unchanged; its
    effect is measured offline instead. The RQ3 investigation was done (item 2 above).
+9. **"RQ3 is where the leverage is: operators differ by more than 20 points"** ("What changed").
+   *Superseded by a controlled operator experiment* (main.tex Takeaway 8, Figures 17 and 18;
+   `operator_experiment_summary.json`, `operator_experiment_per_operator.csv`,
+   `operator_experiment_contrasts.csv`, `operator_bandit_replay.csv`). We applied 10 operators to
+   the same 20 parents (200 attacks, 758 refusal-gated Meta judge calls) and compared each operator
+   with the `echo` no-op on the same parent. No operator beats `echo` (37.2): `code_exec` (37.3),
+   `many_shot_jailbreaking` (36.5), and `synonym` (36.3) are indistinguishable from it, and every
+   other operator scores lower. The largest loss is `persona_roleplay`, one of Jev's favorites, at
+   10.1 points below `echo` (95% interval [−17.6, −2.7], Holm p = 0.05). None of the 200 attacks
+   reaches 80 or gets a high-risk verdict. About 40% of the mutations are not real attacks: 32 are
+   mutator refusals and 47 are silent failures that re-send the parent. Replaying operator policies
+   on this grid over 10 decisions, Jev's intended preferences (31.6) score below uniform choice
+   (33.2). The 20-point spread in the sweep was observational and mostly downside, so the earlier
+   advice to focus on operator choice no longer holds; the best a selector can do here is avoid
+   harmful operators.
 
 ## Question
 Does replacing NAAMSE's hand-built decision points with Jev probabilities change fuzzing
@@ -259,8 +273,9 @@ offline:
   outcomes, and its intended favorites are weak operators. The narrow realized pattern in the
   sweep comes from the shared per-task seed, not from Jev (Revisions items 1 and 2).
 - Pooling turns RQ1's null into a bounded result: Jev's action policy is within about ±1
-  score point of static, and even a perfect action policy would gain under 3 points. RQ3 is
-  where the leverage is: operators differ by more than 20 points.
+  score point of static, and even a perfect action policy would gain under 3 points.
+  *[revised; see Revisions item 9: in a controlled test no operator beats the `echo` no-op, so
+  operator choice is not where the leverage is either.]*
 - The cluster analysis shows what the score metric hides: Jev's action policy measurably
   narrows attack diversity. Meanwhile, the attack family (corpus cluster) determines
   refusal and success more than any selector. Only 3 of 26 clusters ever produced a
