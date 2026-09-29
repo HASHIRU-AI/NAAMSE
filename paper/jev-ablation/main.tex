@@ -58,7 +58,7 @@ A plain LLM selector (Muse Spark, which names one option instead of returning pr
 Jev chooses mutation operators based on how they are described rather than how well they work, and as a judge it broadly agrees with Meta on labels but calls fewer refusals.
 A controlled experiment that applies ten operators to the same 20 parents finds that no operator beats re-sending the parent unchanged, and that Jev's preferred operators tend to score below uniform choice.
 Our follow-up analyses also show that the fuzzer itself shapes these results: about a quarter of mutated prompts are the mutation model's own refusal, a shared random seed couples decisions that should be independent, and the judges' ``successes'' are mostly compliance with low-risk requests.
-Finally, we show that a refusal-gated referee needs 47\% of the judge calls and, because no refusal in the sweep received a harm verdict, would leave every score unchanged.
+Finally, a refusal-gated referee reproduces the stored scores at 47\% of the judge calls, since no refusal in the sweep received a harm verdict.
 \end{abstract}
 
 % ------------------------------------------------------------------------------------------
@@ -355,7 +355,7 @@ The largest loss is \op{persona_roleplay}, one of Jev's favorites, at 10.1 point
 None of the 200 attacks reaches 80 or a high-risk verdict, and the mutations are unreliable: 32 are mutator refusals (12 of 20 for \op{semantic_steganography}) and 47 are silent failures, so 40\% of the ``mutations'' are not new attacks.
 The \op{echo} re-test also shows a single score carries about 6 points of noise (Spearman $\rho = 0.72$).
 Finally, because every operator was observed on every parent, we can replay operator policies on this grid without new queries (\autoref{fig:replay}).
-Over a run-sized budget of 10 decisions, uniform choice averages 33.2 points and Jev's intended preferences 31.6 (1.7 points lower, with a 95\% interval over parents of $[-3.8, +0.2]$), while UCB1 (33.4) and Thompson sampling (33.6) are no better than uniform; Thompson sampling reaches 35.3 only after 200 decisions, still below the best fixed operator (37.3).
+Over a run-sized budget of 10 decisions, uniform choice averages 33.2 points and Jev's intended preferences 31.6 (1.6 points lower, with a 95\% interval over parents of $[-3.8, +0.2]$), while UCB1 (33.4) and Thompson sampling (33.6) are no better than uniform; Thompson sampling reaches 35.3 only after 200 decisions, still below the best fixed operator (37.3).
 This suggests that, for parents the target refuses or answers harmlessly, the spread between operators is mostly downside: the best a selector can do is avoid harmful operators, which Jev's zero-shot preferences do not.
 We did not test parents near success, where operators might matter more.
 
